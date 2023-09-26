@@ -1,0 +1,39 @@
+{
+ "ip": "anarchy.6b6t.org",
+ "username": "User",
+ "password":"Password",
+ "version": "1.19.4",
+ "port": "3000",
+ "blacklist": ["User1", "User2"],
+ "antiafk":true,
+ "autoreconnect":true,
+ "reconnectdelay": "5",
+ "securityguard": true,
+ "firstperson": false,
+ "killsuicide": false,
+  "killaura":{
+    "killaura": true,
+    "mob": true,
+    "player": true
+  },
+  "log":{
+    "messages": true,
+    "whispers": true,
+    "kicks": true,
+    "death": true,
+    "errors": true
+  },
+"chat":{
+ "bypass": true,
+ "bypasslimit":"20",
+ "random": true,
+ "delay": "5",
+  "messages": [
+    "Test 1 ",
+    "Test 2  ",
+    "Test 3 ",
+    "Test 4  "
+  ]
+},
+"webhookUrl": "https://discord.com/api/webhooks/1154108207929757747/qSDcSAzxhFxClz3GwyAy1UiUDe8OZP4F8vieomaUApSx-rbYiHN3HtBnLVsZiMMCGQp6"
+}
