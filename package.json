@@ -1,6 +1,6 @@
 {
   "name": "ImperialBot",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Bot to monitor any bases or locations with side utilities",
   "main": "index.js",
   "scripts": {
@@ -16,6 +16,7 @@
     "fs": "^0.0.1-security",
     "mineflayer": "^4.14.0",
     "mineflayer-pathfinder": "^2.4.5",
+    "mineflayer-pvp": "^1.3.2",
     "prismarine-viewer": "^1.25.0",
     "ws": "^8.14.2"
   }

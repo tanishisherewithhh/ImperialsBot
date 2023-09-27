@@ -1,16 +1,18 @@
-@echo off
-@echo Installing mineflayer....
+@echo off 
+@echo Installing dependencies
 npm install mineflayer 
-@echo Installing axios....
-npm install axios
-@echo Installing fs....
-npm install fs
-@echo Installing mineflayer-pathfinder.....
-npm install mineflayer-pathfinder
-@echo Installing express.....
-npm install express
-@echo Installing ws....
-npm install ws
-@echo Installing prismarine viewer....
+pause
+npm install axios 
+pause
+npm install fs 
+pause
+npm install mineflayer-pathfinder 
+pause
+npm install mineflayer-pvp
+pause
+npm install express 
+pause
+npm install ws 
+pause
 npm install prismarine-viewer
 pause

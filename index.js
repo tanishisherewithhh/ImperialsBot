@@ -2,10 +2,13 @@ let mineflayer = require('mineflayer');
 const axios = require('axios');
 const fs = require('fs');
 const pathfinder = require('mineflayer-pathfinder').pathfinder;
+const Movements = require('mineflayer-pathfinder').Movements
 const express = require('express');
 const WebSocket = require('ws');
 const mineflayerViewer = require('prismarine-viewer').mineflayer;
 const imagePath = './image/Imperials.png'; // Path to your image
+const pvp = require('mineflayer-pvp').plugin;
+const { GoalNear } = require('mineflayer-pathfinder').goals
 
 // Read the image file and convert it to base64
 const image = fs.readFileSync(imagePath);
@@ -26,7 +29,7 @@ const blacklisted = config.blacklist;
 const port = config.port;
 
 let server;
-let chatLog = [];
+let chatLog = new Set();
 let antiafk = config.antiafk;
 let bot;
 let spamming = false;
@@ -75,10 +78,11 @@ const main = () => {
 `;
 	sendWebhookMessage(webhookUrl, imperialsText);
 	sendWebhookMessage(webhookUrl, '‏');
-	bot.setMaxListeners(21);
-
+	bot.setMaxListeners(1000);
+    
 	bot.loadPlugin(pathfinder);
-
+    bot.loadPlugin(pvp);
+    
 	const mcData = require('minecraft-data')(bot.version);
 	bot.once("login", async () => {
 		sendWebhookMessage(webhookUrl, `> ### *[${username}]* joined ${serverIP}`);
@@ -104,8 +108,13 @@ const main = () => {
 				bot.viewer.drawLine('path', path)
 			}
 		}) 
+        bot.waitForTicks(50);
+		bot.chat('/register ' + password);
+        bot.waitForTicks(50);
+		bot.chat("/login " + config.password);
 		bot.chat('hello');   
 	})
+  const defaultMove = new Movements(bot)
 
 	// Event listener for incoming chat messages
 	bot.on('chat', (username, message) => {
@@ -166,11 +175,12 @@ const main = () => {
                         bot.attack(bot.targetEntity, true);
                       } 
                       bot.targetEntity = entity;
-                      bot.attack(bot.targetEntity, true);
+                      bot.pvp.attack(bot.targetEntity);
             }
         }
     } else if (bot.targetEntity) {
         sendWSmessage('Lost sight of ' + bot.targetEntity.type);
+      bot.pvp.stop()
       bot.targetEntity = null;
     }
     }
@@ -264,7 +274,7 @@ const main = () => {
 		}
 		sendWebhookMessage(webhookUrl, `## THE BOT HAS DIED`)
 	});
-
+localhostApp();
 };
 
 function generateRandomString(length) {
@@ -333,35 +343,52 @@ function killMyself(){
         bot.activateItem();
       });
     } else {
-        sendWebhookMessage(webhookUrl, '> [BOT] I dont have a flint and steel to kill myself');
-        sendWSmessage(`[BOT] I dont have a flint and steel to kill myself`);
-    }
+        sendWebhookMessage(webhookUrl, '> [BOT] I dont have a flint and steel to kill myself. Trying using lava');
+        sendWSmessage(`[BOT] I dont have a flint and steel to kill myself. Trying using lava`);
+         const lavaBlock = bot.findBlock({
+    matching: block => block.name === 'lava',
+    maxDistance: 512,
+         });
+  if (lavaBlock) {
+    bot.pathfinder.setMovements(defaultMove);
+    const p = lavaBlock.position;
+      bot.pathfinder.setGoal(new GoalNear(p.x, p.y, p.z, 512))
+  } else {
+    sendWebhookMessage('No nearby lava blocks found.');
+      sendWSmessage('No nearby lava blocks found.');
+  }
+}
 }
 
 function sendWSmessage(messageWS){
     connections.forEach(ws => {
   if (ws.readyState === ws.OPEN) {
+    chatLog.add(String(messageWS));
     ws.send(String(messageWS));
   }
 });
 }
 main();
+function localhostApp(){
 wss.on('connection', ws => {
     connections.push(ws);
+    ws.send(String(Array.from(chatLog).join('\n')));
 
   ws.on('close', () => {
     // Remove closed connections from the list
-      sendWebhookMessage(webhookUrl, 'WebSocket Connection closed');
     connections = connections.filter(conn => conn !== ws);
   });
 
 	bot.on('chat', (username, message) => {
+        chatLog.add(`[${username}] ${message}`);
 		ws.send(`[${username}] ${message}`);
 	});
     bot.on("death", (err) => {
+        chatLog.add(`THE BOT HAS DIED`);
 		ws.send(`THE BOT HAS DIED`);
 	});
     bot.on('whisper', (username, message) => {
+        chatLog.add(`[WHISPER] ${username} whispers: ` + message);
 		ws.send(`[WHISPER] ${username} whispers: ` + message);
 	})
 });
@@ -769,3 +796,4 @@ app.get('/spam', (req, res) => {
     sendWSmessage(`Spamming: ` + spamming);
 	res.send(`Spamming: ` + spamming);
 });
+}
