@@ -1,0 +1,377 @@
+/* Dark Themes (Default is Blue) */
+
+/* Simple Dark */
+body.theme-simple-dark {
+    --bg-color: #121212;
+    --glass-bg: rgba(30, 30, 30, 0.85);
+    /* More opaque */
+    --glass-border: rgba(255, 255, 255, 0.15);
+    --primary: #e0e0e0;
+    /* Light grey for text/icons */
+    --primary-hover: #ffffff;
+    --text-main: #e0e0e0;
+    --text-muted: #a0a0a0;
+    --accent-warm: #ffffff;
+    background-image: none;
+    background-color: #121212;
+}
+
+/* Button Overrides for Simple Dark */
+body.theme-simple-dark .btn,
+body.theme-simple-dark .toggle-btn,
+body.theme-simple-dark .add-bot-btn,
+body.theme-simple-dark .chat-input-area button,
+body.theme-simple-dark .nav-btn,
+body.theme-simple-dark .btn-primary {
+    background: #2b2b2b !important;
+    border: 1px solid #404040;
+    color: #e0e0e0 !important;
+}
+
+body.theme-simple-dark .btn:hover,
+body.theme-simple-dark .toggle-btn:hover,
+body.theme-simple-dark .add-bot-btn:hover,
+body.theme-simple-dark .chat-input-area button:hover,
+body.theme-simple-dark .nav-btn:hover,
+body.theme-simple-dark .btn-primary:hover {
+    background: #3a3a3a !important;
+    border-color: #505050;
+}
+
+body.theme-simple-dark .danger-btn,
+body.theme-simple-dark .nav-btn.stop {
+    background: #450a0a !important;
+    border-color: #7f1d1d;
+    color: #fca5a5 !important;
+}
+
+body.theme-simple-dark .success-btn,
+body.theme-simple-dark .nav-btn.go {
+    background: #064e3b !important;
+    border-color: #065f46;
+    color: #6ee7b7 !important;
+}
+
+body.theme-simple-dark input,
+body.theme-simple-dark select,
+body.theme-simple-dark .nav-input {
+    background: #1e1e1e !important;
+    border-color: #404040;
+    color: #e0e0e0 !important;
+}
+
+/* Modal Overrides for Simple Dark */
+body.theme-simple-dark .modal-content {
+    background: #121212 !important;
+    border-color: #404040;
+}
+
+body.theme-simple-dark .bot-item.active {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: #fff;
+}
+
+/* Emerald (Green) */
+body.theme-emerald {
+    --bg-color: #022c22;
+    --glass-bg: rgba(6, 78, 59, 0.6);
+    --primary: #10b981;
+    --primary-hover: #059669;
+    --accent-warm: #f59e0b;
+    background-image: radial-gradient(circle at 50% 50%, #064e3b 0%, #022c22 100%);
+}
+
+/* Crimson (Red) */
+body.theme-crimson {
+    --bg-color: #450a0a;
+    --glass-bg: rgba(127, 29, 29, 0.6);
+    --primary: #ef4444;
+    --primary-hover: #dc2626;
+    --accent-warm: #f59e0b;
+    background-image: radial-gradient(circle at 50% 50%, #7f1d1d 0%, #450a0a 100%);
+}
+
+/* Amethyst (Purple) */
+body.theme-amethyst {
+    --bg-color: #2e1065;
+    --glass-bg: rgba(88, 28, 135, 0.6);
+    --primary: #a855f7;
+    --primary-hover: #9333ea;
+    --accent-warm: #facc15;
+    background-image: radial-gradient(circle at 50% 50%, #581c87 0%, #2e1065 100%);
+}
+
+/* Espresso (Coffee) */
+body.theme-espresso {
+    --bg-color: #271c19;
+    /* Very dark brown */
+    --glass-bg: rgba(67, 48, 43, 0.6);
+    /* Dark roast */
+    --primary: #d4a373;
+    /* Latte foam color */
+    --primary-hover: #bc8a5f;
+    --text-main: #faedcd;
+    /* Cream */
+    --text-muted: #d4a373;
+    --accent-warm: #d4a373;
+    background-image: radial-gradient(circle at 50% 50%, #43302b 0%, #271c19 100%);
+}
+
+/* Amber (Yellow/Gold) */
+body.theme-amber {
+    --bg-color: #2a1b00;
+    /* Dark gold */
+    --glass-bg: rgba(120, 53, 15, 0.6);
+    --primary: #f59e0b;
+    --primary-hover: #d97706;
+    --accent-warm: #fbbf24;
+    background-image: radial-gradient(circle at 50% 50%, #451a03 0%, #2a1b00 100%);
+}
+
+/* Light Themes */
+
+/* Sky (Light Blue) */
+body.theme-sky {
+    --bg-color: #f0f9ff;
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-border: rgba(0, 0, 0, 0.1);
+    --primary: #0ea5e9;
+    --primary-hover: #0284c7;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    background-image: radial-gradient(circle at 50% 50%, #e0f2fe 0%, #f0f9ff 100%);
+}
+
+/* Light Theme Chat Overrides */
+body.theme-sky .chat-box {
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+body.theme-sky .chat-message {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+body.theme-sky .chat-message strong {
+    color: #0c4a6e;
+}
+
+body.theme-sky .bot-item,
+body.theme-sky .card,
+body.theme-sky .top-bar,
+body.theme-sky .sidebar,
+body.theme-sky input,
+body.theme-sky select {
+    background: rgba(255, 255, 255, 0.7);
+    border-color: rgba(0, 0, 0, 0.05);
+    color: #0f172a;
+}
+
+body.theme-sky .bot-item:hover {
+    background: rgba(255, 255, 255, 0.9);
+}
+
+/* Mint (Light Green) */
+body.theme-mint {
+    --bg-color: #f0fdf4;
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-border: rgba(0, 0, 0, 0.1);
+    --primary: #22c55e;
+    --primary-hover: #16a34a;
+    --text-main: #052e16;
+    --text-muted: #4b5563;
+    background-image: radial-gradient(circle at 50% 50%, #dcfce7 0%, #f0fdf4 100%);
+}
+
+body.theme-mint .card,
+body.theme-mint .sidebar {
+    background: rgba(255, 255, 255, 0.7);
+    border-color: rgba(0, 0, 0, 0.05);
+    color: #052e16;
+}
+
+/* Shared Light Theme Overrides (Sky, Mint, Rose) */
+body.theme-sky .chat-box,
+body.theme-mint .chat-box,
+body.theme-rose .chat-box {
+    background: #ffffff !important;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+body.theme-sky .chat-message,
+body.theme-mint .chat-message,
+body.theme-rose .chat-message {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+body.theme-sky .chat-message strong,
+body.theme-mint .chat-message strong,
+body.theme-rose .chat-message strong {
+    color: #0f172a;
+}
+
+/* Fix Button Visibility in Light Themes (WASD, Controls, Spammer) */
+body.theme-sky .btn,
+body.theme-mint .btn,
+body.theme-rose .btn,
+body.theme-sky .control-btn,
+body.theme-mint .control-btn,
+body.theme-rose .control-btn,
+body.theme-sky .btn-move,
+body.theme-mint .btn-move,
+body.theme-rose .btn-move,
+body.theme-sky .btn-action,
+body.theme-mint .btn-action,
+body.theme-rose .btn-action,
+body.theme-sky #addSpamMsgBtn,
+body.theme-mint #addSpamMsgBtn,
+body.theme-rose #addSpamMsgBtn,
+body.theme-sky .btn-icon,
+body.theme-mint .btn-icon,
+body.theme-rose .btn-icon {
+    background: #ffffff !important;
+    border: 1px solid rgba(0, 0, 0, 0.3) !important;
+    color: #1a1a1a !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+body.theme-sky .btn:hover,
+body.theme-mint .btn:hover,
+body.theme-rose .btn:hover,
+body.theme-sky .control-btn:hover,
+body.theme-mint .control-btn:hover,
+body.theme-rose .control-btn:hover,
+body.theme-sky .btn-move:hover,
+body.theme-mint .btn-move:hover,
+body.theme-rose .btn-move:hover,
+body.theme-sky .btn-action:hover,
+body.theme-mint .btn-action:hover,
+body.theme-rose .btn-action:hover {
+    background: #f1f5f9 !important;
+    border-color: rgba(0, 0, 0, 0.5) !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Fix Light Theme Modals */
+body.theme-sky .modal-content,
+body.theme-mint .modal-content,
+body.theme-rose .modal-content {
+    background: #ffffff !important;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    color: #0f172a !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+body.theme-sky .modal-content h3,
+body.theme-mint .modal-content h3,
+body.theme-rose .modal-content h3 {
+    color: #0f172a !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    padding-bottom: 15px;
+}
+
+body.theme-sky .modal-content label,
+body.theme-mint .modal-content label,
+body.theme-rose .modal-content label {
+    color: #475569 !important;
+}
+
+/* Fix Spammer Config Background */
+body.theme-sky .spammer-config,
+body.theme-mint .spammer-config,
+body.theme-rose .spammer-config {
+    background: rgba(255, 255, 255, 0.6) !important;
+    border: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Ensure Inputs are also distinct */
+body.theme-sky input,
+body.theme-sky select,
+body.theme-mint input,
+body.theme-mint select,
+body.theme-rose input,
+body.theme-rose select {
+    background: #fff !important;
+    border: 1px solid rgba(0, 0, 0, 0.2) !important;
+    color: #1a1a1a !important;
+}
+
+/* Rose (Light Red/Pink) */
+body.theme-rose {
+    --bg-color: #fff1f2;
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-border: rgba(0, 0, 0, 0.1);
+    --primary: #f43f5e;
+    --primary-hover: #e11d48;
+    --text-main: #881337;
+    --text-muted: #4b5563;
+    background-image: radial-gradient(circle at 50% 50%, #ffe4e6 0%, #fff1f2 100%);
+}
+
+body.theme-rose .card,
+body.theme-rose .sidebar {
+    background: rgba(255, 255, 255, 0.7);
+    border-color: rgba(0, 0, 0, 0.05);
+    color: #881337;
+}
+
+/* Theme Selector Styles */
+.theme-selector-container {
+    margin-top: auto;
+    padding-top: 20px;
+    border-top: 1px solid var(--glass-border);
+}
+
+.theme-label {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    margin-bottom: 10px;
+    display: block;
+}
+
+.custom-select-wrapper {
+    position: relative;
+}
+
+.theme-select-input {
+    width: 100%;
+    padding: 12px 15px;
+    appearance: none;
+    -webkit-appearance: none;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    color: var(--text-main);
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    outline: none;
+}
+
+.theme-select-input:hover {
+    background: rgba(0, 0, 0, 0.6);
+    border-color: var(--primary);
+}
+
+.theme-select-input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+}
+
+.select-arrow {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
+.theme-select-input option {
+    background: #1e293b;
+    color: white;
+    padding: 10px;
+}

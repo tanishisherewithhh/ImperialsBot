@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ImperialsBot Dashboard</title>
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="plugins.css">
+    <link rel="stylesheet" href="themes.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="logo">
+                <img src="logo.png" alt="ImperialsBot"
+                    style="height: 40px; vertical-align: middle; margin-right: 10px;">
+                ImperialsBot
+            </div>
+            <div class="bot-list-header">Active Bots</div>
+            <div class="bot-list" id="botList">
+                <!-- Bot items will be injected here -->
+            </div>
+            <button class="add-bot-btn" id="addBotBtn">+ Add Bot</button>
+
+            <div class="theme-selector-container">
+                <label class="theme-label">THEME</label>
+                <div class="custom-select-wrapper">
+                    <select id="themeSelect" class="theme-select-input">
+                        <option value="">Default (Blue)</option>
+                        <option value="theme-simple-dark">Simple Dark</option>
+                        <option value="theme-emerald">Emerald (Green)</option>
+                        <option value="theme-crimson">Crimson (Red)</option>
+                        <option value="theme-amethyst">Amethyst (Purple)</option>
+                        <option value="theme-espresso">Espresso (Brown)</option>
+                        <option value="theme-amber">Amber (Gold)</option>
+                        <option disabled>──────────</option>
+                        <option value="theme-sky">Sky (Light Blue)</option>
+                        <option value="theme-mint">Mint (Light Green)</option>
+                        <option value="theme-rose">Rose (Light Red)</option>
+                    </select>
+                    <div class="select-arrow">▼</div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="bot-info" style="display: flex; align-items: center; gap: 15px;">
+                    <img src="logo.png" style="height: 35px; border-radius: 4px;">
+                    <div>
+                        <h2 id="currentBotName" style="margin: 0;">Select a Bot</h2>
+                        <div class="status-indicator" id="botStatus">Offline</div>
+                    </div>
+                </div>
+                <div class="stats-panel" id="statsPanel">
+                    <div class="stat-item">Pos: <span id="posStat">0, 0, 0</span></div>
+                    <div class="stat-item">Health: <span id="healthStat">20</span></div>
+                    <div class="stat-item">Food: <span id="foodStat">20</span></div>
+                </div>
+            </header>
+
+            <div class="dashboard-grid">
+                <!-- Left Column (Chat & Inventory) -->
+                <div class="column left-col">
+                    <div class="card chat-card">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <h3>Chat</h3>
+                            <button id="exportChatBtn"
+                                style="background: rgba(59, 130, 246, 0.1); border: 1px solid var(--primary); color: var(--primary); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: 500; transition: all 0.2s;">Export</button>
+                        </div>
+                        <div class="chat-container">
+                            <div class="chat-box" id="chatBox"></div>
+                        </div>
+                        <form id="chatForm" class="chat-input-area">
+                            <input type="text" id="chatInput" placeholder="Type a message...">
+                            <button type="submit">Send</button>
+                        </form>
+                    </div>
+
+                    <div class="card plugins-card">
+                        <h3>Plugins</h3>
+                        <div id="pluginsList" class="plugins-grid">
+                            <div style="color: var(--text-muted); font-size: 0.9rem;">No plugins loaded</div>
+                        </div>
+                    </div>
+
+                    <div class="card inventory-card">
+                        <h3>Inventory</h3>
+                        <div class="inventory-grid" id="inventoryGrid"></div>
+                    </div>
+                </div>
+
+                <!-- Right Column (Controls & Viewer) -->
+                <div class="column right-col">
+                    <div class="card viewer-card">
+                        <h3>Visual Feed <span id="viewerPortDisplay"
+                                style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;"></span></h3>
+                        <div class="viewer-container" id="viewerContainer">
+                            <div class="placeholder">Viewer Offline</div>
+                        </div>
+                    </div>
+
+                    <div class="card controls-card">
+                        <h3>Controls</h3>
+                        <div class="control-group">
+                            <button class="btn action-btn" id="rejoinBtn">Rejoin</button>
+                            <button class="btn danger-btn" id="suicideBtn">Suicide</button>
+                            <button class="btn warning-btn" data-action="stop">Disconnect</button>
+                            <button class="btn danger-btn" data-action="delete">Delete Bot</button>
+                        </div>
+
+                        <div class="control-group">
+                            <div class="nav-container">
+                                <input type="number" id="navX" class="nav-input" placeholder="X">
+                                <input type="number" id="navY" class="nav-input" placeholder="Y">
+                                <input type="number" id="navZ" class="nav-input" placeholder="Z">
+                                <button id="navToggleBtn" class="nav-btn go" title="Start/Stop">Go</button>
+                            </div>
+                        </div>
+
+                        <div class="movement-controls">
+                            <div class="d-pad">
+                                <button class="btn-move up" data-control="forward">W</button>
+                                <button class="btn-move left" data-control="left">A</button>
+                                <button class="btn-move down" data-control="back">S</button>
+                                <button class="btn-move right" data-control="right">D</button>
+                            </div>
+                            <div class="actions">
+                                <button class="btn-action" data-control="jump">Jump</button>
+                                <button class="btn-action" data-control="sprint">Sprint</button>
+                                <button class="btn-action" data-control="sneak">Sneak</button>
+                            </div>
+                        </div>
+
+                        <div class="sliders">
+                            <div class="slider-group">
+                                <label>Yaw: <span id="yawVal">0</span></label>
+                                <input type="range" id="yawSlider" min="-3.14" max="3.14" step="0.1" value="0">
+                            </div>
+                            <div class="slider-group">
+                                <label>Pitch: <span id="pitchVal">0</span></label>
+                                <input type="range" id="pitchSlider" min="-1.57" max="1.57" step="0.1" value="0">
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="control-row centered-controls">
+                            <button class="btn-action compact" id="btnLeftClick" title="Left Click">
+                                Attack
+                            </button>
+                            <button class="btn-action compact" id="btnRightClick" title="Right Click">
+                                Use
+                            </button>
+                            <button class="btn compact" id="viewModeBtn" title="Switch Perspective">
+                                View
+                            </button>
+                        </div>
+
+                        <div class="feature-toggles">
+                            <div class="toggle-row">
+                                <button class="btn toggle-btn" id="killauraBtn">Killaura: OFF</button>
+                                <button class="btn toggle-btn" id="antiAfkBtn">Anti-AFK: OFF</button>
+                                <button class="btn toggle-btn" id="autoAuthBtn">AutoAuth: OFF</button>
+                            </div>
+                            <div class="toggle-row">
+                                <button class="btn toggle-btn" id="autoReconnectBtn">Auto Reconnect: ON</button>
+                            </div>
+
+                            <div class="spammer-controls">
+                                <h4>Spammer Config</h4>
+                                <div class="spammer-list" id="spammerList">
+                                    <!-- Dynamic Inputs -->
+                                </div>
+                                <div style="display: flex; gap: 5px;">
+                                    <button class="btn-action" id="addSpamMsgBtn" style="flex:1;">+ Add Message</button>
+                                    <button class="btn-action secondary" id="importSpamBtn" style="flex:1;"
+                                        title="Import from TXT">Import TXT</button>
+                                    <input type="file" id="importSpamFile" accept=".txt" style="display:none">
+                                </div>
+
+                                <div class="spammer-settings">
+                                    <input type="number" id="spammerDelay" placeholder="Delay (ms)" value="3000">
+                                    <select id="spammerOrder">
+                                        <option value="random">Random</option>
+                                        <option value="sequential">Sequential</option>
+                                    </select>
+                                </div>
+                                <div class="spammer-settings">
+                                    <label class="checkbox-label"><input type="checkbox" id="spammerAppend"> <span
+                                            id="spammerLenLabel">Anti-Spam Length: 5</span></label>
+                                    <input type="range" id="spammerLen" min="0" max="20" value="5"
+                                        title="Random String Length">
+                                </div>
+                                <button class="btn toggle-btn" id="spammerBtn">Start Spammer</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card players-card">
+                        <h3>Online Players (<span id="playerCount">0</span>)</h3>
+                        <div class="player-list" id="playerList"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add Bot Modal -->
+    <div class="modal" id="addBotModal">
+        <div class="modal-content">
+            <h3>Add New Bot</h3>
+            <form id="addBotForm">
+                <div class="form-group">
+                    <label>Server IP</label>
+                    <input type="text" name="host" placeholder="localhost" value="localhost" required>
+                </div>
+                <div class="form-group">
+                    <label>Port</label>
+                    <input type="number" name="port" placeholder="25565" value="25565" required>
+                </div>
+                <div class="form-group">
+                    <label>Auth Type</label>
+                    <select name="auth">
+                        <option value="offline">Offline (Cracked)</option>
+                        <option value="microsoft">Microsoft (Online)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" name="username" placeholder="BotName / Email" required>
+                </div>
+                <div class="form-group">
+                    <label>Password (Optional)</label>
+                    <input type="password" name="password" placeholder="For AutoAuth">
+                </div>
+                <div class="form-group checkbox-group">
+                    <label><input type="checkbox" name="registerConfirm" checked> Register with Confirm (/reg pass
+                        pass)</label>
+                </div>
+                <div class="form-group">
+                    <label>Version</label>
+                    <input type="text" name="version" placeholder="1.21.4" value="1.21.4">
+                </div>
+                <div class="form-group">
+                    <label>Discord Webhook URL (Optional)</label>
+                    <input type="text" name="webhookUrl" placeholder="https://discord.com/api/webhooks/...">
+                </div>
+
+                <div class="form-group checkbox-group">
+                    <label><input type="checkbox" name="firstPerson"> First Person View</label>
+                </div>
+                <div class="form-group checkbox-group">
+                    <label><input type="checkbox" name="autoReconnect" checked> Auto Reconnect</label>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" id="cancelAddBot" class="btn-secondary">Cancel</button>
+                    <button type="submit" class="btn-primary">Add Bot</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Bot Modal -->
+    <div class="modal" id="editBotModal">
+        <div class="modal-content">
+            <h3>Edit Bot</h3>
+            <form id="editBotForm">
+                <div class="form-group">
+                    <label>Server IP</label>
+                    <input type="text" name="host" required>
+                </div>
+                <div class="form-group">
+                    <label>Port</label>
+                    <input type="number" name="port" required>
+                </div>
+                <div class="form-group">
+                    <label>Auth Type</label>
+                    <select name="auth">
+                        <option value="offline">Offline (Cracked)</option>
+                        <option value="microsoft">Microsoft (Online)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" name="username" readonly style="opacity: 0.7; cursor: not-allowed;">
+                </div>
+                <div class="form-group">
+                    <label>Password (Optional)</label>
+                    <input type="password" name="password" placeholder="For AutoAuth">
+                </div>
+                <div class="form-group checkbox-group">
+                    <label><input type="checkbox" name="registerConfirm"> Register with Confirm (/reg pass pass)</label>
+                </div>
+                <div class="form-group">
+                    <label>Version</label>
+                    <input type="text" name="version">
+                </div>
+                <div class="form-group">
+                    <label>Discord Webhook URL (Optional)</label>
+                    <input type="text" name="webhookUrl">
+                </div>
+
+                <div class="form-group checkbox-group">
+                    <label><input type="checkbox" name="firstPerson"> First Person View</label>
+                </div>
+                <div class="form-group checkbox-group">
+                    <label><input type="checkbox" name="autoReconnect" checked> Auto Reconnect</label>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" id="cancelEditBot" class="btn-secondary">Cancel</button>
+                    <button type="submit" class="btn-primary">Update Bot</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>

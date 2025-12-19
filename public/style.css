@@ -1,0 +1,1401 @@
+:root {
+    --bg-color: #0f172a;
+    --glass-bg: rgba(30, 41, 59, 0.6);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --primary: #3b82f6;
+    --primary-hover: #2563eb;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --accent-warm: #f59e0b;
+    --danger: #ef4444;
+    --success: #22c55e;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', sans-serif;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    height: 100vh;
+    overflow: hidden;
+    background-image: radial-gradient(circle at 50% 50%, #1e293b 0%, #0f172a 100%);
+}
+
+.app-container {
+    display: flex;
+    height: 100%;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 260px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    border-right: 1px solid var(--glass-border);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.logo {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 20px;
+    background: linear-gradient(to right, var(--primary), var(--accent-warm));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.bot-list-header {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    letter-spacing: 0.05em;
+}
+
+.bot-list {
+    flex: 1;
+    overflow-y: auto;
+    margin-bottom: 20px;
+}
+
+.bot-item {
+    padding: 12px;
+    margin-bottom: 8px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid transparent;
+}
+
+.bot-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.bot-item.active {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: var(--primary);
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+}
+
+.status-dot.online {
+    background: var(--success);
+    box-shadow: 0 0 8px var(--success);
+}
+
+.status-dot.offline {
+    background: var(--danger);
+}
+
+.status-dot.connecting {
+    background: var(--accent-warm);
+}
+
+.add-bot-btn {
+    width: 100%;
+    padding: 12px;
+    background: var(--primary);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.add-bot-btn:hover {
+    background: var(--primary-hover);
+}
+
+/* Main Content */
+.main-content {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 15px 20px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    border-radius: 12px;
+    border: 1px solid var(--glass-border);
+}
+
+.bot-info h2 {
+    font-size: 1.2rem;
+    margin-bottom: 4px;
+}
+
+.status-indicator {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.stats-panel {
+    display: flex;
+    gap: 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+}
+
+.stat-item span {
+    color: var(--accent-warm);
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+    flex: 1;
+    min-height: 0;
+}
+
+.column {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    min-height: 0;
+}
+
+.card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.card h3 {
+    margin-bottom: 15px;
+    font-size: 1rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Viewer */
+.viewer-card {
+    flex: 0 0 250px;
+}
+
+.viewer-container {
+    flex: 1;
+    background: #000;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.placeholder {
+    color: var(--text-muted);
+}
+
+/* Chat */
+.chat-card {
+    flex: 1 0 50vh;
+    /* Grow, don't shrink below 50vh */
+    display: flex;
+    flex-direction: column;
+    min-height: 500px;
+    /* Enforce substantial minimum */
+}
+
+.chat-container {
+    flex: 1;
+    position: relative;
+    min-height: 0;
+    margin-bottom: 10px;
+}
+
+.chat-box {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 8px;
+    padding: 10px;
+    overflow-y: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+.chat-message {
+    margin-bottom: 4px;
+    word-wrap: break-word;
+}
+
+.chat-message.system {
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.log-tag {
+    color: var(--accent-warm);
+    font-weight: bold;
+    margin-right: 5px;
+}
+
+/* Minecraft Colors */
+.mc-black {
+    color: #000000;
+}
+
+.mc-dark_blue {
+    color: #0000AA;
+}
+
+.mc-dark_green {
+    color: #00AA00;
+}
+
+.mc-dark_aqua {
+    color: #00AAAA;
+}
+
+.mc-dark_red {
+    color: #AA0000;
+}
+
+.mc-dark_purple {
+    color: #AA00AA;
+}
+
+.mc-gold {
+    color: #FFAA00;
+}
+
+.mc-gray {
+    color: #AAAAAA;
+}
+
+.mc-dark_gray {
+    color: #555555;
+}
+
+.mc-blue {
+    color: #5555FF;
+}
+
+.mc-green {
+    color: #55FF55;
+}
+
+.mc-aqua {
+    color: #55FFFF;
+}
+
+.mc-red {
+    color: #FF5555;
+}
+
+.mc-light_purple {
+    color: #FF55FF;
+}
+
+.mc-yellow {
+    color: #FFFF55;
+}
+
+.mc-white {
+    color: #FFFFFF;
+}
+
+.chat-input-area {
+    display: flex;
+    gap: 10px;
+}
+
+#chatInput {
+    flex: 1;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
+}
+
+#chatInput:focus {
+    outline: 1px solid var(--primary);
+}
+
+.chat-input-area button {
+    padding: 0 20px;
+    border-radius: 8px;
+    border: none;
+    background: var(--primary);
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.chat-input-area button:hover {
+    background: var(--primary-hover);
+}
+
+/* Controls */
+.controls-card {
+    flex: 0 0 auto;
+}
+
+.control-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+.movement-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.d-pad {
+    display: grid;
+    grid-template-columns: repeat(3, 45px);
+    grid-template-rows: repeat(2, 45px);
+    gap: 5px;
+}
+
+.btn-move {
+    width: 100%;
+    height: 100%;
+    border-radius: 8px;
+    border: none;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background 0.1s;
+}
+
+.btn-move:active,
+.btn-move.active {
+    background: var(--primary);
+}
+
+.up {
+    grid-column: 2;
+    grid-row: 1;
+}
+
+.left {
+    grid-column: 1;
+    grid-row: 2;
+}
+
+.down {
+    grid-column: 2;
+    grid-row: 2;
+}
+
+.right {
+    grid-column: 3;
+    grid-row: 2;
+}
+
+.actions {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-action {
+    padding: 10px 15px;
+    border-radius: 8px;
+    border: none;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    cursor: pointer;
+    font-size: 0.8rem;
+}
+
+.btn-action:active,
+.btn-action.active {
+    background: var(--primary);
+}
+
+/* Sliders */
+.sliders {
+    margin-bottom: 20px;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.slider-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 10px;
+}
+
+.slider-group label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 5px;
+}
+
+input[type=range] {
+    width: 100%;
+}
+
+/* Feature Toggles */
+.feature-toggles {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.toggle-row {
+    display: flex;
+    gap: 10px;
+}
+
+.spammer-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 5px;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.spammer-controls h4 {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 5px;
+    text-transform: uppercase;
+}
+
+.spammer-list {
+    display: flex;
+    flex-direction: column;
+    border: none;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    align-self: flex-start;
+}
+
+.spammer-settings {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.spammer-settings input[type="number"],
+.spammer-settings select {
+    flex: 1;
+    padding: 6px;
+    border-radius: 4px;
+    border: 1px solid var(--glass-border);
+    background: rgba(0, 0, 0, 0.2);
+    color: white;
+}
+
+.checkbox-label {
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+}
+
+.checkbox-label input {
+    width: auto;
+}
+
+.btn {
+    padding: 10px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+    transition: opacity 0.2s;
+    flex: 1;
+}
+
+.action-btn {
+    background: var(--accent-warm);
+    color: white;
+}
+
+.toggle-btn {
+    background: var(--primary);
+    color: white;
+}
+
+.danger-btn {
+    background: var(--danger);
+    color: white;
+}
+
+.warning-btn {
+    background: #f97316;
+    color: white;
+}
+
+/* Orange */
+.btn:hover {
+    opacity: 0.9;
+}
+
+/* Players */
+.players-card {
+    flex: 0 0 200px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.player-list {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.player-item {
+    padding: 6px 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.player-head {
+    width: 20px;
+    height: 20px;
+    background: #ccc;
+    border-radius: 2px;
+}
+
+/* Inventory */
+.inventory-card {
+    flex: 0 0 200px;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.inventory-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(36px, 1fr));
+    gap: 4px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+.inv-slot {
+    width: 36px;
+    height: 36px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--glass-border);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    position: relative;
+}
+
+.inv-count {
+    position: absolute;
+    bottom: 1px;
+    right: 2px;
+    font-size: 0.6rem;
+    color: white;
+    text-shadow: 1px 1px 0 #000;
+}
+
+/* Modal */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-content {
+    background: #1e293b;
+    padding: 30px;
+    border-radius: 16px;
+    border: 1px solid var(--glass-border);
+    width: 400px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid var(--glass-border);
+    background: rgba(0, 0, 0, 0.2);
+    color: white;
+}
+
+.form-group select option {
+    background: #1e293b;
+    color: white;
+}
+
+.checkbox-group label {
+    display: flex;
+    font-size: 0.9rem;
+    /* Increased from 0.75rem to match checkbox */
+    cursor: pointer;
+    align-self: flex-start;
+    align-items: center;
+    /* Fix alignment */
+    gap: 10px;
+    /* Space between box and text */
+}
+
+.checkbox-group input {
+    margin: 0;
+    /* Remove default margins */
+    flex-shrink: 0;
+    /* Prevent squishing */
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-secondary {
+    background: transparent;
+    color: var(--text-muted);
+    padding: 10px 20px;
+    border: none;
+    cursor: pointer;
+}
+
+/* Feature Toggles & Spammer */
+.feature-toggles {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 20px;
+    border-top: 1px solid var(--glass-border);
+    padding-top: 15px;
+}
+
+.toggle-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.toggle-btn {
+    flex: 1;
+    min-width: 100px;
+    font-size: 0.8rem;
+}
+
+.spammer-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.spammer-controls h4 {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.spammer-list {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.spammer-item {
+    display: flex;
+    gap: 5px;
+}
+
+.spammer-item input {
+    flex: 1;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--glass-border);
+    color: white;
+    padding: 5px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+}
+
+.spammer-item .btn-remove {
+    background: var(--danger);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    width: 24px;
+    cursor: pointer;
+}
+
+.spammer-settings {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.spammer-settings input[type="number"],
+.spammer-settings select {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--glass-border);
+    color: white;
+    padding: 5px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    flex: 1;
+}
+
+.spammer-settings input[type="range"] {
+    flex: 1;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+/* Notification styles */
+@keyframes slideIn {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+
+    to {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+}
+
+/* 1. Entry Animations (More Pop) */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes popIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+
+    50% {
+        transform: scale(1.05);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* 1. Entry Animations (Refined) */
+/* Removed .bot-item to prevent re-render flicker */
+/* Only animate new messages (not history) */
+.chat-message:not(.no-anim),
+.notification {
+    animation: fadeInUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.modal-content {
+    animation: popIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+}
+
+/* 2. Mouse Spotlight Effect (Crisper) */
+.btn,
+.card,
+.nav-input,
+.bot-item {
+    position: relative;
+    overflow: hidden;
+}
+
+.btn::after,
+.card::after,
+.bot-item::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    /* 
+       Using pixels directly from JS now. 
+       Increased size for playfulness (120px). 
+       Added 2nd stop for softer edge.
+    */
+    background: radial-gradient(circle 120px at var(--mouse-x) var(--mouse-y),
+            rgba(255, 255, 255, 0.4),
+            rgba(255, 255, 255, 0.1) 40%,
+            transparent 100%);
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+    z-index: 2;
+    mix-blend-mode: overlay;
+}
+
+/* Playful Hover State */
+.btn:hover::after,
+.card:hover::after,
+.bot-item:hover::after {
+    opacity: 1;
+}
+
+/* Light Theme Spotlight Adjustment */
+body.theme-sky .btn::after,
+body.theme-mint .btn::after,
+body.theme-rose .btn::after,
+body.theme-sky .card::after,
+body.theme-mint .card::after,
+body.theme-rose .card::after {
+    background: radial-gradient(circle 100px at var(--mouse-x) var(--mouse-y),
+            rgba(0, 0, 0, 0.2),
+            transparent 100%);
+    mix-blend-mode: multiply;
+}
+
+.btn:hover::after,
+.card:hover::after {
+    opacity: 1;
+}
+
+/* Global Click "Shrink" Effect */
+button:active,
+.btn:active,
+.nav-btn:active,
+.bot-item:active {
+    transform: scale(0.95) !important;
+    transition: transform 0.05s ease-out;
+}
+
+/* Light Theme Spotlight Adjustment (Smaller too) */
+body.theme-sky .btn::after,
+body.theme-mint .btn::after,
+body.theme-rose .btn::after {
+    background: radial-gradient(circle 50px at var(--mouse-x, 50%) var(--mouse-y, 50%),
+            rgba(0, 0, 0, 0.2),
+            transparent 100%);
+    mix-blend-mode: multiply;
+}
+
+/* 3. Parallax (Optimized) */
+.dashboard-container {
+    transition: transform 0.1s cubic-bezier(0.2, 0.8, 0.2, 1);
+    transform: translate(var(--parallax-x, 0px), var(--parallax-y, 0px));
+    will-change: transform;
+}
+
+/* 4. View Transitions (Theme Wipe - Slower & Distinct) */
+::view-transition-group(root) {
+    animation-duration: 0.8s;
+    /* Slower */
+}
+
+::view-transition-new(root) {
+    animation-name: revealCircle;
+    mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+    animation: none;
+    filter: brightness(0.5);
+    /* Dim old theme during wipe */
+}
+
+@keyframes revealCircle {
+    from {
+        clip-path: circle(0% at 0 0);
+    }
+
+    to {
+        clip-path: circle(150% at 0 0);
+    }
+}
+
+/* Control button active state */
+[data-control].active {
+    background: var(--primary) !important;
+    transform: scale(0.95);
+    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Navigation Compact UI */
+.nav-container {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    width: 100%;
+}
+
+.nav-input {
+    flex: 1;
+    width: 100%;
+    padding: 12px 5px;
+    border-radius: 6px;
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
+    font-size: 1rem;
+    text-align: center;
+    min-width: 40px;
+    /* Prevent collapse */
+}
+
+/* Chrome/Safari - Hide Spinners */
+.nav-input::-webkit-outer-spin-button,
+.nav-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Firefox */
+.nav-input[type=number] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.nav-input:focus {
+    outline: 1px solid var(--primary);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.nav-btn {
+    flex: 0 0 70px;
+    /* Wider button */
+    height: 44px;
+    /* Taller to match inputs */
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: bold;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    margin-left: 2px;
+}
+
+.nav-btn.go {
+    background: var(--success);
+}
+
+.nav-btn.stop {
+    background: var(--danger);
+}
+
+.nav-btn:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+/* 5. Custom Checkbox UI (Premium) */
+input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--glass-border);
+    border-radius: 4px;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s;
+    vertical-align: middle;
+}
+
+input[type="checkbox"]:checked {
+    background: var(--primary);
+    border-color: var(--primary);
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
+}
+
+input[type="checkbox"]:checked::after {
+    content: '✔';
+    position: absolute;
+    color: white;
+    font-size: 14px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+/* Light Theme Checkbox Fix */
+body.theme-sky input[type="checkbox"],
+body.theme-mint input[type="checkbox"],
+body.theme-rose input[type="checkbox"] {
+    background: rgba(0, 0, 0, 0.05);
+    border-color: rgba(0, 0, 0, 0.2);
+}
+
+body.theme-sky input[type="checkbox"]:checked,
+body.theme-mint input[type="checkbox"]:checked,
+body.theme-rose input[type="checkbox"]:checked {
+    background: var(--primary) !important;
+    border-color: var(--primary) !important;
+}
+
+body.theme-sky input[type="checkbox"]:checked::after,
+body.theme-mint input[type="checkbox"]:checked::after,
+body.theme-rose input[type="checkbox"]:checked::after {
+    content: '✔';
+    /* Ensure content is set */
+    color: #ffffff !important;
+    font-weight: 900;
+    text-shadow: 0 0 2px rgba(0, 0, 0, 0.8);
+    /* Very strong shadow */
+    font-size: 14px;
+    display: block;
+    /* Ensure visibility */
+}
+
+/* 6. Plugin Toggle Animation */
+input[type="checkbox"].plugin-toggle {
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+input[type="checkbox"].plugin-toggle:checked {
+    transform: scale(1.1);
+}
+
+/* 8. Compact Controls */
+.centered-controls {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 15px;
+    flex-wrap: wrap;
+}
+
+.btn.compact,
+.btn-action.compact {
+    padding: 6px 16px;
+    font-size: 13px;
+    min-width: 80px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--glass-border);
+    border-radius: 3px;
+    transition: background 0.2s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+}
+
+/* Light Theme Scrollbar */
+body.theme-sky ::-webkit-scrollbar-thumb,
+body.theme-mint ::-webkit-scrollbar-thumb,
+body.theme-rose ::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+body.theme-sky ::-webkit-scrollbar-thumb:hover,
+body.theme-mint ::-webkit-scrollbar-thumb:hover,
+body.theme-rose ::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.4);
+}
+
+/* 7. Smooth Plugin Toggle Switch */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.1);
+    transition: .4s cubic-bezier(0.23, 1, 0.32, 1);
+    border-radius: 24px;
+    border: 1px solid var(--glass-border);
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    transition: .4s cubic-bezier(0.23, 1, 0.32, 1);
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+input:checked+.slider {
+    background-color: var(--primary);
+    border-color: var(--primary);
+}
+
+input:focus+.slider {
+    box-shadow: 0 0 1px var(--primary);
+}
+
+input:checked+.slider:before {
+    transform: translateX(20px);
+}
+
+/* Light Theme Switch Fix */
+body.theme-sky .slider,
+body.theme-mint .slider,
+body.theme-rose .slider {
+    background-color: rgba(0, 0, 0, 0.1);
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+body.theme-sky input:checked+.slider,
+body.theme-mint input:checked+.slider,
+body.theme-rose input:checked+.slider {
+    background-color: var(--primary);
+}
+
+/* Spammer Config UI */
+.spammer-list {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.spammer-input-group {
+    display: flex;
+    width: 100%;
+    gap: 8px;
+    margin-bottom: 8px;
+    box-sizing: border-box;
+}
+
+.spammer-input-group input {
+    flex: 1;
+    min-width: 0;
+    /* Important for flex containers */
+    padding: 8px;
+    background: #2a2a2a;
+    border: 1px solid #333;
+    border-radius: 4px;
+    color: white;
+    box-sizing: border-box;
+}
+
+.btn-icon {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 4px;
+    border-radius: 4px;
+    color: #888;
+    transition: all 0.2s;
+}
+
+/* Bot Status Indicator */
+.bot-status-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: #555;
+    /* Default/Connecting */
+    transition: all 0.3s;
+    flex-shrink: 0;
+}
+
+.bot-status-indicator.online {
+    background-color: #22c55e;
+    box-shadow: 0 0 5px #22c55e;
+}
+
+.bot-status-indicator.offline {
+    background-color: #ef4444;
+}
+
+/* Avatar Polish */
+.bot-avatar {
+    width: 32px;
+    height: 32px;
+    background-size: cover;
+    background-position: center;
+    border-radius: 8px;
+    /* Softer corners */
+    background-color: #333;
+    /* Darker neutral background */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.bot-avatar.small {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    /* Circle for compact mode */
+}
+
+.btn-icon.delete:hover {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+}
+
+/* Compact Bot List Styles */
+.bot-item.compact {
+    padding: 8px;
+    /* Reduced from 12px */
+    margin-bottom: 6px;
+    /* Reduced */
+}
+
+.bot-avatar.small {
+    width: 24px;
+    height: 24px;
+}
+
+.btn-icon.small {
+    padding: 2px;
+}

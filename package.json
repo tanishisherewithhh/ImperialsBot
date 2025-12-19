@@ -1,0 +1,31 @@
+{
+  "name": "imperialsbot",
+  "version": "1.0.0",
+  "description": "Multi-bot management tool for Minecraft with web interface",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "keywords": [
+    "minecraft",
+    "bot",
+    "mineflayer",
+    "webui"
+  ],
+  "author": "tanishisherewith",
+  "license": "GPL-3.0-only",
+  "type": "module",
+  "dependencies": {
+    "canvas": "^3.2.0",
+    "express": "^5.2.1",
+    "minecraft-data": "^3.101.0",
+    "mineflayer": "^4.33.0",
+    "mineflayer-auto-eat": "^5.0.3",
+    "mineflayer-pathfinder": "^2.4.5",
+    "mineflayer-pvp": "^1.3.2",
+    "prismarine-viewer": "^1.33.0",
+    "socket.io": "^4.8.1",
+    "vec3": "^0.1.10"
+  }
+}

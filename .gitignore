@@ -1,0 +1,27 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.npmrc
+
+# Logs
+log.txt
+*.log
+
+# Sensitive/Local Config
+bots.json
+settings.json
+.env
+
+# IDEs
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.swo
+
+# Project specific
+tmp/
+public/temp/
