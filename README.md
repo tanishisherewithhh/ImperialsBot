@@ -56,6 +56,7 @@ Distributed under the GNU General Public License v3. See LICENSE for more detail
   ![Light Blue theme](https://github.com/user-attachments/assets/e80ae31b-dd1e-44bb-bf13-26fed8958344)
 
   <img width="1917" height="910" alt="Rest of the UI" src="https://github.com/user-attachments/assets/6687a925-7aba-46fe-a9ff-082c7efd6656" />
+  <img width="540" height="197" alt="Discord Output" src="https://github.com/user-attachments/assets/83f0b955-cb0d-4fc1-92f3-9f1c383251b3" />
 
 </details>
 
