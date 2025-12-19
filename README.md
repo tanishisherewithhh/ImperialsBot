@@ -45,3 +45,17 @@ Please keep code clean and stick to the existing structure. No complex setup is 
 Distributed under the GNU General Public License v3. See LICENSE for more details.
 
 #### Author: tanishisherewith
+
+
+### Latest previews
+<details>
+  <summary>Click to view the images</summary>
+
+  ![Default theme](https://github.com/user-attachments/assets/e4d6d450-bff4-42eb-9db6-42b6172a6142)
+  ![SimpleDark theme](https://github.com/user-attachments/assets/1b596c29-eb36-4388-bcea-3f14d253304d)
+  ![Light Blue theme](https://github.com/user-attachments/assets/e80ae31b-dd1e-44bb-bf13-26fed8958344)
+
+  <img width="1917" height="910" alt="Rest of the UI" src="https://github.com/user-attachments/assets/6687a925-7aba-46fe-a9ff-082c7efd6656" />
+
+</details>
+
