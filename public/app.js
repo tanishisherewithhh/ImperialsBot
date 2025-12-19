@@ -383,7 +383,6 @@ function renderPlayerList(players) {
             el.dataset.username = p.username;
             el.style.cssText = 'display:flex; align-items:center; gap:8px; padding:4px; animate: fadeIn 0.2s;';
             el.innerHTML = `
-                <img src="https://mc-heads.net/avatar/${p.username}" style="width:20px; height:20px; border-radius:4px;">
                 <span style="flex:1;">${p.username}</span>
                 <span class="ping-text" style="color:var(--text-muted); font-size:0.8rem;">${p.ping}ms</span>
             `;
