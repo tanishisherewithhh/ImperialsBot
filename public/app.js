@@ -452,21 +452,15 @@ function selectBot(username) {
         else el.classList.remove('active');
     });
 
-    // Clear Chat
     chatBox.innerHTML = '';
     const welcome = document.createElement('div');
     welcome.className = 'chat-message info';
     welcome.innerText = `Switched to ${username} `;
     chatBox.appendChild(welcome);
 
-    // Update Header
     const botNameHeader = document.getElementById('currentBotName');
     if (botNameHeader) botNameHeader.innerText = username;
 
-    // Request initial data update
-    // We don't have a specific request event, but we can rely on periodic updates.
-    // Or we could emit 'getBotData'? No, server pushes.
-    // Request Data
     socket.emit('requestBotData', { username });
 }
 
@@ -603,7 +597,6 @@ addBotForm.onsubmit = (e) => {
 };
 
 function openEditModal(bot) {
-    // Populate form
     const form = editBotForm;
     form.username.value = bot.username;
     form.host.value = bot.host;
@@ -613,11 +606,10 @@ function openEditModal(bot) {
     if (form.auth) form.auth.value = bot.config.auth || 'offline';
     if (form.webhookUrl) form.webhookUrl.value = bot.config.webhookUrl || '';
 
-    // Checkboxes
+
     if (form.firstPerson) form.firstPerson.checked = !!bot.config.firstPerson;
     if (form.autoReconnect) form.autoReconnect.checked = !!bot.config.autoReconnect;
 
-    // Show
     editBotModal.classList.add('active');
 }
 
@@ -626,15 +618,9 @@ editBotForm.onsubmit = (e) => {
     const formData = new FormData(editBotForm);
     const data = Object.fromEntries(formData.entries());
 
-    // Fix types
     data.port = parseInt(data.port);
     data.firstPerson = formData.get('firstPerson') === 'on';
     data.autoReconnect = formData.get('autoReconnect') === 'on';
-    // Username is read-only usually, or used as key
-    // data.username is from hidden input or disabled input
-
-    // If username is disabled, it won't be in formData, so we might need to grab it manually or ensure input is just readonly
-    // Assuming input is name="username" readonly
 
     socket.emit('editBot', data);
     editBotModal.classList.remove('active');
