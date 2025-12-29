@@ -1,47 +1,81 @@
-## ImperialBot
+# ImperialBot
 
-This is a multi-bot manager for Minecraft with a web dashboard. It allows you to run several bots at once and control them through a clean interface.
+ImperialBot is a multi-bot manager for Minecraft with a web dashboard. It uses [Mineflayer](https://github.com/PrismarineJS/mineflayer) to handle bot logic and allows you to control several bots at once through a browser.
+
+---
+
+### How it works
+
+The project is split into a few main parts:
+
+1.  **Bot Manager**: Handles the lifecycle of your bots.
+2.  **Web Server**: Uses Socket.io to talk to the dashboard in real-time.
+3.  **Features**: Built-in logic like Killaura and AutoEat.
+4.  **Plugins**: A system for adding your own scripts without touching the core code.
+
+---
+
+### Plugin System
+
+You can add custom logic by placing JavaScript files in the `src/plugins/` folder. The bot will automatically detect new files and reload them while the server is running. Every plugin gets access to a simple API for logging and sending chat messages.
+
+#### Example: Custom Command Plugin
+
+This example shows how to make a bot respond to a `!help` command:
+
+```javascript
+export default class HelpPlugin {
+    constructor() {
+        this.name = 'HelpPlugin';
+        this.description = 'Responds to !help and other commands';
+        this.enabled = true;
+        this.color = 'a'; // Green color in logs
+    }
+
+    init(bot, api) {
+        this.bot = bot;
+        this.api = api;
+
+        this.bot.on('chat', (username, message) => {
+            if (!this.enabled) return;
+            if (username === this.bot.username) return;
+
+            const msg = message.toLowerCase();
+
+            if (msg === '!help') {
+                this.api.log(`Responding to help request from ${username}`, 'info');
+                this.bot.chat(`Hello ${username}! Available commands: !help, !info`);
+            } else if (msg === '!info') {
+                this.bot.chat(`ImperialBot Instance v2.0`);
+            }
+        });
+    }
+
+    enable() {
+        this.enabled = true;
+        this.api.log('Plugin enabled.', 'success');
+    }
+
+    disable() {
+        this.enabled = false;
+        this.api.log('Plugin disabled.', 'warning');
+    }
+}
+```
+
+---
 
 ### Getting Started
 
-1. Set up Node.js
-If you don't have Node.js, run start.bat and it will try to install it for you using winget. Alternatively, download it from nodejs.org.
+1.  Make sure you have [Node.js](https://nodejs.org/) installed.
+2.  Run `start.bat` to install dependencies and start the server.
+3.  Go to `http://localhost:3000` in your browser.
 
-2. Run the application
-Just double click start.bat. It will install the required dependencies and start the server.
+For more details on what the bots can do, check the [Mineflayer Documentation](https://github.com/PrismarineJS/mineflayer/blob/master/docs/api.md).
 
-3. Access the Dashboard
-Once the server is running, open your browser and go to http://localhost:3000 (or whatever port you configured).
-
-### Features
-
-- Dashboard: Manage multiple bots from one page.
-- Visual Feed: See what your bots see in real-time.
-- Inventory: View and manage bot items.
-- Chat: Send and receive messages as the bot.
-- Movement: Control bots with WASD or click-to-move.
-- Plugins: Extend functionality with custom scripts.
-- Themes: Custom UI skins to change the look.
-- Discord: Webhook integration for alerts.
-
-### Logic and what are plugins
-
-The bot uses Mineflayer as the core engine. Features like Killaura, AutoEat, and AntiAFK are built in as standard components. 
-
-You can add custom logic in the src/plugins folder. Plugins are basically scripts that listen for bot events (like spawning or receiving a message) and react accordingly. 
-An example plugin ExamplePlugin.js is present in the folder to help you out.
-
-### How to Contribute
-
-If you want to help out:
-1. Fork the repo.
-2. Make your changes.
-3. Submit a pull request.
-
-Please keep code clean and stick to the existing structure. No complex setup is needed.
+---
 
 ### License
+This project is licensed under the GNU General Public License v3.
 
-Distributed under the GNU General Public License v3. See LICENSE for more details.
-
-#### Author: tanishisherewith
+**Author**: tanishisherewith
