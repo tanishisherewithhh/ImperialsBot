@@ -28,6 +28,16 @@ export class BotClient extends EventEmitter {
             return obj.value;
         }
 
+        // Handle NBT/Compound objects
+        if (obj.value) {
+            if (Array.isArray(obj.value)) {
+                return obj.value.map(v => this.extractText(v)).join('');
+            }
+            if (typeof obj.value === 'object') {
+                return this.extractText(obj.value);
+            }
+        }
+
         let text = '';
 
         if (obj.text !== undefined) {
@@ -234,8 +244,6 @@ export class BotClient extends EventEmitter {
 
         this.bot.on('chat', (username, message, translate, jsonMsg, matches) => {
             this.lastChatTime = Date.now();
-            // console.log(`[Chat] ${username}: ${message}`); 
-            // Log everything received from server (including own messages echoed back)
             this.log(`${username}: ${message}`, 'chat');
             this.emit('chat', { username, message, message });
             this.addToHistory(username, message, 'chat');
@@ -288,16 +296,16 @@ export class BotClient extends EventEmitter {
             // Timelock Deduplication Strategy
             // Delay processing by 50ms. If a 'chat' event fired in the meantime (or just before),
             // we assume this message frame was the source of that chat event, and ignore it.
-            setTimeout(() => {
+            /*setTimeout(() => {
                 const timeSinceChat = Date.now() - (this.lastChatTime || 0);
                 if (timeSinceChat < 200) {
                     // A chat event occurred recently (within 200ms window surrounding this message)
                     return;
                 }
-
-                this.emit('chat', { username: '[Server]', message: text });
-                this.addToHistory('[Server]', text, 'chat');
-            }, 50);
+*/
+            this.emit('chat', { username: '[Server]', message: text });
+            this.addToHistory('[Server]', text, 'chat');
+            //}, 50);
         });
 
     }
