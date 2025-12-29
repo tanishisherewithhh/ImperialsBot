@@ -591,7 +591,7 @@ addBotForm.onsubmit = (e) => {
     data.firstPerson = formData.get('firstPerson') === 'on';
     data.autoReconnect = formData.get('autoReconnect') === 'on';
 
-    socket.emit('addBot', data);
+    socket.emit('createBot', data);
     addBotModal.classList.remove('active');
     addBotForm.reset();
 };
