@@ -49,7 +49,6 @@ export class Navigation extends BaseFeature {
 
             this.botClient.updateStatus(`Moving to ${x},${y},${z} (Dist: ${dist})`);
 
-            // Heuristic check for arrival (GoalBlock usually handles this, but good for status)
             if (dist < 2) {
                 // Let pathfinder finish naturally
             }
@@ -73,7 +72,6 @@ export class Navigation extends BaseFeature {
     }
 
     follow(target) {
-        // ... (existing logic if needed, or update similarly)
         const goal = new goals.GoalFollow(target, 1);
         this.botClient.bot.pathfinder.setGoal(goal, true);
     }
