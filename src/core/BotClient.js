@@ -17,66 +17,38 @@ export class BotClient extends EventEmitter {
         this.viewerPort = null;
         this.reconnectTimer = null;
         this.manuallyStopped = false;
+        this.recentMessages = new Set();
     }
 
     extractText(obj) {
         if (!obj) return '';
         if (typeof obj === 'string') return obj;
-
-        if (typeof obj === 'number' || typeof obj === 'boolean') {
-            return String(obj);
-        }
-
-        if (obj.type === 'string' && typeof obj.value === 'string') {
-            return obj.value;
-        }
-
-        // Handle NBT/Compound objects
-        if (obj.value) {
-            if (Array.isArray(obj.value)) {
-                return obj.value.map(v => this.extractText(v)).join('');
-            }
-            if (typeof obj.value === 'object') {
-                return this.extractText(obj.value);
-            }
-        }
-
-        let text = '';
-
-        if (obj.text !== undefined) {
-            text += this.extractText(obj.text);
-        }
-
-        if (obj.translate) {
-            text += obj.translate;
-            if (obj.with && Array.isArray(obj.with)) {
-                const args = obj.with.map(w => this.extractText(w)).filter(t => t);
-                if (args.length > 0) {
-                    text += ' ' + args.join(' ');
-                }
-            }
-        }
-
-        if (obj.extra && Array.isArray(obj.extra)) {
-            text += obj.extra.map(e => this.extractText(e)).join('');
-        }
-
-        if (Array.isArray(obj)) {
-            text += obj.map(item => this.extractText(item)).join('');
-        }
-
-        if (!text && obj.value !== undefined) {
-            text = String(obj.value);
-        }
-
-        if (!text && typeof obj.toString === 'function') {
+        if (typeof obj.toString === 'function') {
             const str = obj.toString();
-            if (str !== '[object Object]') {
-                text = str;
-            }
+            if (str !== '[object Object]') return str;
+        }
+        return '';
+    }
+
+    emitChat(username, message, type = 'chat') {
+        if (!message) return;
+
+        // Clean up text
+        message = message.trim();
+        if (message.length === 0) return;
+
+        // Deduplication Logic
+        const msgKey = `${username}:${message}`;
+        if (this.recentMessages.has(msgKey)) {
+            return; // Skip duplicate
         }
 
-        return text;
+        this.recentMessages.add(msgKey);
+        setTimeout(() => this.recentMessages.delete(msgKey), 500);
+
+        this.log(`${username}: ${message}`, type);
+        this.emit('chat', { username, message, type });
+        this.addToHistory(username, message, type);
     }
 
     parseReason(reason) {
@@ -279,18 +251,11 @@ export class BotClient extends EventEmitter {
         this.bot.on('spawn', emitPlayerList);
 
         this.bot.on('chat', (username, message, translate, jsonMsg, matches) => {
-            this.lastChatTime = Date.now();
-            this.log(`${username}: ${message}`, 'chat');
-            this.emit('chat', { username, message, message });
-            this.addToHistory(username, message, 'chat');
+            this.emitChat(username, message, 'chat');
         });
 
         this.bot.on('whisper', (username, message, translate, jsonMsg, matches) => {
-            this.lastChatTime = Date.now();
-            const content = `[WHISPER] ${username} whispers: ${message}`;
-            this.log(content, 'whisper');
-            this.emit('chat', { username: `[WHISPER] ${username}`, message, content });
-            this.addToHistory(`[WHISPER] ${username}`, message, 'whisper');
+            this.emitChat(`[WHISPER] ${username}`, message, 'whisper');
         });
 
         this.bot.on('death', () => {
@@ -317,31 +282,11 @@ export class BotClient extends EventEmitter {
         this.bot.on('message', (jsonMsg, position) => {
             if (position === 'game_info') return;
 
-            const isChatOrWhisper = jsonMsg.translate && (
-                jsonMsg.translate.startsWith('chat.type') ||
-                jsonMsg.translate.startsWith('commands.message.display')
-            );
-
-            if (isChatOrWhisper) {
-                return; // Try to catch standard chat
-            }
-
-            const text = this.extractText(jsonMsg);
+            // Use mineflayer's built-in conversion to plain text for accuracy
+            const text = jsonMsg.toString();
             if (!text || text.trim().length === 0) return;
 
-            // Timelock Deduplication Strategy
-            // Delay processing by 50ms. If a 'chat' event fired in the meantime (or just before),
-            // we assume this message frame was the source of that chat event, and ignore it.
-            /*setTimeout(() => {
-                const timeSinceChat = Date.now() - (this.lastChatTime || 0);
-                if (timeSinceChat < 200) {
-                    // A chat event occurred recently (within 200ms window surrounding this message)
-                    return;
-                }
-        */
-            this.emit('chat', { username: '[Server]', message: text });
-            this.addToHistory('[Server]', text, 'chat');
-            //}, 50);
+            this.emitChat('[Server]', text, 'chat');
         });
 
     }

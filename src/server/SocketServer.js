@@ -251,7 +251,7 @@ export class SocketServer {
                             killaura: combat ? combat.killauraEnabled : false,
                             antiAfk: antiafk ? antiafk.enabled : false,
                             autoAuth: autoauth ? autoauth.enabled : false,
-                            spammer: spammer ? spammer.enabled : false,
+                            spammer: spammer ? spammer.config.enabled : false,
                             autoReconnect: bot.config.autoReconnect !== false
                         }
                     });
@@ -392,7 +392,7 @@ export class SocketServer {
                 antiAfkEnabled: antiafk ? antiafk.enabled : false,
                 autoAuthEnabled: autoauth ? autoauth.enabled : false,
                 autoReconnectEnabled: bot.config.autoReconnect,
-                spammerEnabled: bot.featureManager.getFeature('spammer') ? bot.featureManager.getFeature('spammer').enabled : false
+                spammerEnabled: bot.featureManager.getFeature('spammer') ? bot.featureManager.getFeature('spammer').config.enabled : false
             });
 
             const spammer = bot.featureManager.getFeature('spammer');
@@ -428,7 +428,7 @@ export class SocketServer {
             killauraEnabled: killaura ? killaura.killauraEnabled : false,
             antiAfkEnabled: antiafk ? antiafk.enabled : false,
             autoAuthEnabled: autoauth ? autoauth.enabled : false,
-            spammerEnabled: spammer ? spammer.enabled : false,
+            spammerEnabled: spammer ? spammer.config.enabled : false,
             autoReconnectEnabled: bot.config.autoReconnect !== false
         });
     }

@@ -515,11 +515,18 @@ socket.on('botChat', (payload) => {
     // payload: { username, message, sender }
     if (currentBot !== payload.username) return;
 
-    // Construct message object compatible with history
+    // UI-side deduplication
+    const lastMsg = chatBox.lastElementChild;
+    const now = Date.now();
+    if (lastMsg && lastMsg.dataset.rawMessage === payload.message) {
+        const lastTime = parseInt(lastMsg.dataset.timestamp);
+        if ((now - lastTime) < 500) return; // Skip duplicate
+    }
+
     const msgObj = {
         message: payload.message,
-        type: 'chat', // or infer from content
-        timestamp: Date.now()
+        type: 'chat',
+        timestamp: now
     };
     renderChatMessage(msgObj);
     chatBox.scrollTop = chatBox.scrollHeight;
@@ -528,6 +535,10 @@ socket.on('botChat', (payload) => {
 function renderChatMessage(msg) {
     const div = document.createElement('div');
     div.className = `chat-message ${msg.type || 'info'}`;
+
+    // Store metadata for deduplication
+    div.dataset.rawMessage = msg.message;
+    div.dataset.timestamp = msg.timestamp || Date.now();
 
     const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
 
@@ -837,9 +848,8 @@ spammerBtn.onclick = () => {
         showNotification('Please select a bot first');
         return;
     }
-    // spammerEnabled = !spammerEnabled; // We'll let the server sync this
-    // updateToggleBtns(); 
-
+    const isCurrentlyActive = spammerBtn.classList.contains('active');
+    const newState = !isCurrentlyActive;
 
     const inputs = spammerList.querySelectorAll('input');
     const messages = Array.from(inputs).map(input => input.value).filter(v => v.trim() !== '');
@@ -848,7 +858,7 @@ spammerBtn.onclick = () => {
         username: currentBot,
         action: 'toggleSpammer',
         payload: {
-            enabled: spammerEnabled,
+            enabled: newState,
             config: {
                 messages: messages,
                 delay: parseInt(spammerDelay.value),
