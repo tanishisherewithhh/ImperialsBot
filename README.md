@@ -18,6 +18,7 @@ The project is split into a few main parts:
 ### Plugin System
 
 You can add custom logic by placing JavaScript files in the `src/plugins/` folder. The bot will automatically detect new files and reload them while the server is running. Every plugin gets access to a simple API for logging and sending chat messages.
+> There is [ExamplePlugin.js](https://github.com/tanishisherewithhh/ImperialsBot/blob/main/ExamplePlugin.js) that explains the structure and API of plugins in more detail.
 
 #### Example: Custom Command Plugin
 
