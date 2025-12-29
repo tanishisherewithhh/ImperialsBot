@@ -68,22 +68,19 @@ export class BotClient extends EventEmitter {
 
     parseReason(reason) {
         if (!reason) return 'Unknown reason';
+
+        // Log raw reason for debugging
+        console.log('Raw Kick Reason:', reason);
+
         if (typeof reason === 'string') return reason;
 
         const extracted = this.extractText(reason);
-        if (extracted && extracted.trim().length > 0) {
+        if (extracted && extracted.trim().length > 0 && extracted !== '[object Object]') {
             return extracted;
         }
 
-        if (typeof reason.toString === 'function') {
-            const str = reason.toString();
-            if (str !== '[object Object]') {
-                return str;
-            }
-        }
-
         try {
-            return JSON.stringify(reason);
+            return JSON.stringify(reason, null, 2);
         } catch (e) {
             return 'Unable to parse kick reason';
         }

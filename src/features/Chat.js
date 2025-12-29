@@ -9,6 +9,7 @@ export class Chat extends BaseFeature {
     async send(message) {
         if (!message) return;
         try {
+            console.log(`[Chat Feature] Sending: ${message}`);
             this.bot.chat(message);
             // Logging is handled by the 'chat' event listener (server echo)
         } catch (err) {
