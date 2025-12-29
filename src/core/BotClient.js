@@ -2,6 +2,7 @@ import mineflayer from 'mineflayer';
 import { EventEmitter } from 'events';
 import { FeatureManager } from '../features/FeatureManager.js';
 import { PluginManager } from './PluginManager.js';
+import { ConfigLoader } from '../config/ConfigLoader.js';
 
 export class BotClient extends EventEmitter {
     constructor(config) {
@@ -14,6 +15,8 @@ export class BotClient extends EventEmitter {
         this.status = 'Created';
         this.chatHistory = [];
         this.viewerPort = null;
+        this.reconnectTimer = null;
+        this.manuallyStopped = false;
     }
 
     extractText(obj) {
@@ -115,9 +118,14 @@ export class BotClient extends EventEmitter {
 
 
     rejoin() {
-        this.log('Rejoining server...', 'warning');
+        this.log('Manual rejoin triggered...', 'warning');
+        this.manuallyStopped = false; // Reset flag
         this.stop();
-        setTimeout(() => this.init(), 1000);
+        if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+        this.reconnectTimer = setTimeout(() => {
+            this.reconnectTimer = null;
+            this.init();
+        }, 1000);
     }
 
     setLook(yaw, pitch) {
@@ -127,6 +135,23 @@ export class BotClient extends EventEmitter {
     }
 
     init() {
+        this.manuallyStopped = false; // Ensure it's false when starting
+        // Clear any pending reconnection timer if init is called manually
+        if (this.reconnectTimer) {
+            clearTimeout(this.reconnectTimer);
+            this.reconnectTimer = null;
+        }
+
+        // If we already have a bot instance, stop it properly first
+        if (this.bot) {
+            try {
+                this.bot.removeAllListeners();
+                this.bot.quit();
+            } catch (e) {
+                // Ignore errors during cleanup
+            }
+        }
+
         this.updateStatus('Connecting');
         this.bot = mineflayer.createBot({
             host: this.config.host,
@@ -173,6 +198,7 @@ export class BotClient extends EventEmitter {
         });
 
         this.bot.on('physicsTick', () => {
+            if (this.reconnectTimer) return; // Don't tick while reconnecting (safety)
             this.pluginManager.onTick();
 
             // Throttle updates (every 500ms)
@@ -191,16 +217,26 @@ export class BotClient extends EventEmitter {
             }
         });
 
-        this.bot.on('end', () => {
+        this.bot.on('end', async () => {
+            // If we manually stopped or a timer is already running, skip
+            if (this.manuallyStopped || this.reconnectTimer) return;
+
             this.updateStatus('Offline');
             this.emit('end');
             this.log(`${this.username} disconnected`, 'error');
 
-            this.log(`AutoReconnect Check: ${this.config.autoReconnect} (${typeof this.config.autoReconnect})`, 'info');
+            const isAuto = this.config.autoReconnect === true || this.config.autoReconnect === 'true';
+            if (isAuto) {
+                const settings = await ConfigLoader.loadSettings() || {};
+                const delay = parseInt(settings.reconnectDelay) || 5000;
 
-            if (this.config.autoReconnect === true || this.config.autoReconnect === 'true') {
-                this.updateStatus('Reconnecting in 5s...');
-                setTimeout(() => this.init(), 5000);
+                this.log(`Auto-reconnect triggered. Delay: ${delay}ms`, 'info');
+                this.updateStatus(`Reconnecting in ${delay / 1000}s...`);
+
+                this.reconnectTimer = setTimeout(() => {
+                    this.reconnectTimer = null;
+                    if (!this.manuallyStopped) this.init();
+                }, delay);
             }
         });
 
@@ -302,7 +338,7 @@ export class BotClient extends EventEmitter {
                     // A chat event occurred recently (within 200ms window surrounding this message)
                     return;
                 }
-*/
+        */
             this.emit('chat', { username: '[Server]', message: text });
             this.addToHistory('[Server]', text, 'chat');
             //}, 50);
@@ -318,6 +354,11 @@ export class BotClient extends EventEmitter {
     }
 
     stop() {
+        this.manuallyStopped = true;
+        if (this.reconnectTimer) {
+            clearTimeout(this.reconnectTimer);
+            this.reconnectTimer = null;
+        }
         if (this.bot) {
             this.bot.quit();
         }

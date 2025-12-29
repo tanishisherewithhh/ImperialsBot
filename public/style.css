@@ -144,6 +144,18 @@ body {
     backdrop-filter: blur(12px);
     border-radius: 12px;
     border: 1px solid var(--glass-border);
+    position: relative;
+}
+
+#settingsBtn {
+    transition: transform 0.3s ease, color 0.2s, background 0.2s;
+    z-index: 10;
+}
+
+#settingsBtn:hover {
+    transform: rotate(90deg);
+    color: var(--primary) !important;
+    background: rgba(255, 255, 255, 0.1) !important;
 }
 
 .bot-info h2 {
@@ -575,6 +587,13 @@ input[type=range] {
 /* Orange */
 .btn:hover {
     opacity: 0.9;
+}
+
+.btn.active {
+    background: var(--success) !important;
+    color: white;
+    box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 /* Players */

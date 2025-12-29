@@ -823,14 +823,11 @@ socket.on('botToggles', (data) => {
         }
     };
 
-    updateBtn(autoReconnectBtn, data.autoReconnectEnabled, 'Auto Reconnect');
-    updateBtn(autoAuthBtn, data.autoAuthEnabled, 'Auto Auth');
+    updateBtn(autoReconnectBtn, data.autoReconnectEnabled, 'Auto-Reconnect');
+    updateBtn(autoAuthBtn, data.autoAuthEnabled, 'AutoAuth');
     updateBtn(antiAfkBtn, data.antiAfkEnabled, 'Anti-AFK');
     updateBtn(killauraBtn, data.killauraEnabled, 'Killaura');
-
-    // Spammer update handled separately by spammerConfig event usually, 
-    // but botToggles also sends spammerEnabled if I updated SocketServer properly.
-    // Let's rely on spammerConfig for spammer as it has more data.
+    updateBtn(spammerBtn, data.spammerEnabled, 'Spammer');
 });
 
 addSpammerInput('ImperialsBot OP');
@@ -840,8 +837,9 @@ spammerBtn.onclick = () => {
         showNotification('Please select a bot first');
         return;
     }
-    spammerEnabled = !spammerEnabled;
-    updateToggleBtns();
+    // spammerEnabled = !spammerEnabled; // We'll let the server sync this
+    // updateToggleBtns(); 
+
 
     const inputs = spammerList.querySelectorAll('input');
     const messages = Array.from(inputs).map(input => input.value).filter(v => v.trim() !== '');
@@ -862,10 +860,7 @@ spammerBtn.onclick = () => {
     });
 };
 
-function updateToggleBtns() {
-    spammerBtn.innerText = spammerEnabled ? 'Stop Spammer' : 'Start Spammer';
-    spammerBtn.className = `btn toggle-btn ${spammerEnabled ? 'active' : ''}`;
-}
+
 
 // ----------------------
 // Bot Actions
@@ -1183,5 +1178,50 @@ socket.on('botStatus', (data) => {
                 navToggleBtn.className = 'nav-btn go';
             }
         }
+    }
+});
+
+// Global Settings Logic
+const settingsModal = document.getElementById('settingsModal');
+const settingsBtn = document.getElementById('settingsBtn');
+const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+const settingsForm = document.getElementById('settingsForm');
+const settingReconnectDelay = document.getElementById('settingReconnectDelay');
+
+if (settingsBtn) {
+    settingsBtn.onclick = () => {
+        settingsModal.classList.add('active');
+    };
+}
+
+if (closeSettingsBtn) {
+    closeSettingsBtn.onclick = () => {
+        settingsModal.classList.remove('active');
+    };
+}
+
+if (settingsForm) {
+    settingsForm.onsubmit = (e) => {
+        e.preventDefault();
+        const delay = parseInt(settingReconnectDelay.value);
+        if (!isNaN(delay)) {
+            socket.emit('saveSettings', { reconnectDelay: delay });
+            settingsModal.classList.remove('active');
+            showNotification('Global settings saved!', 'success');
+        }
+    };
+}
+
+// Ensure settings are loaded into the form
+socket.on('settings', (settings) => {
+    if (settings && settings.reconnectDelay) {
+        if (settingReconnectDelay) settingReconnectDelay.value = settings.reconnectDelay;
+    }
+});
+
+// Close modal on outside click
+window.addEventListener('click', (e) => {
+    if (e.target === settingsModal) {
+        settingsModal.classList.remove('active');
     }
 });

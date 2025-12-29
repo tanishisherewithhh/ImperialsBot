@@ -4,7 +4,6 @@
  * This is a template for creating your own plugins for ImperialBot.
  * Use this as a reference for handling events, logging, and controlling the bot.
  */
-
 export default class ExamplePlugin {
     constructor() {
         // Plugin metadata
