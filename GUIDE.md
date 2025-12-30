@@ -109,7 +109,7 @@ Bots might disconnect when moving between "worlds" or "servers" within a network
 Because this is an automated bot, server anti-cheats (like Grim, Vulcan, or Matrix) may flag the bot's movement or combat as "suspicious." 
 - The bot's physics engine (Mineflayer) may not perfectly replicate a human player's movement.
 - High-speed Killaura will likely get the bot banned on protected servers.
-- This is beyond our control. And lagbacks or rubberbanding is not in our control, and is mainly due to the inaccuracies of mineflayer's physics engine with server anticheats.
+- Lagbacks or rubberbanding are not in our control, and is mainly due to the inaccuracies of mineflayer's physics engine with server anticheats.
 
 **Finding Errors**
 If something isn't working, check these places:
