@@ -240,11 +240,18 @@ export class SocketServer {
                         break;
                     case 'click':
                         if (payload.type === 'left') {
-                            bot.bot.swingArm('right'); // Attack
-                            // Check if there's an entity looking at
-                            const entity = bot.bot.nearestEntity(e => e.type === 'player' || e.type === 'mob');
-                            if (entity && bot.bot.entity.position.distanceTo(entity.position) < 4) {
-                                bot.bot.attack(entity);
+                            bot.bot.swingArm('right');
+
+                            // 1. Check for block at cursor (max 4 blocks range)
+                            const block = bot.bot.blockAtCursor(4);
+                            if (block) {
+                                bot.bot.dig(block, true);
+                            } else {
+                                // 2. Fallback to attacking nearby entity
+                                const entity = bot.bot.nearestEntity(e => (e.type === 'player' || e.type === 'mob') && bot.bot.entity.position.distanceTo(e.position) < 4);
+                                if (entity) {
+                                    bot.bot.attack(entity);
+                                }
                             }
                         } else if (payload.type === 'right') {
                             bot.bot.activateItem(); // Use Item

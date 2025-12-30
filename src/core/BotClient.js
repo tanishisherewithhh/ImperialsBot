@@ -266,6 +266,8 @@ export class BotClient extends EventEmitter {
         this.bot.on('respawn', () => {
             this.log('Dimension/World change detected.', 'info');
             this.lastSpawnTime = Date.now();
+            // Rich Aqua Notification
+            this.emitChat('[Server]', '\x1b[1;36mBOT RESPAWNED\x1b[0m', 'chat');
         });
 
         this.bot.on('kicked', (reason) => {
@@ -358,6 +360,8 @@ export class BotClient extends EventEmitter {
                 posStr = `${Math.floor(pos.x)}, ${Math.floor(pos.y)}, ${Math.floor(pos.z)}`;
             }
             this.updateStatus(`Died at ${posStr}`);
+            // Rich Aqua Notification
+            this.emitChat('[Server]', `\x1b[1;36mBOT DIED AT ${posStr}\x1b[0m`, 'chat');
         });
 
         this.bot.on('playerJoined', (player) => {

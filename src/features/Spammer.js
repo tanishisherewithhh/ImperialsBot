@@ -93,6 +93,8 @@ export class Spammer extends BaseFeature {
 
         try {
             this.botClient.bot.chat(msg);
+            // Log to UI
+            this.botClient.emitChat(this.botClient.username, msg, 'chat');
         } catch (err) {
             this.botClient.log(`Spammer error: ${err.message}`, 'error');
             this.stop();
