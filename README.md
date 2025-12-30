@@ -82,9 +82,7 @@ export default class HelpPlugin {
 
 
 ### What it looks like currently:
-<img width="1920" height="1080" alt="ImperialsBot Dashboard" src="https://github.com/user-attachments/assets/28413e1c-d0c1-4fa3-9e67-9d9c29336f22" />
-
-
+<img width="1920" height="1080" alt="ImperialsBot Dashboard" src="https://github.com/user-attachments/assets/0d1ffcdf-deb5-4724-bf09-92b21cd77152" />
 
 ### License
 This project is licensed under the GNU General Public License v3.
