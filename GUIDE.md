@@ -2,6 +2,9 @@
 
 ### Setup
 
+> [!NOTE]
+> You will need to have [Node.JS](https://nodejs.org/en) installed.
+
 **Windows**
 Double-click `start.bat`. It will check for Node.js, install dependencies, and launch the server.
 
@@ -11,6 +14,7 @@ Double-click `start.bat`. It will check for Node.js, install dependencies, and l
 3. Run `./start.sh` to start.
 
 Once running, open your browser to `http://localhost:3000`.
+If you have used a custom port then go to `http://localhost:YOUR_PORT`
 
 ---
 
@@ -38,6 +42,7 @@ To connect to a Realm:
 > Realms support is strictly for premium accounts. Offline/Cracked auth will not work for Realms.
 
 **Webhook URL**: A Discord webhook URL to receive bot alerts (logins, kicks, etc.).
+> Provide a different webhook URL to different bots to avoid instant ratelimiting and messy outputs.
 
 **Checkboxes**:
 - **Auto-Reconnect**: If ticked, the bot will automatically try to log back in if it gets disconnected or kicked (waiting a few seconds between attempts).
@@ -54,6 +59,8 @@ Once a bot is selected, you can monitor its state in the top bar:
 - **Position**: X, Y, Z coordinates and rotation (Yaw/Pitch).
 - **Inventory**: View everything the bot is holding in the "Inventory" tab.
 - **Online Players**: A list of all players on the server is visible in the **right sidebar**.
+- **Visual Feed**: Watch your bot's world using Prismarine Viewer in the top right. You can even interact with it using your mouse to zoom in/out and look around the world.
+- **Navigation**: You can make the bot automatically travel to a given position using mineflayer-pathfinder and movement.
 
 ---
 
@@ -102,9 +109,11 @@ Bots might disconnect when moving between "worlds" or "servers" within a network
 Because this is an automated bot, server anti-cheats (like Grim, Vulcan, or Matrix) may flag the bot's movement or combat as "suspicious." 
 - The bot's physics engine (Mineflayer) may not perfectly replicate a human player's movement.
 - High-speed Killaura will likely get the bot banned on protected servers.
+- This is beyond our control. And lagbacks or rubberbanding is not in our control, and is mainly due to the inaccuracies of mineflayer's physics engine with server anticheats.
 
 **Finding Errors**
 If something isn't working, check these places:
-1. **The Terminal**: Any server-side crashes or bot connection errors appear here.
+1. **The Terminal/CMD**: Any server-side crashes or bot connection errors appear here.
 2. **Dashboard Logs**: The chatbox shows status updates (e.g., "Bot disconnected: Kick reason").
 3. **Browser Console**: Press `F12` and click "Console" to see if the dashboard itself has errors.
+4. If the program crashes, please check `log.txt` for any error messages that may have been reported.
