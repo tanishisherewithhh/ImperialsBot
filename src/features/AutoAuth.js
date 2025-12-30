@@ -45,6 +45,7 @@ export class AutoAuth extends BaseFeature {
         try {
             if (typeof this.botClient.bot.chat === 'function') {
                 this.botClient.bot.chat(registerCmd);
+                await new Promise(resolve => setTimeout(resolve, 1200));
                 this.botClient.bot.chat(`/login ${password}`);
             } else {
                 this.botClient.log('AutoAuth: chat function missing', 'error');

@@ -149,6 +149,7 @@ export class BotClient extends EventEmitter {
             this.updateStatus('Online');
             this.emit('spawn');
             this.log(`${this.username} spawned`, 'success');
+            this.lastSpawnTime = Date.now();
 
             this.pluginManager.onBotSpawn();
             if (this.bot.inventory) {
@@ -190,8 +191,9 @@ export class BotClient extends EventEmitter {
         });
 
         this.bot.on('end', async () => {
-            // If we manually stopped or a timer is already running, skip
             if (this.manuallyStopped || this.reconnectTimer) return;
+
+            const wasRecentlySpawned = (Date.now() - (this.lastSpawnTime || 0)) < 15000;
 
             this.updateStatus('Offline');
             this.emit('end');
@@ -200,9 +202,14 @@ export class BotClient extends EventEmitter {
             const isAuto = this.config.autoReconnect === true || this.config.autoReconnect === 'true';
             if (isAuto) {
                 const settings = await ConfigLoader.loadSettings() || {};
-                const delay = parseInt(settings.reconnectDelay) || 5000;
+                let delay = parseInt(settings.reconnectDelay) || 5000;
 
-                this.log(`Auto-reconnect triggered. Delay: ${delay}ms`, 'info');
+                // Faster reconnect for suspected server swaps (moved from lobby to game)
+                if (wasRecentlySpawned) {
+                    delay = 1000;
+                    this.log('Suspected server transition. Reconnecting quickly...', 'info');
+                }
+
                 this.updateStatus(`Reconnecting in ${delay / 1000}s...`);
 
                 this.reconnectTimer = setTimeout(() => {
@@ -210,6 +217,11 @@ export class BotClient extends EventEmitter {
                     if (!this.manuallyStopped) this.init();
                 }, delay);
             }
+        });
+
+        this.bot.on('respawn', () => {
+            this.log('Dimension/World change detected.', 'info');
+            this.lastSpawnTime = Date.now();
         });
 
         this.bot.on('kicked', (reason) => {

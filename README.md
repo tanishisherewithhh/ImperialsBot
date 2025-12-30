@@ -1,6 +1,21 @@
 # ImperialBot
 
-ImperialBot is a multi-bot manager for Minecraft with a web dashboard. It uses [Mineflayer](https://github.com/PrismarineJS/mineflayer) to handle bot logic and allows you to control several bots at once through a browser.
+> [!IMPORTANT]
+> **New to ImperialBot?** Check out our [User Guide](GUIDE.md) for setup instructions and troubleshooting tips.
+
+---
+
+ImperialBot is a tool for managing multiple Minecraft bots from a single web dashboard. It uses the [Mineflayer](https://github.com/PrismarineJS/mineflayer) engine to handle bot logic and allows you to control several accounts at once through your browser.
+
+---
+
+### Getting Started
+
+1.  Make sure you have [Node.js](https://nodejs.org/) installed.
+2.  Run `start.bat` (Windows) or `start.sh` (Linux) to install dependencies and start the server.
+3.  Go to `http://localhost:3000` in your browser.
+
+For more information on bot capabilities, see the [Mineflayer Documentation](https://github.com/PrismarineJS/mineflayer/blob/master/docs/api.md).
 
 ---
 
@@ -17,9 +32,7 @@ The project is split into a few main parts:
 
 ### Plugin System
 
-You can add custom logic by placing JavaScript files in the `src/plugins/` folder. The bot will automatically detect new files and reload them while the server is running. Every plugin gets access to a simple API for logging and sending chat messages, which allows you to directly sent messages to the chat box on dashboard.
-
-> There is [ExamplePlugin.js](https://github.com/tanishisherewithhh/ImperialsBot/blob/main/ExamplePlugin.js) that explains the structure and API of plugins in more detail.
+You can add custom logic by placing JavaScript files in the `src/plugins/` folder. The bot will automatically detect new files and reload them while the server is running. Every plugin gets access to a simple API for logging and sending chat messages.
 
 #### Example: Custom Command Plugin
 
@@ -48,7 +61,7 @@ export default class HelpPlugin {
                 this.api.log(`Responding to help request from ${username}`, 'info');
                 this.bot.chat(`Hello ${username}! Available commands: !help, !info`);
             } else if (msg === '!info') {
-                this.bot.chat(`ImperialBot Instance v3.0`);
+                this.bot.chat(`ImperialBot Instance v2.0`);
             }
         });
     }
@@ -64,16 +77,6 @@ export default class HelpPlugin {
     }
 }
 ```
-
----
-
-### Getting Started
-
-1.  Make sure you have [Node.js](https://nodejs.org/) installed.
-2.  Run `start.bat` / 'start.sh' to install dependencies and start the server.
-3.  Go to `http://localhost:PORT` (default port :3000), in your browser.
-
-For more details on what the bots can do, check the [Mineflayer Documentation](https://github.com/PrismarineJS/mineflayer/blob/master/docs/api.md).
 
 ---
 
