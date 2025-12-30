@@ -232,12 +232,35 @@
             <h3>Add New Bot</h3>
             <form id="addBotForm">
                 <div class="form-group">
-                    <label>Server IP</label>
-                    <input type="text" name="host" placeholder="localhost" value="localhost" required>
+                    <label>Connection Type</label>
+                    <select name="connectionType" onchange="toggleRealmsFields(this, 'add')">
+                        <option value="server">Standard Server</option>
+                        <option value="realms">Minecraft Realms</option>
+                    </select>
                 </div>
-                <div class="form-group">
-                    <label>Port</label>
-                    <input type="number" name="port" placeholder="25565" value="25565" required>
+                <div id="addServerFields">
+                    <div class="form-group">
+                        <label>Server IP</label>
+                        <input type="text" name="host" placeholder="localhost" value="localhost">
+                    </div>
+                    <div class="form-group">
+                        <label>Port</label>
+                        <input type="number" name="port" placeholder="25565" value="25565">
+                    </div>
+                </div>
+                <div id="addRealmsFields" style="display: none;">
+                    <div class="form-group">
+                        <label>Realm ID / Name / Invite</label>
+                        <input type="text" name="realmIdentifier" placeholder="Realm ID or Invite Link">
+                    </div>
+                    <div class="form-group">
+                        <label>Realm Type</label>
+                        <select name="realmType">
+                            <option value="id">Realm ID</option>
+                            <option value="name">Realm Name</option>
+                            <option value="invite">Invite Link</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>Auth Type</label>
@@ -305,12 +328,35 @@
             <h3>Edit Bot</h3>
             <form id="editBotForm">
                 <div class="form-group">
-                    <label>Server IP</label>
-                    <input type="text" name="host" required>
+                    <label>Connection Type</label>
+                    <select name="connectionType" onchange="toggleRealmsFields(this, 'edit')">
+                        <option value="server">Standard Server</option>
+                        <option value="realms">Minecraft Realms</option>
+                    </select>
                 </div>
-                <div class="form-group">
-                    <label>Port</label>
-                    <input type="number" name="port" required>
+                <div id="editServerFields">
+                    <div class="form-group">
+                        <label>Server IP</label>
+                        <input type="text" name="host">
+                    </div>
+                    <div class="form-group">
+                        <label>Port</label>
+                        <input type="number" name="port">
+                    </div>
+                </div>
+                <div id="editRealmsFields" style="display: none;">
+                    <div class="form-group">
+                        <label>Realm ID / Name / Invite</label>
+                        <input type="text" name="realmIdentifier" placeholder="Realm ID or Invite Link">
+                    </div>
+                    <div class="form-group">
+                        <label>Realm Type</label>
+                        <select name="realmType">
+                            <option value="id">Realm ID</option>
+                            <option value="name">Realm Name</option>
+                            <option value="invite">Invite Link</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>Auth Type</label>

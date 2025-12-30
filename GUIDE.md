@@ -23,11 +23,21 @@ To add a bot, click the **Add Bot** button and fill in the fields:
 - **Version**: The Minecraft version of the server. Leave empty for auto-detection, or specify (e.g., `1.20.1`).
 - **Auth**: 
     - `Offline`: For cracked servers (no password needed).
-    - `Microsoft`: For premium accounts.
+    - `Microsoft`: For premium accounts and **Minecraft Realms**.
 - **Password**: 
     - For **Microsoft** accounts, this is your account password.
     - For **Cracked** servers with **Auto-Auth** enabled, this password is used to automatically type `/login <password>` or `/register <password> <password>` when you join.
-- **Webhook URL**: A Discord webhook URL to receive bot alerts (logins, kicks, etc.).
+
+**Minecraft Realms Support**:
+To connect to a Realm:
+1. Set **Connection Type** to "Minecraft Realms".
+2. Ensure **Auth Type** is set to "Microsoft".
+3. Choose the **Realm Type** (ID, Name, or Invite Link).
+4. Enter the corresponding identifier in the input field.
+> [!NOTE]
+> Realms support is strictly for premium accounts. Offline/Cracked auth will not work for Realms.
+
+**Webhook URL**: A Discord webhook URL to receive bot alerts (logins, kicks, etc.).
 
 **Checkboxes**:
 - **Auto-Reconnect**: If ticked, the bot will automatically try to log back in if it gets disconnected or kicked (waiting a few seconds between attempts).

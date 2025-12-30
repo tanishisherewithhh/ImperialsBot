@@ -582,6 +582,11 @@ tabBtns.forEach(btn => {
 addBotBtn.onclick = () => {
     addBotModal.classList.add('active');
 };
+window.toggleRealmsFields = function (select, prfx) {
+    const isRealms = select.value === 'realms';
+    document.getElementById(`${prfx}ServerFields`).style.display = isRealms ? 'none' : 'block';
+    document.getElementById(`${prfx}RealmsFields`).style.display = isRealms ? 'block' : 'none';
+};
 
 cancelAddBot.onclick = () => {
     addBotModal.classList.remove('active');
@@ -597,29 +602,67 @@ addBotForm.onsubmit = (e) => {
     const formData = new FormData(addBotForm);
     const data = Object.fromEntries(formData.entries());
 
+    // Connection Logic
+    if (data.connectionType === 'realms') {
+        data.realms = {
+            [data.realmType === 'id' ? 'realmId' : (data.realmType === 'name' ? 'realmName' : 'realmInvite')]: data.realmIdentifier
+        };
+        // Clear host/port for realms
+        data.host = '';
+        data.port = 0;
+    }
+
     // Fix types
-    data.port = parseInt(data.port);
+    data.port = parseInt(data.port) || 0;
     data.firstPerson = formData.get('firstPerson') === 'on';
     data.autoReconnect = formData.get('autoReconnect') === 'on';
+    data.registerConfirm = formData.get('registerConfirm') === 'on';
 
     socket.emit('createBot', data);
     addBotModal.classList.remove('active');
     addBotForm.reset();
+    // Reset fields visibility
+    document.getElementById('addServerFields').style.display = 'block';
+    document.getElementById('addRealmsFields').style.display = 'none';
 };
 
 function openEditModal(bot) {
     const form = editBotForm;
     form.username.value = bot.username;
-    form.host.value = bot.host;
-    form.port.value = bot.port;
+    form.host.value = bot.host || '';
+    form.port.value = bot.port || 25565;
     if (form.version) form.version.value = bot.config.version || '';
     if (form.password) form.password.value = bot.config.password || '';
     if (form.auth) form.auth.value = bot.config.auth || 'offline';
     if (form.webhookUrl) form.webhookUrl.value = bot.config.webhookUrl || '';
 
+    // Realms logic
+    if (bot.config.realms) {
+        form.connectionType.value = 'realms';
+        document.getElementById('editServerFields').style.display = 'none';
+        document.getElementById('editRealmsFields').style.display = 'block';
+
+        const realms = bot.config.realms;
+        if (realms.realmId) {
+            form.realmType.value = 'id';
+            form.realmIdentifier.value = realms.realmId;
+        } else if (realms.realmName) {
+            form.realmType.value = 'name';
+            form.realmIdentifier.value = realms.realmName;
+        } else if (realms.realmInvite) {
+            form.realmType.value = 'invite';
+            form.realmIdentifier.value = realms.realmInvite;
+        }
+    } else {
+        form.connectionType.value = 'server';
+        document.getElementById('editServerFields').style.display = 'block';
+        document.getElementById('editRealmsFields').style.display = 'none';
+    }
+
 
     if (form.firstPerson) form.firstPerson.checked = !!bot.config.firstPerson;
     if (form.autoReconnect) form.autoReconnect.checked = !!bot.config.autoReconnect;
+    if (form.registerConfirm) form.registerConfirm.checked = !!bot.config.registerConfirm;
 
     editBotModal.classList.add('active');
 }
@@ -629,9 +672,21 @@ editBotForm.onsubmit = (e) => {
     const formData = new FormData(editBotForm);
     const data = Object.fromEntries(formData.entries());
 
-    data.port = parseInt(data.port);
+    // Connection Logic
+    if (data.connectionType === 'realms') {
+        data.realms = {
+            [data.realmType === 'id' ? 'realmId' : (data.realmType === 'name' ? 'realmName' : 'realmInvite')]: data.realmIdentifier
+        };
+        data.host = '';
+        data.port = 0;
+    } else {
+        data.realms = null; // Clear if switching back
+    }
+
+    data.port = parseInt(data.port) || 0;
     data.firstPerson = formData.get('firstPerson') === 'on';
     data.autoReconnect = formData.get('autoReconnect') === 'on';
+    data.registerConfirm = formData.get('registerConfirm') === 'on';
 
     socket.emit('editBot', data);
     editBotModal.classList.remove('active');

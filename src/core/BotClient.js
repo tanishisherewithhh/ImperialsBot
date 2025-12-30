@@ -125,14 +125,21 @@ export class BotClient extends EventEmitter {
         }
 
         this.updateStatus('Connecting');
-        this.bot = mineflayer.createBot({
-            host: this.config.host,
-            port: this.config.port,
+        const botOptions = {
             username: this.config.username,
             password: this.config.password,
             auth: this.config.auth || 'offline',
             version: this.config.version
-        });
+        };
+
+        if (this.config.realms) {
+            botOptions.realms = this.config.realms;
+        } else {
+            botOptions.host = this.config.host;
+            botOptions.port = this.config.port;
+        }
+
+        this.bot = mineflayer.createBot(botOptions);
 
         this.bindEvents();
         try {
