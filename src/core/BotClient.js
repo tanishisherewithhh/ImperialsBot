@@ -4,6 +4,7 @@ import { FeatureManager } from '../features/FeatureManager.js';
 import { PluginManager } from './PluginManager.js';
 import { ConfigLoader } from '../config/ConfigLoader.js';
 import inventoryViewer from 'mineflayer-web-inventory';
+import { NetworkUtils } from '../utils/NetworkUtils.js';
 
 export class BotClient extends EventEmitter {
     constructor(config) {
@@ -159,14 +160,19 @@ export class BotClient extends EventEmitter {
         this.bot = mineflayer.createBot(botOptions);
 
         // Web Inventory Integration
-        // Assign a unique port (fallback to random if not specified)
-        this.inventoryPort = 4000 + Math.floor(Math.random() * 1000);
-        try {
-            inventoryViewer(this.bot, { port: this.inventoryPort, startOnLoad: true });
-            this.log(`Web Inventory started on port ${this.inventoryPort}`, 'info');
-        } catch (err) {
-            this.log(`Failed to start Web Inventory: ${err.message}`, 'error');
-        }
+        // Assign a unique safe port
+        const startInvPort = 4000 + Math.floor(Math.random() * 1000);
+        NetworkUtils.findFreePort(startInvPort).then(port => {
+            this.inventoryPort = port;
+            try {
+                inventoryViewer(this.bot, { port: this.inventoryPort, startOnLoad: true });
+                this.log(`Web Inventory started on safe port ${this.inventoryPort}`, 'info');
+                // Re-emit status to update frontend with the actual port
+                this.updateStatus(this.status);
+            } catch (err) {
+                this.log(`Failed to start Web Inventory: ${err.message}`, 'error');
+            }
+        });
 
         this.bindEvents();
         try {

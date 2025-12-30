@@ -4,6 +4,7 @@ const require = createRequire(import.meta.url);
 const { mineflayer: viewer } = require('prismarine-viewer');
 
 import net from 'net';
+import { NetworkUtils } from '../utils/NetworkUtils.js';
 
 export class Viewer extends BaseFeature {
     init() {
@@ -24,7 +25,7 @@ export class Viewer extends BaseFeature {
         }
 
         try {
-            const port = await this.findFreePort(this.botClient.config.viewerPort);
+            const port = await NetworkUtils.findFreePort(this.botClient.config.viewerPort);
 
             // Close existing if we can (though prismarine-viewer is tricky)
 
@@ -47,23 +48,5 @@ export class Viewer extends BaseFeature {
         this.startViewer();
     }
 
-    findFreePort(startPort) {
-        return new Promise((resolve, reject) => {
-            const server = net.createServer();
-            server.unref();
-            server.on('error', (err) => {
-                if (err.code === 'EADDRINUSE') {
-                    // Port in use, try next
-                    resolve(this.findFreePort(startPort + 1));
-                } else {
-                    reject(err);
-                }
-            });
-            server.listen(startPort, () => {
-                server.close(() => {
-                    resolve(startPort);
-                });
-            });
-        });
-    }
+
 }
