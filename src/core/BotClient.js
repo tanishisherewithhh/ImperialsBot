@@ -3,6 +3,7 @@ import { EventEmitter } from 'events';
 import { FeatureManager } from '../features/FeatureManager.js';
 import { PluginManager } from './PluginManager.js';
 import { ConfigLoader } from '../config/ConfigLoader.js';
+import inventoryViewer from 'mineflayer-web-inventory';
 
 export class BotClient extends EventEmitter {
     constructor(config) {
@@ -18,6 +19,11 @@ export class BotClient extends EventEmitter {
         this.reconnectTimer = null;
         this.manuallyStopped = false;
         this.recentMessages = new Set();
+        this.inventoryPort = null;
+
+        this.on('viewerStarted', (data) => {
+            this.viewerPort = data.port;
+        });
     }
 
     extractText(obj) {
@@ -30,25 +36,34 @@ export class BotClient extends EventEmitter {
         return '';
     }
 
-    emitChat(username, message, type = 'chat') {
+    emitChat(username, message, type = 'chat', ansi = null) {
         if (!message) return;
 
-        // Clean up text
-        message = message.trim();
-        if (message.length === 0) return;
+        const plainText = typeof message === 'string' ? message.trim() : message.toString().trim();
+        if (plainText.length === 0) return;
 
-        // Deduplication Logic
-        const msgKey = `${username}:${message}`;
-        if (this.recentMessages.has(msgKey)) {
-            return; // Skip duplicate
-        }
+        const msgKey = `${username}:${plainText}`;
+        if (this.recentMessages.has(msgKey)) return;
 
         this.recentMessages.add(msgKey);
         setTimeout(() => this.recentMessages.delete(msgKey), 500);
 
-        this.log(`${username}: ${message}`, type);
-        this.emit('chat', { username, message, type });
-        this.addToHistory(username, message, type);
+        const displayMessage = ansi || message;
+
+        // Log locally for console/file, but don't broadcast as 'log' to UI
+        // and avoid double-pushing to chatHistory since emitChat calls addToHistory.
+        const msgStr = `${username}: ${displayMessage}`;
+        // The original `this.log` call had `broadcast = false`, meaning it only added to history
+        // and did not emit a 'log' event. We replicate that by only calling `addToHistory` later.
+
+        this.emit('chat', {
+            message: displayMessage,
+            type,
+            raw: plainText,
+            sender: username
+        });
+
+        this.addToHistory(username, displayMessage, type);
     }
 
     parseReason(reason) {
@@ -73,10 +88,10 @@ export class BotClient extends EventEmitter {
 
     updateStatus(status) {
         this.status = status;
-        this.emit('status', { status, version: this.config.version });
+        this.emit('status', { status, version: this.config.version, inventoryPort: this.inventoryPort });
     }
 
-    log(message, type = 'info') {
+    log(message, type = 'info', broadcast = true) {
         const msgStr = typeof message === 'object' ? JSON.stringify(message, null, 2) : message;
 
         // Save to history
@@ -85,7 +100,9 @@ export class BotClient extends EventEmitter {
             this.chatHistory.shift();
         }
 
-        this.emit('log', { message: msgStr, type });
+        if (broadcast) {
+            this.emit('log', { message: msgStr, type });
+        }
     }
 
 
@@ -140,6 +157,16 @@ export class BotClient extends EventEmitter {
         }
 
         this.bot = mineflayer.createBot(botOptions);
+
+        // Web Inventory Integration
+        // Assign a unique port (fallback to random if not specified)
+        this.inventoryPort = 4000 + Math.floor(Math.random() * 1000);
+        try {
+            inventoryViewer(this.bot, { port: this.inventoryPort, startOnLoad: true });
+            this.log(`Web Inventory started on port ${this.inventoryPort}`, 'info');
+        } catch (err) {
+            this.log(`Failed to start Web Inventory: ${err.message}`, 'error');
+        }
 
         this.bindEvents();
         try {
@@ -211,11 +238,8 @@ export class BotClient extends EventEmitter {
                 const settings = await ConfigLoader.loadSettings() || {};
                 let delay = parseInt(settings.reconnectDelay) || 5000;
 
-                // Faster reconnect for suspected server swaps (moved from lobby to game)
-                if (wasRecentlySpawned) {
-                    delay = 1000;
-                    this.log('Suspected server transition. Reconnecting quickly...', 'info');
-                }
+                // Ensure a safe minimum delay for server transitions
+                if (delay < 2000) delay = 2000;
 
                 this.updateStatus(`Reconnecting in ${delay / 1000}s...`);
 
@@ -269,12 +293,25 @@ export class BotClient extends EventEmitter {
         this.bot.on('playerLeft', emitPlayerList);
         this.bot.on('spawn', emitPlayerList);
 
+        // Rich Chat handling
         this.bot.on('chat', (username, message, translate, jsonMsg, matches) => {
-            this.emitChat(username, message, 'chat');
+            this.emitChat(username, message, 'chat', jsonMsg.toAnsi());
         });
 
         this.bot.on('whisper', (username, message, translate, jsonMsg, matches) => {
-            this.emitChat(`[WHISPER] ${username}`, message, 'whisper');
+            this.emitChat(`[WHISPER] ${username}`, message, 'whisper', jsonMsg.toAnsi());
+        });
+
+        this.bot.on('message', (jsonMsg, position) => {
+            if (position === 'game_info') return;
+
+            // Only handle system messages here (chat/whisper are handled above)
+            if (position === 'chat' || position === 'whisper') return;
+
+            const plainText = jsonMsg.toString();
+            if (!plainText || plainText.trim().length === 0) return;
+
+            this.emitChat('[Server]', plainText, 'chat', jsonMsg.toAnsi());
         });
 
         this.bot.on('death', () => {
@@ -298,15 +335,7 @@ export class BotClient extends EventEmitter {
             }
         });
 
-        this.bot.on('message', (jsonMsg, position) => {
-            if (position === 'game_info') return;
-
-            // Use mineflayer's built-in conversion to plain text for accuracy
-            const text = jsonMsg.toString();
-            if (!text || text.trim().length === 0) return;
-
-            this.emitChat('[Server]', text, 'chat');
-        });
+        // Removed redundant 'message' listener as it's consolidated above
 
     }
 

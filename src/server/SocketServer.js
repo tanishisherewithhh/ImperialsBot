@@ -26,8 +26,32 @@ export class SocketServer {
             this.io.emit('botPlayers', data);
         });
 
+        botManager.on('botChat', (data) => {
+            this.io.emit('botChat', data);
+        });
+
+        botManager.on('botStatus', (data) => {
+            this.io.emit('botStatus', data);
+        });
+
         botManager.on('botSpawn', (username) => {
             // updates handled by botList
+        });
+
+        botManager.on('botViewer', (data) => {
+            this.io.emit('botViewer', data);
+        });
+
+        botManager.on('botData', (data) => {
+            this.io.emit('botData', data);
+        });
+
+        botManager.on('botInventory', (data) => {
+            this.io.emit('botInventory', data);
+        });
+
+        botManager.on('botPlayers', (data) => {
+            this.io.emit('botPlayers', data);
         });
     }
 
@@ -67,16 +91,25 @@ export class SocketServer {
                 }
             });
 
-            socket.on('requestBotData', ({ username }) => {
+            socket.on('requestBotData', (data) => {
+                const { username } = data;
                 const bot = botManager.getBot(username);
                 if (!bot) return;
 
+                // Sync UI State
+                socket.emit('chatHistory', { username: bot.username, history: bot.chatHistory || [] });
                 this.broadcastToggles(username);
 
-                // Return early if bot instance not ready
-                if (!bot.bot) return;
+                if (bot.pluginManager) {
+                    socket.emit('pluginList', { username: bot.username, plugins: bot.pluginManager.getAllPlugins() });
+                }
 
-                if (bot.bot.entity) {
+                if (bot.config.spammer) {
+                    socket.emit('spammerConfig', { username, config: bot.config.spammer });
+                }
+
+                // Instance Data
+                if (bot.bot && bot.bot.entity) {
                     socket.emit('botData', {
                         username,
                         data: {
@@ -87,29 +120,33 @@ export class SocketServer {
                             pitch: bot.bot.entity.pitch
                         }
                     });
-                }
 
-                if (bot.bot.players) {
                     const players = Object.values(bot.bot.players).map(p => ({
                         username: p.username,
                         uuid: p.uuid,
                         ping: p.ping
                     }));
                     socket.emit('botPlayers', { username, players });
-                }
 
-                if (bot.bot.inventory) {
-                    const items = bot.bot.inventory.items().map(item => ({
+                    const inventory = bot.bot.inventory.items().map(item => ({
                         slot: item.slot,
                         name: item.name,
                         displayName: item.displayName,
                         count: item.count
                     }));
-                    socket.emit('botInventory', { username, items });
-                }
+                    socket.emit('botInventory', { username, items: inventory });
 
-                if (bot.config.spammer) {
-                    socket.emit('spammerConfig', { username, config: bot.config.spammer });
+                    if (bot.inventoryPort) {
+                        socket.emit('botStatus', { username, status: bot.status, inventoryPort: bot.inventoryPort });
+                    }
+
+                    if (bot.viewerPort) {
+                        socket.emit('botViewer', {
+                            username,
+                            port: bot.viewerPort,
+                            firstPerson: !!bot.config.firstPerson
+                        });
+                    }
                 }
             });
 
@@ -229,68 +266,7 @@ export class SocketServer {
                 }
             });
 
-            socket.on('requestBotData', (data) => {
-                const { username } = data;
-                const bot = botManager.getBot(username);
 
-                if (bot) {
-                    socket.emit('chatHistory', { username: bot.username, history: bot.chatHistory || [] });
-
-                    if (bot.pluginManager) {
-                        socket.emit('pluginList', { username: bot.username, plugins: bot.pluginManager.getAllPlugins() });
-                    }
-
-                    const combat = bot.featureManager.getFeature('combat');
-                    const antiafk = bot.featureManager.getFeature('antiafk');
-                    const autoauth = bot.featureManager.getFeature('autoauth');
-                    const spammer = bot.featureManager.getFeature('spammer');
-
-                    socket.emit('botToggles', {
-                        username: bot.username,
-                        toggles: {
-                            killaura: combat ? combat.killauraEnabled : false,
-                            antiAfk: antiafk ? antiafk.enabled : false,
-                            autoAuth: autoauth ? autoauth.enabled : false,
-                            spammer: spammer ? spammer.config.enabled : false,
-                            autoReconnect: bot.config.autoReconnect !== false
-                        }
-                    });
-
-                    if (spammer && spammer.config) {
-                        socket.emit('spammerConfig', {
-                            username: bot.username,
-                            config: spammer.config
-                        });
-                    }
-
-                    if (bot.bot && bot.bot.entity) {
-                        socket.emit('botData', {
-                            username: bot.username,
-                            data: {
-                                position: bot.bot.entity.position,
-                                health: bot.bot.health,
-                                food: bot.bot.food,
-                                yaw: bot.bot.entity.yaw,
-                                pitch: bot.bot.entity.pitch
-                            }
-                        });
-
-                        const players = Object.values(bot.bot.players).map(p => ({
-                            username: p.username,
-                            ping: p.ping
-                        }));
-                        socket.emit('botPlayers', { username: bot.username, data: players });
-
-                        const inventory = bot.bot.inventory.items().map(item => ({
-                            slot: item.slot,
-                            name: item.name,
-                            displayName: item.displayName,
-                            count: item.count
-                        }));
-                        socket.emit('botInventory', { username: bot.username, data: inventory });
-                    }
-                }
-            });
 
             socket.on('control', (data) => {
                 const { username, control, state } = data;
@@ -311,37 +287,8 @@ export class SocketServer {
             const bot = botManager.getBot(username);
             if (!bot) return;
 
-            bot.on('status', (status) => {
-                this.io.emit('botStatus', { username, status });
-            });
-
-            bot.on('dataUpdate', (data) => {
-                this.io.emit('botData', { username, data });
-            });
-
-            bot.on('inventoryUpdate', (data) => {
-                this.io.emit('botInventory', { username, data });
-            });
-
-            bot.on('playersUpdate', (data) => {
-                this.io.emit('botPlayers', { username, data });
-            });
-
-            bot.on('chat', (data) => {
-                this.io.emit('botChat', { username, message: data.message, sender: data.username });
-            });
-
-            bot.on('log', (data) => {
-                this.io.emit('botLog', { username, message: data.message, type: data.type });
-            });
-
-            bot.on('viewerStarted', (data) => {
-                this.io.emit('botViewer', {
-                    username,
-                    port: data.port,
-                    firstPerson: !!bot.config.firstPerson
-                });
-            });
+            // These are now handled by global botManager events in bindGlobalEvents
+            // which avoid duplicate listeners and memory leaks.
 
             botManager.on('pluginsUpdated', () => {
                 if (bot.pluginManager) {

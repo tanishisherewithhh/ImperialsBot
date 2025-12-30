@@ -134,7 +134,7 @@ socket.on('botList', (data) => {
         item.innerHTML = `
             <div class="bot-avatar small" style="background-image: url('https://mc-heads.net/avatar/${bot.username}')"></div>
             <div class="bot-name" style="flex: 1; margin: 0 8px; font-size: 0.9rem;">${bot.username}</div>
-            <div class="bot-status-indicator ${statusClass}" style="margin-right: 8px;"></div>
+            <div class="status-dot ${statusClass}" style="margin-right: 8px;"></div>
             <div style="display: flex; gap: 4px;">
                 <button class="btn-icon small" data-action="edit" title="Edit Bot">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
@@ -193,7 +193,7 @@ socket.on('logs', (payload) => {
     div.appendChild(timeSpan);
 
     const formattedMessage = document.createElement('span');
-    formattedMessage.innerHTML = formatMinecraftText(message);
+    formattedMessage.innerHTML = formatChat(message);
     div.appendChild(formattedMessage);
 
     chatBox.appendChild(div);
@@ -258,6 +258,81 @@ function formatMinecraftText(text) {
     return html;
 }
 
+function ansiToHtml(text) {
+    if (!text) return '';
+
+    // Map ANSI colors to Minecraft-themed hex codes
+    const ansiMap = {
+        '30': '#000000', '31': '#AA0000', '32': '#00AA00', '33': '#FFAA00',
+        '34': '#0000AA', '35': '#AA00AA', '36': '#00AAAA', '37': '#AAAAAA',
+        '90': '#555555', '91': '#FF5555', '92': '#55FF55', '93': '#FFFF55',
+        '94': '#5555FF', '95': '#FF55FF', '96': '#55FFFF', '97': '#FFFFFF'
+    };
+
+    const styles = {
+        '1': 'font-weight:bold;',
+        '3': 'font-style:italic;',
+        '4': 'text-decoration:underline;',
+        '9': 'text-decoration:line-through;'
+    };
+
+    let html = '';
+    let currentColor = '';
+    let currentStyles = new Set();
+
+    // Splitting by ANSI sequences more globally: \u001b or \x1b followed by [ followed by codes ending in m
+    // We catch the entire code block which might contain multiple delimited codes e.g. [1;31m
+    const parts = text.split(/[\u001b\x1b]\[([0-9;]*)m/);
+
+    for (let i = 0; i < parts.length; i++) {
+        if (i % 2 === 0) {
+            // Text part
+            if (parts[i]) {
+                const styleStr = (currentColor ? `color:${currentColor};` : '') + Array.from(currentStyles).join('');
+                if (styleStr) {
+                    html += `<span style="${styleStr}">${escapeHtml(parts[i])}</span>`;
+                } else {
+                    html += escapeHtml(parts[i]);
+                }
+            }
+        } else {
+            // ANSI code part
+            const codes = parts[i].split(';');
+            for (const code of codes) {
+                // Handle 0 (reset), 1 (bold), 31 (red), etc.
+                if (code === '0' || code === '') {
+                    currentColor = '';
+                    currentStyles.clear();
+                } else if (ansiMap[code]) {
+                    currentColor = ansiMap[code];
+                } else if (styles[code]) {
+                    currentStyles.add(styles[code]);
+                }
+            }
+        }
+    }
+
+    return html;
+}
+
+function formatChat(text) {
+    if (!text) return '';
+    let result = text;
+
+    // 1. Process ANSI first (usually from toAnsi())
+    if (result.includes('\u001b') || result.includes('\x1b')) {
+        result = ansiToHtml(result);
+        // Note: ansiToHtml returns HTML with <span> tags, 
+        // we shouldn't run formatMinecraftText on HTML tags directly 
+        // but it's likely the text is now safe.
+    } else {
+        // 2. Fallback or manual Minecraft formatting
+        result = formatMinecraftText(result);
+    }
+
+    return result;
+}
+
 function escapeHtml(text) {
     if (!text) return '';
     return text
@@ -272,37 +347,30 @@ socket.on('botStatus', (payload) => {
     // payload: { username, status: 'Online' | 'Offline' | ... }
     const { username, status } = payload;
 
-    // Update local state
     if (bots.has(username)) {
-        bots.get(username).status = status.toLowerCase();
+        const bot = bots.get(username);
+        bot.status = status.toLowerCase();
+        if (payload.inventoryPort) bot.inventoryPort = payload.inventoryPort;
     }
+
+    // Update List Dot in sidebar
+    const items = botList.querySelectorAll('.bot-item');
+    items.forEach(item => {
+        const nameEl = item.querySelector('.bot-name');
+        if (nameEl && nameEl.innerText === username) {
+            const dot = item.querySelector('.status-dot');
+            if (dot) {
+                dot.className = 'status-dot ' + status.toLowerCase();
+            }
+        }
+    });
 
     // Update Header if current
     if (currentBot === username) {
         document.getElementById('botStatus').innerText = status;
         document.getElementById('botStatus').className = `status-indicator ${status.toLowerCase()}`;
+        updateInventoryFrame();
     }
-
-    // Update List Dot
-    // Find the item by iterating or by ID (we don't have IDs on items yet, so strict matching name)
-    const items = botList.querySelectorAll('.bot-item');
-    items.forEach(item => {
-        const nameEl = item.querySelector('.bot-name');
-        if (nameEl && nameEl.innerText === username) {
-            const dot = item.querySelector('.bot-status-indicator');
-            if (dot) {
-                // remove old status classes
-                dot.classList.remove('online', 'offline', 'connecting');
-                // add new
-                const s = status.toLowerCase();
-                if (s === 'online' || s === 'offline' || s === 'connecting') {
-                    dot.classList.add(s);
-                } else {
-                    dot.classList.add('connecting'); // Default for other statuses
-                }
-            }
-        }
-    });
 });
 
 socket.on('botData', (payload) => {
@@ -338,13 +406,8 @@ function trim(num) {
     return Number(num).toFixed(2);
 }
 
-socket.on('botInventory', (payload) => {
-    // payload: { username, items }
-    if (currentBot !== payload.username) return;
-    if (currentTab === 'inventory') {
-        renderInventory(payload.items, payload.version);
-    }
-});
+// Bot Inventory event is now handled by the iframe, but we can still listen for metadata if needed.
+// However, to keep it clean, we'll remove the legacy listener.
 
 socket.on('botPlayers', (payload) => {
     if (currentBot !== payload.username) return;
@@ -462,6 +525,37 @@ function selectBot(username) {
     if (botNameHeader) botNameHeader.innerText = username;
 
     socket.emit('requestBotData', { username });
+    updateInventoryFrame();
+}
+
+function updateInventoryFrame() {
+    const iframe = document.getElementById('inventoryIframe');
+    const placeholder = document.getElementById('inventoryPlaceholder');
+    const bot = bots.get(currentBot);
+
+    const status = (bot.status || '').toLowerCase();
+
+    if (bot && status === 'online' && bot.inventoryPort) {
+        // Use hostname to ensure it works in various environments
+        const url = `http://${window.location.hostname}:${bot.inventoryPort}`;
+        if (iframe.src !== url) {
+            iframe.src = url;
+            console.log(`Setting inventory iframe for ${currentBot} to ${url}`);
+        }
+        iframe.style.display = 'block';
+        placeholder.style.display = 'none';
+    } else {
+        iframe.style.display = 'none';
+        iframe.src = '';
+        placeholder.style.display = 'flex';
+        if (!bot) {
+            placeholder.innerText = 'Select a bot to view inventory';
+        } else if (status !== 'online') {
+            placeholder.innerText = 'Bot is offline';
+        } else {
+            placeholder.innerText = 'Inventory loading...';
+        }
+    }
 }
 
 function updateViewer(port) {
@@ -497,7 +591,7 @@ socket.on('chatHistory', (payload) => {
     const username = payload.username;
     const history = payload.history;
 
-    if (currentBot !== username) return; // Prevent state bleeding
+    if (!currentBot || currentBot.toLowerCase() !== username.toLowerCase()) return;
 
     chatBox.innerHTML = '';
     const welcome = document.createElement('div');
@@ -512,20 +606,24 @@ socket.on('chatHistory', (payload) => {
 });
 
 socket.on('botChat', (payload) => {
-    // payload: { username, message, sender }
-    if (currentBot !== payload.username) return;
+    // payload: { username, message, type, raw }
+    if (!currentBot || !payload.username || currentBot.toLowerCase() !== payload.username.toLowerCase()) return;
 
     // UI-side deduplication
     const lastMsg = chatBox.lastElementChild;
     const now = Date.now();
-    if (lastMsg && lastMsg.dataset.rawMessage === payload.message) {
+    const compareText = payload.raw || payload.message;
+
+    if (lastMsg && lastMsg.dataset.rawMessage === compareText) {
         const lastTime = parseInt(lastMsg.dataset.timestamp);
         if ((now - lastTime) < 500) return; // Skip duplicate
     }
 
     const msgObj = {
+        username: payload.sender || '[Server]',
         message: payload.message,
-        type: 'chat',
+        type: payload.type || 'chat',
+        raw: compareText,
         timestamp: now
     };
     renderChatMessage(msgObj);
@@ -537,7 +635,7 @@ function renderChatMessage(msg) {
     div.className = `chat-message ${msg.type || 'info'}`;
 
     // Store metadata for deduplication
-    div.dataset.rawMessage = msg.message;
+    div.dataset.rawMessage = msg.raw || msg.message;
     div.dataset.timestamp = msg.timestamp || Date.now();
 
     const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
@@ -548,8 +646,16 @@ function renderChatMessage(msg) {
     timeSpan.innerText = `[${time}] `;
     div.appendChild(timeSpan);
 
+    if (msg.username && msg.username !== '[Server]') {
+        const nameSpan = document.createElement('span');
+        nameSpan.style.fontWeight = 'bold';
+        nameSpan.style.marginRight = '5px';
+        nameSpan.innerText = `${msg.username}:`;
+        div.appendChild(nameSpan);
+    }
+
     const textSpan = document.createElement('span');
-    textSpan.innerHTML = formatMinecraftText(msg.message);
+    textSpan.innerHTML = formatChat(msg.message);
     div.appendChild(textSpan);
 
     chatBox.appendChild(div);
@@ -568,10 +674,8 @@ tabBtns.forEach(btn => {
         document.getElementById(btn.dataset.tab).classList.add('active');
         currentTab = btn.dataset.tab;
 
-        // Refresh data if needed
-        if (currentTab === 'inventory' && currentBot) {
-            // Maybe request inventory update?
-            // socket.emit('getInventory', currentBot);
+        if (currentTab === 'inventory') {
+            updateInventoryFrame();
         }
     };
 });
@@ -695,83 +799,6 @@ editBotForm.onsubmit = (e) => {
 cancelEditBot.onclick = () => {
     editBotModal.classList.remove('active');
 };
-// Inventory
-// ----------------------
-function renderInventory(items, version = '1.20.1') {
-    // 1. Initialize Grid (45 slots: 36 Main + 4 Armor + 1 Offhand + Crafting?)
-    // Standard player inventory is 0-8 (hotbar), 9-35 (storage), 36-39 (armor), 40 (offhand), 41-44 (crafting)
-    const TOTAL_SLOTS = 45;
-
-    if (inventoryGridEl.childElementCount !== TOTAL_SLOTS) {
-        inventoryGridEl.innerHTML = '';
-        for (let i = 0; i < TOTAL_SLOTS; i++) {
-            const slot = document.createElement('div');
-            slot.className = 'inv-slot';
-            slot.dataset.slotId = i;
-
-            const img = document.createElement('img');
-            img.style.display = 'none';
-            slot.appendChild(img);
-
-            const count = document.createElement('span');
-            count.className = 'inv-count';
-            slot.appendChild(count);
-
-            inventoryGridEl.appendChild(slot);
-        }
-    }
-
-    // 2. Create Map of New Data
-    const itemMap = new Map();
-    items.forEach(item => itemMap.set(item.slot, item));
-
-    const slots = inventoryGridEl.children;
-    for (let i = 0; i < TOTAL_SLOTS; i++) {
-        const slotEl = slots[i];
-        const imgEl = slotEl.querySelector('img');
-        const countEl = slotEl.querySelector('.inv-count');
-
-        const newItem = itemMap.get(i);
-        const signature = newItem ? `${newItem.name}:${newItem.count} ` : 'empty';
-
-        if (slotEl.dataset.signature === signature) {
-            continue; // No change
-        }
-
-        // Update Slot
-        slotEl.dataset.hasItem = 'true';
-        slotEl.dataset.signature = signature;
-        slotEl.title = newItem ? newItem.displayName : ''; // Full Name Tooltip
-
-        if (!newItem) {
-            imgEl.style.display = 'none';
-            countEl.textContent = '';
-            slotEl.removeAttribute('data-has-item');
-            continue;
-        }
-
-        countEl.textContent = newItem.count > 1 ? newItem.count : '';
-
-        const assetVersion = version || '1.21.4';
-        const iconUrl = `https://raw.githubusercontent.com/PrismarineJS/minecraft-assets/master/data/${assetVersion}/items/${newItem.name}.png`;
-        const blockUrl = `https://raw.githubusercontent.com/PrismarineJS/minecraft-assets/master/data/${assetVersion}/blocks/${newItem.name}.png`;
-
-
-        imgEl.style.display = 'block';
-        if (imgEl.dataset.srcName !== newItem.name) {
-            imgEl.dataset.srcName = newItem.name;
-            imgEl.src = iconUrl;
-            imgEl.onerror = () => {
-                if (imgEl.src === iconUrl) {
-                    imgEl.src = blockUrl;
-                } else {
-                    //imgEl.style.display = 'none';
-                }
-            };
-        }
-    }
-}
-
 // ----------------------
 // Chat
 // ----------------------

@@ -43,6 +43,30 @@ class BotManager extends EventEmitter {
             this.emit('botPlayers', { username: config.username, players });
         });
 
+        bot.on('chat', (data) => {
+            this.emit('botChat', { username: config.username, ...data });
+        });
+
+        bot.on('status', (payload) => {
+            this.emit('botStatus', { username: config.username, ...payload });
+        });
+
+        bot.on('dataUpdate', (data) => {
+            this.emit('botData', { username: config.username, data });
+        });
+
+        bot.on('inventoryUpdate', (data) => {
+            this.emit('botInventory', { username: config.username, data });
+        });
+
+        bot.on('playerList', (players) => {
+            this.emit('botPlayers', { username: config.username, players });
+        });
+
+        bot.on('viewerStarted', (data) => {
+            this.emit('botViewer', { username: config.username, ...data });
+        });
+
         return bot;
     }
 
@@ -82,7 +106,8 @@ class BotManager extends EventEmitter {
             status: bot.status,
             host: bot.config.host,
             port: bot.config.port,
-            config: bot.config
+            config: bot.config,
+            inventoryPort: bot.inventoryPort
         }));
     }
 

@@ -191,6 +191,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 20px;
+    height: 100%;
     min-height: 0;
 }
 
@@ -230,16 +231,22 @@ body {
 
 .placeholder {
     color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    width: 100%;
+    text-align: center;
+    font-size: 0.9rem;
+    font-style: italic;
+    background: rgba(0, 0, 0, 0.1);
 }
 
 /* Chat */
 .chat-card {
-    flex: 1 0 50vh;
-    /* Grow, don't shrink below 50vh */
+    flex: 0 0 500px;
     display: flex;
     flex-direction: column;
-    min-height: 500px;
-    /* Enforce substantial minimum */
 }
 
 .chat-container {
@@ -631,8 +638,8 @@ input[type=range] {
 
 /* Inventory */
 .inventory-card {
-    flex: 0 0 200px;
-    min-height: 0;
+    flex: 1;
+    min-height: 400px;
     display: flex;
     flex-direction: column;
 }

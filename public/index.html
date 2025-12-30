@@ -107,7 +107,13 @@
 
                     <div class="card inventory-card">
                         <h3>Inventory</h3>
-                        <div class="inventory-grid" id="inventoryGrid"></div>
+                        <div id="inventoryIframeContainer"
+                            style="width: 100%; flex: 1; border-radius: 12px; overflow: hidden; background: rgba(0,0,0,0.2); display: flex; flex-direction: column;">
+                            <iframe id="inventoryIframe" src=""
+                                style="width: 100%; height: 100%; border: none; display: none;"></iframe>
+                            <div id="inventoryPlaceholder" class="placeholder">Select an online bot to view inventory
+                            </div>
+                        </div>
                     </div>
                 </div>
 
