@@ -2,9 +2,23 @@ import { ExpressServer } from './src/server/ExpressServer.js';
 import { SocketServer } from './src/server/SocketServer.js';
 import { botManager } from './src/core/BotManager.js';
 import { ConfigLoader } from './src/config/ConfigLoader.js';
+import { Logger } from './src/utils/Logger.js';
 import readline from 'readline';
 
 const start = async () => {
+    Logger.initGlobalLogging();
+
+    process.on('uncaughtException', (err) => {
+        Logger.originalConsole.error('UNCAUGHT EXCEPTION:', err);
+        Logger.log(`UNCAUGHT EXCEPTION: ${err.stack || err.message}`, 'CRITICAL');
+        // Removed process.exit(1) to keep the application and other bots alive
+    });
+
+    process.on('unhandledRejection', (reason, promise) => {
+        Logger.originalConsole.error('UNHANDLED REJECTION:', reason);
+        Logger.log(`UNHANDLED REJECTION: ${reason}`, 'CRITICAL');
+    });
+
     let settings = await ConfigLoader.loadSettings();
     let port = 3000;
 

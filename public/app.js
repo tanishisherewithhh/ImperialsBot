@@ -630,14 +630,15 @@ socket.on('botChat', (payload) => {
     const lastMsg = chatBox.lastElementChild;
     const now = Date.now();
     const compareText = payload.raw || payload.message;
+    const sender = payload.sender || '[Server]';
 
-    if (lastMsg && lastMsg.dataset.rawMessage === compareText) {
+    if (lastMsg && lastMsg.dataset.rawMessage === compareText && lastMsg.dataset.sender === sender) {
         const lastTime = parseInt(lastMsg.dataset.timestamp);
         if ((now - lastTime) < 500) return; // Skip duplicate
     }
 
     const msgObj = {
-        username: payload.sender || '[Server]',
+        username: sender,
         message: payload.message,
         type: payload.type || 'chat',
         raw: compareText,
@@ -653,6 +654,7 @@ function renderChatMessage(msg) {
 
     // Store metadata for deduplication
     div.dataset.rawMessage = msg.raw || msg.message;
+    div.dataset.sender = msg.username || '[Server]';
     div.dataset.timestamp = msg.timestamp || Date.now();
 
     const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
@@ -667,7 +669,8 @@ function renderChatMessage(msg) {
         const nameSpan = document.createElement('span');
         nameSpan.style.fontWeight = 'bold';
         nameSpan.style.marginRight = '5px';
-        nameSpan.innerText = `${msg.username}:`;
+        // Use formatChat for username too to support formatted names from servers
+        nameSpan.innerHTML = formatChat(msg.username) + ':';
         div.appendChild(nameSpan);
     }
 

@@ -6,6 +6,7 @@ import { ConfigLoader } from '../config/ConfigLoader.js';
 import inventoryViewer from 'mineflayer-web-inventory';
 import { NetworkUtils } from '../utils/NetworkUtils.js';
 import { MinecraftColorUtils } from '../utils/MinecraftColorUtils.js';
+import { Logger } from '../utils/Logger.js';
 
 export class BotClient extends EventEmitter {
     constructor(config) {
@@ -30,15 +31,6 @@ export class BotClient extends EventEmitter {
         this.mcColors = MinecraftColorUtils;
     }
 
-    extractText(obj) {
-        if (!obj) return '';
-        if (typeof obj === 'string') return obj;
-        if (typeof obj.toString === 'function') {
-            const str = obj.toString();
-            if (str !== '[object Object]') return str;
-        }
-        return '';
-    }
 
     emitChat(username, message, type = 'chat', ansi = null) {
         if (!message) return;
@@ -53,12 +45,6 @@ export class BotClient extends EventEmitter {
         setTimeout(() => this.recentMessages.delete(msgKey), 500);
 
         const displayMessage = ansi || message;
-
-        // Log locally for console/file, but don't broadcast as 'log' to UI
-        // and avoid double-pushing to chatHistory since emitChat calls addToHistory.
-        const msgStr = `${username}: ${displayMessage}`;
-        // The original `this.log` call had `broadcast = false`, meaning it only added to history
-        // and did not emit a 'log' event. We replicate that by only calling `addToHistory` later.
 
         this.emit('chat', {
             message: displayMessage,
@@ -81,15 +67,15 @@ export class BotClient extends EventEmitter {
             return reason.toAnsi();
         }
 
-        // 2. If it's a string, may contain § codes
-        if (typeof reason === 'string') {
-            return this.mcColors.minecraftToAnsi(reason);
+        // 2. If it's an NBT-style object or complex JSON
+        if (typeof reason === 'object' && reason !== null) {
+            const parsed = this.mcColors.nbtToAnsi(reason);
+            if (parsed && parsed.trim().length > 0) return parsed;
         }
 
-        // 3. Recursive extraction for objects if toAnsi didn't exist
-        const extracted = this.extractText(reason);
-        if (extracted && extracted.trim().length > 0 && extracted !== '[object Object]') {
-            return this.mcColors.minecraftToAnsi(extracted);
+        // 3. If it's a string, may contain § codes
+        if (typeof reason === 'string') {
+            return this.mcColors.minecraftToAnsi(reason);
         }
 
         try {
@@ -105,7 +91,12 @@ export class BotClient extends EventEmitter {
     }
 
     log(message, type = 'info', broadcast = true) {
-        let msgStr = typeof message === 'object' ? JSON.stringify(message, null, 2) : message;
+        let msgStr;
+        try {
+            msgStr = typeof message === 'object' ? JSON.stringify(message, null, 2) : message;
+        } catch (e) {
+            msgStr = '[Circular or Unserializable Object]';
+        }
 
         // Convert Minecraft codes if present
         if (typeof msgStr === 'string' && msgStr.includes('§')) {
@@ -121,6 +112,9 @@ export class BotClient extends EventEmitter {
         if (broadcast) {
             this.emit('log', { message: msgStr, type });
         }
+
+        // Persistent file logging
+        Logger.log(`[${this.username}] ${msgStr}`, type);
     }
 
 
@@ -143,13 +137,11 @@ export class BotClient extends EventEmitter {
 
     init() {
         this.manuallyStopped = false; // Ensure it's false when starting
-        // Clear any pending reconnection timer if init is called manually
         if (this.reconnectTimer) {
             clearTimeout(this.reconnectTimer);
             this.reconnectTimer = null;
         }
 
-        // If we already have a bot instance, stop it properly first
         if (this.bot) {
             try {
                 this.bot.removeAllListeners();
@@ -174,17 +166,21 @@ export class BotClient extends EventEmitter {
             botOptions.port = this.config.port;
         }
 
-        this.bot = mineflayer.createBot(botOptions);
+        try {
+            this.bot = mineflayer.createBot(botOptions);
+        } catch (err) {
+            this.log(`Fatal Initialization Error: ${err.message}`, 'error');
+            this.updateStatus(`Fatal Error: ${err.message}`);
+            return;
+        }
 
         // Web Inventory Integration
-        // Assign a unique safe port
         const startInvPort = 4000 + Math.floor(Math.random() * 1000);
         NetworkUtils.findFreePort(startInvPort).then(port => {
             this.inventoryPort = port;
             try {
                 inventoryViewer(this.bot, { port: this.inventoryPort, startOnLoad: true });
                 this.log(`Web Inventory started on safe port ${this.inventoryPort}`, 'info');
-                // Re-emit status to update frontend with the actual port
                 this.updateStatus(this.status);
             } catch (err) {
                 this.log(`Failed to start Web Inventory: ${err.message}`, 'error');
@@ -228,10 +224,9 @@ export class BotClient extends EventEmitter {
         });
 
         this.bot.on('physicsTick', () => {
-            if (this.reconnectTimer) return; // Don't tick while reconnecting (safety)
+            if (this.reconnectTimer) return;
             this.pluginManager.onTick();
 
-            // Throttle updates (every 500ms)
             if (this.bot.entity) {
                 const now = Date.now();
                 if (now - (this.lastDataEmit || 0) > 500) {
@@ -249,9 +244,6 @@ export class BotClient extends EventEmitter {
 
         this.bot.on('end', async () => {
             if (this.manuallyStopped || this.reconnectTimer) return;
-
-            const wasRecentlySpawned = (Date.now() - (this.lastSpawnTime || 0)) < 15000;
-
             this.updateStatus('Offline');
             this.emit('end');
             this.log(`${this.username} disconnected`, 'error');
@@ -260,8 +252,6 @@ export class BotClient extends EventEmitter {
             if (isAuto) {
                 const settings = await ConfigLoader.loadSettings() || {};
                 let delay = parseInt(settings.reconnectDelay) || 5000;
-
-                // Ensure a safe minimum delay for server transitions
                 if (delay < 2000) delay = 2000;
 
                 this.updateStatus(`Reconnecting in ${delay / 1000}s...`);
@@ -296,45 +286,69 @@ export class BotClient extends EventEmitter {
             if (playerUpdateTimeout) clearTimeout(playerUpdateTimeout);
             playerUpdateTimeout = setTimeout(() => {
                 if (!this.bot || !this.bot.players) return;
-
                 const players = Object.values(this.bot.players).map(p => ({
                     username: p.username,
                     uuid: p.uuid,
                     ping: p.ping
                 }));
-
-                // Debug log to trace empty updates
-                if (players.length === 0) {
-                    this.log('Warning: Emitting empty player list', 'debug');
-                }
-
                 this.emit('playerList', players);
-            }, 500); // 500ms debounce to dampen spam and race conditions
+            }, 500);
         };
 
         this.bot.on('playerJoined', emitPlayerList);
         this.bot.on('playerLeft', emitPlayerList);
         this.bot.on('spawn', emitPlayerList);
 
-        // Rich Chat handling
-        this.bot.on('chat', (username, message, translate, jsonMsg, matches) => {
-            this.emitChat(username, message, 'chat', jsonMsg.toAnsi());
-        });
-
-        this.bot.on('whisper', (username, message, translate, jsonMsg, matches) => {
-            this.emitChat(`[WHISPER] ${username}`, message, 'whisper', jsonMsg.toAnsi());
-        });
-
+        // Global message handling (Ensures we catch unparsed or system messages)
         this.bot.on('message', (jsonMsg, position) => {
             if (position === 'game_info') return;
-
-            // Only handle system messages here (chat/whisper are handled above)
-            if (position === 'chat' || position === 'whisper') return;
 
             const plainText = jsonMsg.toString();
             if (!plainText || plainText.trim().length === 0) return;
 
-            this.emitChat('[Server]', plainText, 'chat', jsonMsg.toAnsi());
+            // For chat/whisper positions, we let the specific 'chat' and 'whisper' 
+            // events below handle it. They are more reliable for name extraction.
+            if (position === 'chat' || position === 'whisper') return;
+
+            const ansi = jsonMsg.toAnsi();
+
+            // Deduplicate exact ANSI packets
+            const recentKey = `msg:${ansi}`;
+            if (this.recentMessages.has(recentKey)) return;
+            this.recentMessages.add(recentKey);
+            setTimeout(() => this.recentMessages.delete(recentKey), 500);
+
+            // Forward to UI as a system log/message
+            this.emitChat('[Server]', plainText, 'chat', ansi);
+        });
+
+        // Chat event handling (Primary source for player messages with accurate names)
+        const handleRichEvent = (username, message, type, jsonMsg) => {
+            const fullAnsi = jsonMsg.toAnsi();
+            const fullPlain = jsonMsg.toString();
+
+            // Clean the username if it's a whisper event ([WHISPER] Tanish -> Tanish)
+            const plainUsername = username.replace(/^[\[\(]WHISPER[\]\)]\s?/, '').trim();
+
+            // Intelligence Check: Does the full server line already contain the username?
+            // If so, we use '[Server]' to avoid 'Player: <Player> Hello' redundancy.
+            // If not, we use the detached 'username' to ensure the dashboard shows WHO said it.
+            if (fullPlain.includes(plainUsername) && fullPlain.length > message.length + 1) {
+                // The full formatted line is complete (e.g. "<Tanish> Hello" or "[Admin] Tanish: Hello")
+                this.emitChat('[Server]', fullPlain, type, fullAnsi);
+            } else {
+                // The full line is missing the name or is just the body
+                // (e.g. from some custom chat plugins or strange server formats)
+                this.emitChat(username, message, type, fullAnsi);
+            }
+        };
+
+        this.bot.on('chat', (username, message, translate, jsonMsg) => {
+            handleRichEvent(username, message, 'chat', jsonMsg);
+        });
+
+        this.bot.on('whisper', (username, message, translate, jsonMsg) => {
+            handleRichEvent(`[WHISPER] ${username}`, message, 'whisper', jsonMsg);
         });
 
         this.bot.on('death', () => {
@@ -357,9 +371,6 @@ export class BotClient extends EventEmitter {
                 this.log(`[-] ${player.username} left the game`, 'error');
             }
         });
-
-        // Removed redundant 'message' listener as it's consolidated above
-
     }
 
     addToHistory(username, message, type = 'chat') {
