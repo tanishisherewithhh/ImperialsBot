@@ -76,11 +76,20 @@ export class BotClient extends EventEmitter {
         // Log raw reason for debugging
         console.log('Raw Kick Reason:', reason);
 
-        if (typeof reason === 'string') return reason;
+        // 1. If it's a Mineflayer/Prismarine chat component, use toAnsi()
+        if (typeof reason.toAnsi === 'function') {
+            return reason.toAnsi();
+        }
 
+        // 2. If it's a string, may contain § codes
+        if (typeof reason === 'string') {
+            return this.mcColors.minecraftToAnsi(reason);
+        }
+
+        // 3. Recursive extraction for objects if toAnsi didn't exist
         const extracted = this.extractText(reason);
         if (extracted && extracted.trim().length > 0 && extracted !== '[object Object]') {
-            return extracted;
+            return this.mcColors.minecraftToAnsi(extracted);
         }
 
         try {
@@ -96,7 +105,12 @@ export class BotClient extends EventEmitter {
     }
 
     log(message, type = 'info', broadcast = true) {
-        const msgStr = typeof message === 'object' ? JSON.stringify(message, null, 2) : message;
+        let msgStr = typeof message === 'object' ? JSON.stringify(message, null, 2) : message;
+
+        // Convert Minecraft codes if present
+        if (typeof msgStr === 'string' && msgStr.includes('§')) {
+            msgStr = this.mcColors.minecraftToAnsi(msgStr);
+        }
 
         // Save to history
         this.chatHistory.push({ message: msgStr, type, timestamp: Date.now() });
