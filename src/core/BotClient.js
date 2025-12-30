@@ -5,6 +5,7 @@ import { PluginManager } from './PluginManager.js';
 import { ConfigLoader } from '../config/ConfigLoader.js';
 import inventoryViewer from 'mineflayer-web-inventory';
 import { NetworkUtils } from '../utils/NetworkUtils.js';
+import { MinecraftColorUtils } from '../utils/MinecraftColorUtils.js';
 
 export class BotClient extends EventEmitter {
     constructor(config) {
@@ -25,6 +26,8 @@ export class BotClient extends EventEmitter {
         this.on('viewerStarted', (data) => {
             this.viewerPort = data.port;
         });
+
+        this.mcColors = MinecraftColorUtils;
     }
 
     extractText(obj) {

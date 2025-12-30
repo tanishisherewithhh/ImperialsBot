@@ -25,9 +25,9 @@ export class Security extends BaseFeature {
                 const pos = entity.position;
                 const posStr = `\x1b[3m\x1b[90mat (${Math.floor(pos.x)}, ${Math.floor(pos.y)}, ${Math.floor(pos.z)})\x1b[0m`;
 
-                // 3. High-Visibility Logging (Red ANSI)
-                // Using \x1b[1;31m for Bold Red
-                const securityMsg = `\x1b[1;31mSecurity Alert: Player ${username} detected!\x1b[0m ${posStr}`;
+                // 3. High-Visibility Logging (Multi-Colored ANSI)
+                // Bold Red for Alert, Bold Yellow for Name, Italic Gray for Pos
+                const securityMsg = `\x1b[1;31mSecurity Alert: \x1b[1;33m${username} \x1b[0m\x1b[1;31mdetected!\x1b[0m ${posStr}`;
 
                 const discordFeature = this.botClient.featureManager.getFeature('discord');
                 if (discordFeature) {

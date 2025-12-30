@@ -266,18 +266,26 @@ function ansiToHtml(text) {
         '30': '#000000', '31': '#AA0000', '32': '#00AA00', '33': '#FFAA00',
         '34': '#0000AA', '35': '#AA00AA', '36': '#00AAAA', '37': '#AAAAAA',
         '90': '#555555', '91': '#FF5555', '92': '#55FF55', '93': '#FFFF55',
-        '94': '#5555FF', '95': '#FF55FF', '96': '#55FFFF', '97': '#FFFFFF'
+        '94': '#5555FF', '95': '#FF55FF', '96': '#55FFFF', '97': '#FFFFFF',
+        // Backgrounds (subtle)
+        '40': 'background:#000000;', '41': 'background:#AA0000;', '42': 'background:#00AA00;', '43': 'background:#FFAA00;',
+        '44': 'background:#0000AA;', '45': 'background:#AA00AA;', '46': 'background:#00AAAA;', '47': 'background:#AAAAAA;'
     };
 
     const styles = {
         '1': 'font-weight:bold;',
+        '2': 'opacity:0.7;', // Dim
         '3': 'font-style:italic;',
         '4': 'text-decoration:underline;',
+        '5': 'animation: blink 1s infinite;', // Blink (custom CSS needed)
+        '7': 'filter: invert(100%);', // Invert
+        '8': 'opacity:0;', // Hidden
         '9': 'text-decoration:line-through;'
     };
 
     let html = '';
     let currentColor = '';
+    let currentBackground = '';
     let currentStyles = new Set();
 
     // Splitting by ANSI sequences more globally: \u001b or \x1b followed by [ followed by codes ending in m
@@ -288,7 +296,11 @@ function ansiToHtml(text) {
         if (i % 2 === 0) {
             // Text part
             if (parts[i]) {
-                const styleStr = (currentColor ? `color:${currentColor};` : '') + Array.from(currentStyles).join('');
+                const styleArr = Array.from(currentStyles);
+                if (currentColor) styleArr.push(`color:${currentColor};`);
+                if (currentBackground) styleArr.push(currentBackground);
+
+                const styleStr = styleArr.join('');
                 if (styleStr) {
                     html += `<span style="${styleStr}">${escapeHtml(parts[i])}</span>`;
                 } else {
@@ -302,9 +314,14 @@ function ansiToHtml(text) {
                 // Handle 0 (reset), 1 (bold), 31 (red), etc.
                 if (code === '0' || code === '') {
                     currentColor = '';
+                    currentBackground = '';
                     currentStyles.clear();
                 } else if (ansiMap[code]) {
-                    currentColor = ansiMap[code];
+                    if (code.startsWith('4')) {
+                        currentBackground = ansiMap[code];
+                    } else {
+                        currentColor = ansiMap[code];
+                    }
                 } else if (styles[code]) {
                     currentStyles.add(styles[code]);
                 }
@@ -319,14 +336,14 @@ function formatChat(text) {
     if (!text) return '';
     let result = text;
 
-    // 1. Process ANSI first (usually from toAnsi())
+    // Process ANSI first (usually from toAnsi())
     if (result.includes('\u001b') || result.includes('\x1b')) {
         result = ansiToHtml(result);
         // Note: ansiToHtml returns HTML with <span> tags, 
         // we shouldn't run formatMinecraftText on HTML tags directly 
         // but it's likely the text is now safe.
     } else {
-        // 2. Fallback or manual Minecraft formatting
+        // Fallback or manual Minecraft formatting
         result = formatMinecraftText(result);
     }
 
