@@ -1031,6 +1031,49 @@ controls.forEach(control => {
     });
 });
 
+// Click Actions
+const btnLeftClick = document.getElementById('btnLeftClick');
+const btnRightClick = document.getElementById('btnRightClick');
+const viewModeBtn = document.getElementById('viewModeBtn');
+
+if (btnLeftClick) {
+    btnLeftClick.onmousedown = () => {
+        if (!currentBot) return showNotification('Select a bot first');
+        socket.emit('botAction', {
+            username: currentBot,
+            action: 'click',
+            payload: { type: 'left' }
+        });
+        btnLeftClick.style.transform = 'scale(0.95)';
+    };
+    btnLeftClick.onmouseup = () => btnLeftClick.style.transform = 'scale(1)';
+    btnLeftClick.onmouseleave = () => btnLeftClick.style.transform = 'scale(1)';
+}
+
+if (btnRightClick) {
+    btnRightClick.onmousedown = () => {
+        if (!currentBot) return showNotification('Select a bot first');
+        socket.emit('botAction', {
+            username: currentBot,
+            action: 'click',
+            payload: { type: 'right' }
+        });
+        btnRightClick.style.transform = 'scale(0.95)';
+    };
+    btnRightClick.onmouseup = () => btnRightClick.style.transform = 'scale(1)';
+    btnRightClick.onmouseleave = () => btnRightClick.style.transform = 'scale(1)';
+}
+
+if (viewModeBtn) {
+    viewModeBtn.onclick = () => {
+        if (!currentBot) return showNotification('Select a bot first');
+        socket.emit('botAction', {
+            username: currentBot,
+            action: 'toggleView'
+        });
+    };
+}
+
 function sendControl(control, state) {
     if (!currentBot) return;
     socket.emit('control', {
@@ -1115,35 +1158,7 @@ window.addEventListener('blur', () => {
     activeKeys.clear();
 });
 
-// New Mouse & View Controls
-const btnLeftClick = document.getElementById('btnLeftClick');
-const btnRightClick = document.getElementById('btnRightClick');
-const viewModeBtn = document.getElementById('viewModeBtn');
 
-if (btnLeftClick) {
-    btnLeftClick.onmousedown = () => {
-        if (!currentBot) return;
-        socket.emit('botAction', { username: currentBot, action: 'click', payload: { type: 'left' } });
-        btnLeftClick.style.transform = 'scale(0.9)';
-    };
-    btnLeftClick.onmouseup = () => btnLeftClick.style.transform = 'scale(1)';
-}
-
-if (btnRightClick) {
-    btnRightClick.onmousedown = () => {
-        if (!currentBot) return;
-        socket.emit('botAction', { username: currentBot, action: 'click', payload: { type: 'right' } });
-        btnRightClick.style.transform = 'scale(0.9)';
-    };
-    btnRightClick.onmouseup = () => btnRightClick.style.transform = 'scale(1)';
-}
-
-if (viewModeBtn) {
-    viewModeBtn.onclick = () => {
-        if (!currentBot) return;
-        socket.emit('botAction', { username: currentBot, action: 'toggleView' });
-    };
-}
 
 const exportChatBtn = document.getElementById('exportChatBtn');
 exportChatBtn.onclick = () => {

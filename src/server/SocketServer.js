@@ -238,6 +238,24 @@ export class SocketServer {
                     case 'setLook':
                         bot.setLook(payload.yaw, payload.pitch);
                         break;
+                    case 'click':
+                        if (payload.type === 'left') {
+                            bot.bot.swingArm('right'); // Attack
+                            // Check if there's an entity looking at
+                            const entity = bot.bot.nearestEntity(e => e.type === 'player' || e.type === 'mob');
+                            if (entity && bot.bot.entity.position.distanceTo(entity.position) < 4) {
+                                bot.bot.attack(entity);
+                            }
+                        } else if (payload.type === 'right') {
+                            bot.bot.activateItem(); // Use Item
+                        }
+                        break;
+                    case 'toggleView':
+                        const viewerFeature = bot.featureManager.getFeature('viewer');
+                        if (viewerFeature) {
+                            viewerFeature.toggleView();
+                        }
+                        break;
                     case 'suicide':
                         const combatForSuicide = bot.featureManager.getFeature('combat');
                         if (combatForSuicide) {
@@ -249,19 +267,6 @@ export class SocketServer {
                         break;
                     case 'delete':
                         botManager.removeBot(username);
-                        break;
-                    case 'click':
-                        if (payload.type === 'left') {
-                            bot.bot.swingArm('right'); // Attack/Main Hand
-                        } else if (payload.type === 'right') {
-                            bot.bot.activateItem(); // Use Item
-                        }
-                        break;
-                    case 'toggleView':
-                        const viewerFeature = bot.featureManager.getFeature('viewer');
-                        if (viewerFeature) {
-                            viewerFeature.toggleView();
-                        }
                         break;
                 }
             });
