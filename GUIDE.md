@@ -75,7 +75,7 @@ The spammer allows the bot to send messages repeatedly.
 
 **Chat & Exporting**
 - **Sending Chat**: Type in the bottom bar to send messages as the bot.
-- **Exporting Logs**: You can select and copy the chat text directly from the dashboard box to save your logs manually.
+- **Exporting Logs**: There is a export button above the chatbox to directly export chat of a bot as a txt file
 
 **Themes**
 Use the theme selector in the sidebar to change the dashboard’s look. These are saved locally so they persist when you refresh.
