@@ -65,7 +65,12 @@ export class SocketServer {
             socket.on('saveSettings', async (newSettings) => {
                 try {
                     await ConfigLoader.saveSettings(newSettings);
-                    this.io.emit('settings', await ConfigLoader.loadSettings());
+                    const updatedSettings = await ConfigLoader.loadSettings();
+                    this.io.emit('settings', updatedSettings);
+
+                    if (newSettings.navigationProfile) {
+                        botManager.updateAllNavigationProfiles(newSettings.navigationProfile);
+                    }
                 } catch (err) {
                     console.error('Failed to save settings:', err);
                 }

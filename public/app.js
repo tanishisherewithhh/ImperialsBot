@@ -1331,8 +1331,14 @@ if (settingsForm) {
     settingsForm.onsubmit = (e) => {
         e.preventDefault();
         const delay = parseInt(settingReconnectDelay.value);
-        if (!isNaN(delay)) {
-            socket.emit('saveSettings', { reconnectDelay: delay });
+        const profile = document.getElementById('settingNavigationProfile').value;
+        const updates = {};
+
+        if (!isNaN(delay)) updates.reconnectDelay = delay;
+        if (profile) updates.navigationProfile = profile;
+
+        if (Object.keys(updates).length > 0) {
+            socket.emit('saveSettings', updates);
             settingsModal.classList.remove('active');
             showNotification('Global settings saved!', 'success');
         }
@@ -1343,6 +1349,10 @@ if (settingsForm) {
 socket.on('settings', (settings) => {
     if (settings && settings.reconnectDelay) {
         if (settingReconnectDelay) settingReconnectDelay.value = settings.reconnectDelay;
+    }
+    if (settings && settings.navigationProfile) {
+        const navProfileSelect = document.getElementById('settingNavigationProfile');
+        if (navProfileSelect) navProfileSelect.value = settings.navigationProfile;
     }
 });
 

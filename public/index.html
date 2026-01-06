@@ -320,6 +320,14 @@
                     <input type="number" id="settingReconnectDelay" name="reconnectDelay" placeholder="5000" min="1000"
                         step="1000">
                 </div>
+                <div class="form-group">
+                    <label>Navigation Profile</label>
+                    <select id="settingNavigationProfile" name="navigationProfile">
+                        <option value="Shortest">Shortest (Efficient)</option>
+                        <option value="Safest">Safest (Avoids Danger)</option>
+                        <option value="Easiest">Easiest (Breaks Blocks)</option>
+                    </select>
+                </div>
                 <div class="modal-actions">
                     <button type="button" id="closeSettingsBtn" class="btn-secondary">Close</button>
                     <button type="submit" class="btn-primary">Save Settings</button>

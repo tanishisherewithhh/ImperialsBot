@@ -125,6 +125,15 @@ class BotManager extends EventEmitter {
         // If we wanted to auto-restart:
         // if (bot.status === 'Online') bot.rejoin();
     }
+
+    updateAllNavigationProfiles(profileName) {
+        for (const bot of this.bots.values()) {
+            const nav = bot.featureManager.getFeature('navigation');
+            if (nav) {
+                nav.setProfile(profileName);
+            }
+        }
+    }
 }
 
 export const botManager = new BotManager();
