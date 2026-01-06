@@ -35,45 +35,42 @@ export class BotClient extends EventEmitter {
     emitChat(username, message, type = 'chat', ansi = null) {
         if (!message) return;
 
-        const plainText = typeof message === 'string' ? message.trim() : message.toString().trim();
+        const displayMessage = ansi || message;
+
+        const plainText = displayMessage.replace(/\x1b\[[0-9;]*m/g, '').trim();
         if (plainText.length === 0) return;
 
-        const msgKey = `${username}:${plainText}`;
-        if (this.recentMessages.has(msgKey)) return;
+        for (const recent of this.recentMessages) {
+            if (recent === plainText) return;
+        }
 
-        this.recentMessages.add(msgKey);
-        setTimeout(() => this.recentMessages.delete(msgKey), 500);
-
-        const displayMessage = ansi || message;
+        this.recentMessages.add(plainText);
+        setTimeout(() => this.recentMessages.delete(plainText), 1000);
 
         this.emit('chat', {
             message: displayMessage,
             type,
             raw: plainText,
-            sender: username
+            sender: username || '[Server]'
         });
 
-        this.addToHistory(username, displayMessage, type);
+        this.addToHistory(username || '[Server]', displayMessage, type);
     }
 
     parseReason(reason) {
         if (!reason) return 'Unknown reason';
 
-        // Log raw reason for debugging
         console.log('Raw Kick Reason:', reason);
 
-        // 1. If it's a Mineflayer/Prismarine chat component, use toAnsi()
         if (typeof reason.toAnsi === 'function') {
             return reason.toAnsi();
         }
 
-        // 2. If it's an NBT-style object or complex JSON
         if (typeof reason === 'object' && reason !== null) {
             const parsed = this.mcColors.nbtToAnsi(reason);
             if (parsed && parsed.trim().length > 0) return parsed;
         }
 
-        // 3. If it's a string, may contain § codes
         if (typeof reason === 'string') {
             return this.mcColors.minecraftToAnsi(reason);
         }
@@ -98,12 +95,10 @@ export class BotClient extends EventEmitter {
             msgStr = '[Circular or Unserializable Object]';
         }
 
-        // Convert Minecraft codes if present
         if (typeof msgStr === 'string' && msgStr.includes('§')) {
             msgStr = this.mcColors.minecraftToAnsi(msgStr);
         }
 
-        // Save to history
         this.chatHistory.push({ message: msgStr, type, timestamp: Date.now() });
         if (this.chatHistory.length > 100) {
             this.chatHistory.shift();
@@ -113,7 +108,6 @@ export class BotClient extends EventEmitter {
             this.emit('log', { message: msgStr, type });
         }
 
-        // Persistent file logging
         Logger.log(`[${this.username}] ${msgStr}`, type);
     }
 
@@ -136,7 +130,7 @@ export class BotClient extends EventEmitter {
     }
 
     init() {
-        this.manuallyStopped = false; // Ensure it's false when starting
+        this.manuallyStopped = false;
         if (this.reconnectTimer) {
             clearTimeout(this.reconnectTimer);
             this.reconnectTimer = null;
@@ -147,7 +141,6 @@ export class BotClient extends EventEmitter {
                 this.bot.removeAllListeners();
                 this.bot.quit();
             } catch (e) {
-                // Ignore errors during cleanup
             }
         }
 
@@ -300,49 +293,30 @@ export class BotClient extends EventEmitter {
         this.bot.on('playerJoined', emitPlayerList);
         this.bot.on('playerLeft', emitPlayerList);
         this.bot.on('spawn', emitPlayerList);
-
-        // Global message handling (Ensures we catch unparsed or system messages)
         this.bot.on('message', (jsonMsg, position) => {
             if (position === 'game_info') return;
 
+            const getBestAnsi = (comp) => {
+                if (!comp) return '';
+                if (comp.unsigned && typeof comp.unsigned.toAnsi === 'function') {
+                    return comp.unsigned.toAnsi();
+                }
+                if (typeof comp.toAnsi === 'function') {
+                    return comp.toAnsi();
+                }
+                return comp.toString();
+            };
+
+            const fullAnsi = getBestAnsi(jsonMsg);
             const plainText = jsonMsg.toString();
             if (!plainText || plainText.trim().length === 0) return;
 
-            // For chat/whisper positions, we let the specific 'chat' and 'whisper' 
-            // events below handle it. They are more reliable for name extraction.
-            if (position === 'chat' || position === 'whisper') return;
-
-            const ansi = jsonMsg.toAnsi();
-
-            // Deduplicate exact ANSI packets
-            const recentKey = `msg:${ansi}`;
-            if (this.recentMessages.has(recentKey)) return;
-            this.recentMessages.add(recentKey);
-            setTimeout(() => this.recentMessages.delete(recentKey), 500);
-
-            // Forward to UI as a system log/message
-            this.emitChat('[Server]', plainText, 'chat', ansi);
+            this.emitChat('[Server]', fullAnsi, 'chat', fullAnsi);
         });
 
-        // Chat event handling (Primary source for player messages with accurate names)
         const handleRichEvent = (username, message, type, jsonMsg) => {
-            const fullAnsi = jsonMsg.toAnsi();
-            const fullPlain = jsonMsg.toString();
-
-            // Clean the username if it's a whisper event ([WHISPER] Tanish -> Tanish)
-            const plainUsername = username.replace(/^[\[\(]WHISPER[\]\)]\s?/, '').trim();
-
-            // Intelligence Check: Does the full server line already contain the username?
-            // If so, we use '[Server]' to avoid 'Player: <Player> Hello' redundancy.
-            // If not, we use the detached 'username' to ensure the dashboard shows WHO said it.
-            if (fullPlain.includes(plainUsername) && fullPlain.length > message.length + 1) {
-                // The full formatted line is complete (e.g. "<Tanish> Hello" or "[Admin] Tanish: Hello")
-                this.emitChat('[Server]', fullPlain, type, fullAnsi);
-            } else {
-                // The full line is missing the name or is just the body
-                // (e.g. from some custom chat plugins or strange server formats)
-                this.emitChat(username, message, type, fullAnsi);
-            }
+            const fullAnsi = jsonMsg.unsigned?.toAnsi?.() || jsonMsg.toAnsi();
+            this.emitChat('[Server]', fullAnsi, type, fullAnsi);
         };
 
         this.bot.on('chat', (username, message, translate, jsonMsg) => {

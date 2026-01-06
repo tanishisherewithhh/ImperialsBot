@@ -1,8 +1,9 @@
 import { BaseFeature } from './BaseFeature.js';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const { pathfinder, goals } = require('mineflayer-pathfinder');
-const { plugin: movement, Heuristics } = require('mineflayer-movement');
+const { pathfinder } = require('mineflayer-pathfinder');
+const { plugin: movement } = require('mineflayer-movement');
+const Vec3 = require('vec3');
 import { ConfigLoader } from '../config/ConfigLoader.js';
 
 export class Navigation extends BaseFeature {
@@ -13,100 +14,134 @@ export class Navigation extends BaseFeature {
         const settings = await ConfigLoader.loadSettings() || {};
         this.currentProfile = settings.navigationProfile || 'Shortest';
 
-        // Wait for bot to be ready to setup movements
-        if (this.botClient.bot.movement) {
-            this.setupHeuristics();
-        } else {
-            this.botClient.bot.once('spawn', () => this.setupHeuristics());
-        }
+        this.active = false;
+        this.targetPos = null;
+        this.navInterval = null;
+
+        // Steering loop
+        this.botClient.bot.on('physicsTick', () => this.onTick());
     }
 
-    setupHeuristics() {
-        if (!this.botClient.bot.movement) return;
-
-        const { Distance, Danger, Proximity, Conformity } = Heuristics;
-
-        let profile;
+    getProfileWeights() {
         switch (this.currentProfile) {
             case 'Safest':
-                profile = {
-                    danger: 1.0,
-                    distance: 0.8,
-                    proximity: 0.4,
-                    conformity: 0.2
-                };
-                break;
+                return { danger: 1.0, distance: 0.8, proximity: 0.4, conformity: 0.2 };
             case 'Easiest':
-                profile = {
-                    danger: 0.4,
-                    distance: 0.2,
-                    proximity: 0.8,
-                    conformity: 0.6
-                };
-                break;
+                return { danger: 0.4, distance: 0.2, proximity: 0.8, conformity: 0.6 };
             case 'Shortest':
             default:
-                profile = {
-                    danger: 0.3,
-                    distance: 0.5,
-                    proximity: 1.0,
-                    conformity: 0.6
-                };
-                break;
+                return { danger: 0.3, distance: 0.5, proximity: 1.0, conformity: 0.6 };
         }
-
-        const heuristics = [
-            new Distance({ weight: profile.distance }),
-            new Danger({ weight: profile.danger }),
-            new Proximity({ weight: profile.proximity }),
-            new Conformity({ weight: profile.conformity })
-        ];
-
-        this.botClient.bot.movement.setHeuristics(heuristics);
-        this.botClient.log(`Navigation heuristics applied for profile: ${this.currentProfile}`, 'info');
     }
 
     setProfile(profileName) {
         this.currentProfile = profileName;
-        this.setupHeuristics();
+        if (this.active) {
+            // Re-apply goal with new heuristics if active
+            this.applyGoal();
+        }
         this.botClient.log(`Navigation profile switched to: ${profileName}`, 'info');
     }
 
+    applyGoal() {
+        const bot = this.botClient.bot;
+        if (!bot.movement || !this.targetPos) return;
+
+        const weights = this.getProfileWeights();
+
+        try {
+            // Create heuristics as per documentation
+            const distance = bot.movement.heuristic.new('distance')
+                .weight(weights.distance)
+                .radius(4)
+                .height(2)
+                .count(8);
+
+            const danger = bot.movement.heuristic.new('danger')
+                .weight(weights.danger)
+                .radius(2)
+                .depth(3);
+
+            const proximity = bot.movement.heuristic.new('proximity')
+                .weight(weights.proximity)
+                .target(this.targetPos);
+
+            const conformity = bot.movement.heuristic.new('conformity')
+                .weight(weights.conformity);
+
+            // Create and set Goal
+            const goal = new bot.movement.Goal({
+                distance,
+                danger,
+                proximity,
+                conformity
+            });
+
+            bot.movement.setGoal(goal);
+        } catch (err) {
+            this.botClient.log(`Error setting navigation goal: ${err.message}`, 'error');
+        }
+    }
+
+    onTick() {
+        const bot = this.botClient.bot;
+        if (!bot.entity || !bot.movement || !this.active || !this.targetPos) return;
+
+        try {
+            // Steering
+            const yaw = bot.movement.getYaw();
+            if (yaw !== null && !isNaN(yaw)) {
+                bot.movement.steer(yaw);
+                bot.setControlState('forward', true);
+                bot.setControlState('jump', bot.entity.isCollidedHorizontally);
+                bot.setControlState('sprint', this.currentProfile === 'Shortest');
+            }
+        } catch (err) {
+            // Silent catch for ticking errors
+        }
+    }
+
     moveTo(x, y, z) {
-        if (!this.botClient.bot.movement) {
+        const bot = this.botClient.bot;
+        if (!bot.movement) {
             this.botClient.log('Movement plugin not ready', 'error');
             return;
         }
 
-        const goal = new goals.GoalBlock(x, y, z);
-        this.botClient.bot.movement.setGoal(goal);
+        if (!bot.entity) {
+            this.botClient.log('Bot not spawned yet', 'error');
+            return;
+        }
 
-        this.botClient.updateStatus(`Moving to ${x},${y},${z}`);
+        this.targetPos = new Vec3(x, y, z);
+        this.active = true;
+
+        this.applyGoal();
+
+        this.botClient.updateStatus('Moving');
         this.botClient.log(`Starting navigation to ${x}, ${y}, ${z} (${this.currentProfile})`);
 
         if (this.navInterval) clearInterval(this.navInterval);
 
-        let startTime = Date.now();
-        let lastPos = this.botClient.bot.entity.position.clone();
+        let lastPos = bot.entity.position.clone();
         let speeds = [];
 
         this.navInterval = setInterval(() => {
-            if (!this.botClient.bot || !this.botClient.bot.entity) {
-                this.stop();
+            if (!this.botClient.bot || !this.botClient.bot.entity || !this.targetPos) {
+                this.stop(true);
                 return;
             }
+
             const pos = this.botClient.bot.entity.position;
-            const targetPos = new (require('vec3'))(x, y, z);
-            const dist = pos.distanceTo(targetPos);
+            const dist = pos.distanceTo(this.targetPos);
 
-            // Calculate speed for ETA
-            const currentSpeed = pos.distanceTo(lastPos); // distance moved since last second
+            // Speed calculation
+            const currentSpeed = pos.distanceTo(lastPos);
             speeds.push(currentSpeed);
-            if (speeds.length > 5) speeds.shift(); // 5-second rolling average
-
+            if (speeds.length > 5) speeds.shift();
             const avgSpeed = speeds.reduce((a, b) => a + b, 0) / speeds.length;
-            let etaStr = '--:--';
 
+            let etaStr = '--:--';
             if (avgSpeed > 0.1) {
                 const remainingSeconds = dist / avgSpeed;
                 const minutes = Math.floor(remainingSeconds / 60);
@@ -115,30 +150,42 @@ export class Navigation extends BaseFeature {
             }
 
             lastPos = pos.clone();
+            this.botClient.updateStatus(`Moving: ${dist.toFixed(0)}m away (ETA: ${etaStr})`);
 
-            this.botClient.updateStatus(`Moving: ${dist.toFixed(0)} blocks away | ETA: ${etaStr}`);
-
-            if (dist < 1.5) {
-                this.stop();
+            if (dist < 1.8) {
+                const target = this.targetPos;
+                this.stop(true);
                 this.botClient.updateStatus('Arrived');
-                this.botClient.log(`Arrived at ${x}, ${y}, ${z}`, 'success');
+                this.botClient.log(`Arrived at ${target.x.toFixed(0)}, ${target.y.toFixed(0)}, ${target.z.toFixed(0)}`, 'success');
             }
         }, 1000);
     }
 
-    stop() {
-        if (this.navInterval) clearInterval(this.navInterval);
+    stop(silent = false) {
+        this.active = false;
+        if (this.navInterval) {
+            clearInterval(this.navInterval);
+            this.navInterval = null;
+        }
 
-        if (this.botClient.bot.movement) {
-            this.botClient.bot.movement.setGoal(null);
-            this.botClient.updateStatus('Navigation Stopped');
+        const bot = this.botClient.bot;
+        if (bot) {
+            bot.clearControlStates();
+            if (bot.movement) bot.movement.setGoal(null);
+        }
+
+        if (!silent) {
+            this.botClient.updateStatus('Online');
             this.botClient.log('Navigation stopped', 'warning');
         }
+
+        this.targetPos = null;
     }
 
     follow(target) {
-        if (!this.botClient.bot.movement) return;
-        const goal = new goals.GoalFollow(target, 2);
-        this.botClient.bot.movement.setGoal(goal);
+        if (!target || !target.position) return;
+        this.targetPos = target.position;
+        this.active = true;
+        this.applyGoal();
     }
 }
