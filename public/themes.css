@@ -380,3 +380,313 @@ body.theme-rose .sidebar {
     color: white;
     padding: 10px;
 }
+
+/* ═══════════════════════════════════════════════════
+   TERMINAL MODE — CRT green-on-black with parallax bg
+   ═══════════════════════════════════════════════════ */
+
+body.theme-terminal {
+    --bg-color: #050505;
+    --glass-bg: rgba(0, 0, 0, 0.75);
+    --glass-border: rgba(74, 246, 38, 0.25);
+    --primary: #4af626;
+    --primary-hover: #3cd41e;
+    --text-main: #c8ffc0;
+    --text-muted: #5a8a52;
+    --accent-warm: #4af626;
+    --danger: #f43f5e;
+    --success: #4af626;
+
+    background-image: none;
+    background-color: #050505;
+    font-family: 'JetBrains Mono', monospace;
+    position: relative;
+}
+
+/* Parallax translucent background image */
+body.theme-terminal::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('terminal-bg.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    opacity: 0.12;
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* Ensure all content sits above the bg */
+body.theme-terminal .app-container {
+    position: relative;
+    z-index: 1;
+}
+
+/* Scanline overlay for CRT feel */
+body.theme-terminal::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: repeating-linear-gradient(0deg,
+            rgba(0, 0, 0, 0.08) 0px,
+            rgba(0, 0, 0, 0.08) 1px,
+            transparent 1px,
+            transparent 3px);
+    z-index: 2;
+    pointer-events: none;
+}
+
+/* Global font override */
+body.theme-terminal,
+body.theme-terminal *:not(svg):not(path):not(use) {
+    font-family: 'JetBrains Mono', monospace !important;
+}
+
+/* Sharp corners everywhere */
+body.theme-terminal .card,
+body.theme-terminal .sidebar,
+body.theme-terminal .top-bar,
+body.theme-terminal .btn,
+body.theme-terminal .toggle-btn,
+body.theme-terminal .tab-btn,
+body.theme-terminal input,
+body.theme-terminal select,
+body.theme-terminal .bot-item,
+body.theme-terminal .chat-box,
+body.theme-terminal .chat-input-area,
+body.theme-terminal .modal-content,
+body.theme-terminal .player-item,
+body.theme-terminal .plugin-card,
+body.theme-terminal .nav-input,
+body.theme-terminal .spammer-config,
+body.theme-terminal .control-btn,
+body.theme-terminal .btn-move,
+body.theme-terminal .btn-action {
+    border-radius: 0 !important;
+}
+
+/* Sidebar */
+body.theme-terminal .sidebar {
+    width: 290px !important;
+    background: rgba(0, 0, 0, 0.85);
+    border-right: 2px solid #4af626;
+    backdrop-filter: none;
+    padding: 15px !important;
+}
+
+body.theme-terminal .bot-item {
+    padding: 8px 10px !important;
+    font-size: 0.85rem !important;
+}
+
+body.theme-terminal .bot-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin: 0 6px !important;
+}
+
+body.theme-terminal .bot-list-header {
+    font-size: 0.75rem !important;
+    margin-top: 10px;
+    letter-spacing: 0.1em;
+}
+
+/* Logo  */
+body.theme-terminal .logo {
+    background: none;
+    -webkit-text-fill-color: #4af626;
+    text-shadow: 0 0 8px rgba(74, 246, 38, 0.5);
+    font-size: 1.3rem !important;
+    margin-bottom: 15px !important;
+}
+
+/* Search input */
+body.theme-terminal #botSearchInput {
+    padding: 8px 10px !important;
+    font-size: 0.85rem !important;
+    margin-bottom: 5px;
+}
+
+/* Cards */
+body.theme-terminal .card {
+    background: rgba(0, 0, 0, 0.7);
+    border: 1px solid rgba(74, 246, 38, 0.2);
+}
+
+/* Buttons */
+body.theme-terminal .btn,
+body.theme-terminal .toggle-btn,
+body.theme-terminal .add-bot-btn,
+body.theme-terminal .chat-input-area button,
+body.theme-terminal .nav-btn,
+body.theme-terminal .btn-primary {
+    background: rgba(0, 0, 0, 0.6) !important;
+    border: 1px solid rgba(74, 246, 38, 0.4);
+    color: #4af626 !important;
+    text-shadow: 0 0 4px rgba(74, 246, 38, 0.3);
+}
+
+body.theme-terminal .btn:hover,
+body.theme-terminal .toggle-btn:hover,
+body.theme-terminal .add-bot-btn:hover,
+body.theme-terminal .chat-input-area button:hover,
+body.theme-terminal .nav-btn:hover,
+body.theme-terminal .btn-primary:hover {
+    background: #4af626 !important;
+    color: #000 !important;
+    text-shadow: none;
+}
+
+body.theme-terminal .danger-btn,
+body.theme-terminal .nav-btn.stop {
+    background: rgba(60, 0, 0, 0.6) !important;
+    border-color: #f43f5e;
+    color: #f43f5e !important;
+}
+
+body.theme-terminal .success-btn,
+body.theme-terminal .nav-btn.go {
+    background: rgba(0, 40, 0, 0.6) !important;
+    border-color: #4af626;
+    color: #4af626 !important;
+}
+
+/* Inputs */
+body.theme-terminal input,
+body.theme-terminal select,
+body.theme-terminal .nav-input {
+    background: rgba(0, 0, 0, 0.8) !important;
+    border: 1px solid rgba(74, 246, 38, 0.3) !important;
+    color: #c8ffc0 !important;
+}
+
+body.theme-terminal input:focus,
+body.theme-terminal select:focus {
+    border-color: #4af626 !important;
+    box-shadow: 0 0 6px rgba(74, 246, 38, 0.3);
+}
+
+/* Tabs */
+body.theme-terminal .tab-btn {
+    color: #5a8a52;
+    border-bottom: 2px solid transparent;
+}
+
+body.theme-terminal .tab-btn.active {
+    background: #4af626 !important;
+    color: #000 !important;
+    font-weight: bold;
+}
+
+/* Bot items */
+body.theme-terminal .bot-item {
+    border: 1px solid transparent;
+}
+
+body.theme-terminal .bot-item:hover {
+    background: rgba(74, 246, 38, 0.05);
+    border-color: rgba(74, 246, 38, 0.2);
+}
+
+body.theme-terminal .bot-item.active {
+    background: rgba(74, 246, 38, 0.1);
+    border-color: #4af626;
+}
+
+/* Chat */
+body.theme-terminal .chat-box {
+    background: rgba(0, 0, 0, 0.85);
+    border: 1px solid rgba(74, 246, 38, 0.2);
+}
+
+body.theme-terminal .chat-message {
+    border-bottom: 1px solid rgba(74, 246, 38, 0.06);
+}
+
+body.theme-terminal .chat-input-area {
+    border-top: 1px solid rgba(74, 246, 38, 0.2);
+    background: rgba(0, 0, 0, 0.7);
+}
+
+/* Modal */
+body.theme-terminal .modal-content {
+    background: #0a0a0a !important;
+    border: 2px solid #4af626;
+    box-shadow: 0 0 30px rgba(74, 246, 38, 0.15);
+}
+
+body.theme-terminal .modal-content h3 {
+    color: #4af626 !important;
+    border-bottom: 1px solid rgba(74, 246, 38, 0.2);
+}
+
+body.theme-terminal .modal-content label {
+    color: #5a8a52 !important;
+}
+
+/* Status indicators */
+body.theme-terminal .status-dot.online {
+    background: #4af626;
+    box-shadow: 0 0 6px #4af626;
+}
+
+/* Plugin cards */
+body.theme-terminal .plugin-card {
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(74, 246, 38, 0.15);
+}
+
+/* Scrollbars */
+body.theme-terminal ::-webkit-scrollbar {
+    width: 6px;
+}
+
+body.theme-terminal ::-webkit-scrollbar-track {
+    background: #050505;
+}
+
+body.theme-terminal ::-webkit-scrollbar-thumb {
+    background: #1a3a18;
+}
+
+body.theme-terminal ::-webkit-scrollbar-thumb:hover {
+    background: #4af626;
+}
+
+/* Spammer config */
+body.theme-terminal .spammer-config {
+    background: rgba(0, 0, 0, 0.6) !important;
+    border: 1px solid rgba(74, 246, 38, 0.15) !important;
+}
+
+/* Control buttons (WASD etc) */
+body.theme-terminal .control-btn,
+body.theme-terminal .btn-move,
+body.theme-terminal .btn-action,
+body.theme-terminal .btn-icon.small {
+    background: rgba(0, 0, 0, 0.6) !important;
+    border: 1px solid rgba(74, 246, 38, 0.3) !important;
+    color: #4af626 !important;
+}
+
+body.theme-terminal .control-btn:hover,
+body.theme-terminal .btn-move:hover,
+body.theme-terminal .btn-action:hover {
+    background: rgba(74, 246, 38, 0.15) !important;
+    border-color: #4af626 !important;
+}
+
+body.theme-terminal .control-btn.active,
+body.theme-terminal .btn-move.active {
+    background: #4af626 !important;
+    color: #000 !important;
+}
