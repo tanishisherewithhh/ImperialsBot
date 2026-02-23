@@ -21,7 +21,7 @@ export class Combat extends BaseFeature {
     }
 
     killauraLoop() {
-        // Safety check to prevent crashing/kicks during world switches or if bot is dead
+
         if (!this.botClient.bot || !this.botClient.bot.entity) return;
 
         const filter = e => e.type === 'mob' || e.type === 'player';

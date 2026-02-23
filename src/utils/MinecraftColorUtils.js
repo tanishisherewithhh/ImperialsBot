@@ -29,7 +29,7 @@ export class MinecraftColorUtils {
             return match;
         });
 
-        // Ensure we reset at the end to avoid bleeding colors in console
+        // we reset at the end to avoid bleeding colors
         return result + '\x1b[0m';
     }
 

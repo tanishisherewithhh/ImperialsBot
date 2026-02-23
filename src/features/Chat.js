@@ -10,7 +10,7 @@ export class Chat extends BaseFeature {
         if (!message) return;
         try {
             this.bot.chat(message);
-           // this.botClient.emitChat(this.botClient.username, message, 'chat');
+
         } catch (err) {
             this.botClient.log(`Failed to send chat: ${err.message}`, 'error');
         }

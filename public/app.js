@@ -1,13 +1,14 @@
 const socket = io();
 
-// State
+
 let currentBot = null;
-let currentTab = 'controls'; // controls, inventory, viewer
+let currentTab = 'controls';
 let bots = new Map();
 let activeKeys = new Set();
 let spammerEnabled = false;
+let lowPerformanceEnabled = false;
 
-// Key Mapping
+
 const keyMap = {
     'w': 'forward',
     's': 'back',
@@ -18,13 +19,13 @@ const keyMap = {
     'control': 'sprint'
 };
 
-// Utils
+
 function isTyping() {
     const el = document.activeElement;
     return el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT';
 }
 
-// Elements
+
 const botList = document.getElementById('botList');
 const connectionStatus = document.getElementById('connectionStatus');
 const viewerContainer = document.getElementById('viewerContainer');
@@ -56,7 +57,7 @@ const spammerLen = document.getElementById('spammerLen');
 const suicideBtn = document.getElementById('suicideBtn');
 const rejoinBtn = document.getElementById('rejoinBtn');
 
-// Modals
+
 const addBotModal = document.getElementById('addBotModal');
 const editBotModal = document.getElementById('editBotModal');
 const addBotBtn = document.getElementById('addBotBtn');
@@ -66,6 +67,9 @@ const addBotForm = document.getElementById('addBotForm');
 const editBotForm = document.getElementById('editBotForm');
 const chatForm = document.getElementById('chatForm');
 
+let chatInputHistory = [];
+let chatInputHistoryIndex = -1;
+
 if (chatForm) {
     chatForm.onsubmit = (e) => {
         e.preventDefault();
@@ -73,6 +77,14 @@ if (chatForm) {
         const text = input.value.trim();
         if (text && currentBot) {
             socket.emit('botAction', { username: currentBot, action: 'chat', payload: { message: text } });
+
+
+            if (chatInputHistory[0] !== text) {
+                chatInputHistory.unshift(text);
+                if (chatInputHistory.length > 10) chatInputHistory.pop();
+            }
+            chatInputHistoryIndex = -1;
+
             input.value = '';
         } else if (!currentBot) {
             showNotification('Select a bot to chat', 'warning');
@@ -80,7 +92,30 @@ if (chatForm) {
     };
 }
 
-// Notifications
+if (chatInput) {
+    chatInput.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (chatInputHistory.length > 0) {
+                if (chatInputHistoryIndex < chatInputHistory.length - 1) {
+                    chatInputHistoryIndex++;
+                    chatInput.value = chatInputHistory[chatInputHistoryIndex];
+                }
+            }
+        } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (chatInputHistoryIndex > 0) {
+                chatInputHistoryIndex--;
+                chatInput.value = chatInputHistory[chatInputHistoryIndex];
+            } else if (chatInputHistoryIndex === 0) {
+                chatInputHistoryIndex = -1;
+                chatInput.value = '';
+            }
+        }
+    });
+}
+
+
 const notificationContainer = document.createElement('div');
 notificationContainer.className = 'notification-container';
 document.body.appendChild(notificationContainer);
@@ -98,21 +133,23 @@ function showNotification(message, type = 'info') {
     }, 3000);
 }
 
-// ----------------------
-// Socket Events
-// ----------------------
+
+
+
 
 socket.on('connect', () => {
-    connectionStatus.style.background = '#22c55e'; // Green
+    connectionStatus.style.background = '#22c55e';
     connectionStatus.title = 'Connected to Server';
     loadingOverlay.classList.remove('active');
 });
 
 socket.on('disconnect', () => {
-    connectionStatus.style.background = '#ef4444'; // Red
+    connectionStatus.style.background = '#ef4444';
     connectionStatus.title = 'Disconnected';
     loadingOverlay.classList.add('active');
 });
+
+let selectedBots = new Set();
 
 socket.on('botList', (data) => {
     botList.innerHTML = '';
@@ -121,29 +158,59 @@ socket.on('botList', (data) => {
         const item = document.createElement('div');
         item.className = `bot-item compact ${currentBot === bot.username ? 'active' : ''}`;
 
-        // Select bot on click (unless clicking action button)
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'bot-checkbox';
+        checkbox.checked = selectedBots.has(bot.username);
+        checkbox.style.width = '18px';
+        checkbox.style.height = '16px';
+        checkbox.style.marginRight = '4px';
+        checkbox.onclick = (e) => {
+            e.stopPropagation();
+            if (checkbox.checked) selectedBots.add(bot.username);
+            else selectedBots.delete(bot.username);
+            updateSelectedCount();
+        };
+
         item.onclick = (e) => {
-            if (!e.target.closest('.btn-icon')) {
+            if (!e.target.closest('.btn-icon') && !e.target.closest('.bot-checkbox')) {
                 selectBot(bot.username);
             }
         };
 
         const statusClass = bot.status === 'online' ? 'online' : (bot.status === 'offline' ? 'offline' : 'connecting');
 
-        // Compact Layout: Avatar | Name | StatusDot | EditButton | DeleteButton
-        item.innerHTML = `
-            <div class="bot-avatar small" style="background-image: url('https://mc-heads.net/avatar/${bot.username}')"></div>
-            <div class="bot-name" style="flex: 1; margin: 0 8px; font-size: 0.9rem;">${bot.username}</div>
-            <div class="status-dot ${statusClass}" style="margin-right: 8px;"></div>
-            <div style="display: flex; gap: 4px;">
-                <button class="btn-icon small" data-action="edit" title="Edit Bot">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                </button>
-                <button class="btn-icon small delete" data-action="delete-item" title="Delete Bot">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                </button>
-            </div>
+        item.innerHTML = '';
+        item.appendChild(checkbox);
+
+        const avatar = document.createElement('div');
+        avatar.className = 'bot-avatar small';
+        avatar.style.backgroundImage = `url('https://mc-heads.net/avatar/${bot.username}')`;
+        item.appendChild(avatar);
+
+        const name = document.createElement('div');
+        name.className = 'bot-name';
+        name.style.cssText = 'flex: 1; margin: 0 8px; font-size: 0.9rem;';
+        name.innerText = bot.username;
+        item.appendChild(name);
+
+        const dot = document.createElement('div');
+        dot.className = `status-dot ${statusClass}`;
+        dot.style.marginRight = '8px';
+        item.appendChild(dot);
+
+        const actionGroup = document.createElement('div');
+        actionGroup.style.display = 'flex';
+        actionGroup.style.gap = '4px';
+        actionGroup.innerHTML = `
+            <button class="btn-icon small" data-action="edit" title="Edit Bot">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            </button>
+            <button class="btn-icon small delete" data-action="delete-item" title="Delete Bot">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </button>
         `;
+        item.appendChild(actionGroup);
 
         const editBtn = item.querySelector('[data-action="edit"]');
         editBtn.onclick = (e) => {
@@ -162,16 +229,37 @@ socket.on('botList', (data) => {
         botList.appendChild(item);
     });
 
+    updateSelectedCount();
+
     if (!currentBot && data.length > 0) {
         selectBot(data[0].username);
     } else if (currentBot) {
-        // Update View Mode Label for current bot
         const bot = bots.get(currentBot);
         if (bot && viewModeBtn) {
             viewModeBtn.innerText = bot.config.firstPerson ? 'Third Person' : 'First Person';
         }
     }
 });
+
+function updateSelectedCount() {
+    const el = document.getElementById('selectedCount');
+    if (el) el.innerText = selectedBots.size;
+}
+
+const searchInputBox = document.getElementById('botSearchInput');
+if (searchInputBox) {
+    searchInputBox.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase();
+        const items = botList.querySelectorAll('.bot-item');
+        items.forEach(item => {
+            const nameEl = item.querySelector('.bot-name');
+            if (nameEl) {
+                const name = nameEl.innerText.toLowerCase();
+                item.style.display = name.includes(query) ? 'flex' : 'none';
+            }
+        });
+    });
+}
 
 socket.on('logs', (payload) => {
     if (currentBot !== payload.username) return;
@@ -180,11 +268,11 @@ socket.on('logs', (payload) => {
     const div = document.createElement('div');
     div.className = `chat-message ${type}`;
 
-    // Formatting
-    // Formatting
+
+
     const time = new Date().toLocaleTimeString();
 
-    // Safe text handling with Color Code Parsing
+
     const timeSpan = document.createElement('span');
     timeSpan.style.opacity = '0.5';
     timeSpan.style.fontSize = '0.8em';
@@ -197,10 +285,13 @@ socket.on('logs', (payload) => {
     div.appendChild(formattedMessage);
 
     chatBox.appendChild(div);
-    chatBox.scrollTop = chatBox.scrollHeight;
+    const isAtBottom = (chatBox.scrollHeight - chatBox.scrollTop - chatBox.clientHeight) < 50;
+    if (isAtBottom) {
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
 });
 
-// Helper: Parse Minecraft § codes to HTML
+
 function formatMinecraftText(text) {
     if (!text) return '';
 
@@ -261,25 +352,25 @@ function formatMinecraftText(text) {
 function ansiToHtml(text) {
     if (!text) return '';
 
-    // Map ANSI colors to Minecraft-themed hex codes
+
     const ansiMap = {
         '30': '#000000', '31': '#AA0000', '32': '#00AA00', '33': '#FFAA00',
         '34': '#0000AA', '35': '#AA00AA', '36': '#00AAAA', '37': '#AAAAAA',
         '90': '#555555', '91': '#FF5555', '92': '#55FF55', '93': '#FFFF55',
         '94': '#5555FF', '95': '#FF55FF', '96': '#55FFFF', '97': '#FFFFFF',
-        // Backgrounds (subtle)
+
         '40': 'background:#000000;', '41': 'background:#AA0000;', '42': 'background:#00AA00;', '43': 'background:#FFAA00;',
         '44': 'background:#0000AA;', '45': 'background:#AA00AA;', '46': 'background:#00AAAA;', '47': 'background:#AAAAAA;'
     };
 
     const styles = {
         '1': 'font-weight:bold;',
-        '2': 'opacity:0.7;', // Dim
+        '2': 'opacity:0.7;',
         '3': 'font-style:italic;',
         '4': 'text-decoration:underline;',
-        '5': 'animation: blink 1s infinite;', // Blink (custom CSS needed)
-        '7': 'filter: invert(100%);', // Invert
-        '8': 'opacity:0;', // Hidden
+        '5': 'animation: blink 1s infinite;',
+        '7': 'filter: invert(100%);',
+        '8': 'opacity:0;',
         '9': 'text-decoration:line-through;'
     };
 
@@ -288,13 +379,13 @@ function ansiToHtml(text) {
     let currentBackground = '';
     let currentStyles = new Set();
 
-    // Splitting by ANSI sequences more globally: \u001b or \x1b followed by [ followed by codes ending in m
-    // We catch the entire code block which might contain multiple delimited codes e.g. [1;31m
+
+
     const parts = text.split(/[\u001b\x1b]\[([0-9;]*)m/);
 
     for (let i = 0; i < parts.length; i++) {
         if (i % 2 === 0) {
-            // Text part
+
             if (parts[i]) {
                 const styleArr = Array.from(currentStyles);
                 if (currentColor) styleArr.push(`color:${currentColor};`);
@@ -308,10 +399,10 @@ function ansiToHtml(text) {
                 }
             }
         } else {
-            // ANSI code part
+
             const codes = parts[i].split(';');
             for (const code of codes) {
-                // Handle 0 (reset), 1 (bold), 31 (red), etc.
+
                 if (code === '0' || code === '') {
                     currentColor = '';
                     currentBackground = '';
@@ -336,14 +427,14 @@ function formatChat(text) {
     if (!text) return '';
     let result = text;
 
-    // Process ANSI first (usually from toAnsi())
+
     if (result.includes('\u001b') || result.includes('\x1b')) {
         result = ansiToHtml(result);
-        // Note: ansiToHtml returns HTML with <span> tags, 
-        // we shouldn't run formatMinecraftText on HTML tags directly 
-        // but it's likely the text is now safe.
+
+
+
     } else {
-        // Fallback or manual Minecraft formatting
+
         result = formatMinecraftText(result);
     }
 
@@ -361,7 +452,7 @@ function escapeHtml(text) {
 }
 
 socket.on('botStatus', (payload) => {
-    // payload: { username, status: 'Online' | 'Offline' | ... }
+
     const { username, status } = payload;
 
     if (bots.has(username)) {
@@ -370,7 +461,7 @@ socket.on('botStatus', (payload) => {
         if (payload.inventoryPort) bot.inventoryPort = payload.inventoryPort;
     }
 
-    // Update List Dot in sidebar
+
     const items = botList.querySelectorAll('.bot-item');
     items.forEach(item => {
         const nameEl = item.querySelector('.bot-name');
@@ -382,20 +473,30 @@ socket.on('botStatus', (payload) => {
         }
     });
 
-    // Update Header if current
+
     if (currentBot === username) {
         document.getElementById('botStatus').innerText = status;
         document.getElementById('botStatus').className = `status-indicator ${status.toLowerCase()}`;
+
+        const rejoinBtn = document.getElementById('rejoinBtn');
+        if (rejoinBtn) {
+            const lowStatus = status.toLowerCase();
+            const isOffline = lowStatus === 'offline' || lowStatus === 'created';
+            rejoinBtn.innerHTML = rejoinBtn.innerHTML.replace(isOffline ? 'Rejoin' : 'Join', isOffline ? 'Join' : 'Rejoin');
+        }
+
         updateInventoryFrame();
     }
 });
 
+let lastBotDataUpdate = 0;
 socket.on('botData', (payload) => {
-    // payload: { username, data: { position, health, food, yaw, pitch } }
-    if (currentBot !== payload.username) return;
-    const data = payload.data;
 
-    console.log('Bot Data:', data); // Debug
+    if (currentBot !== payload.username) return;
+    const now = Date.now();
+    if (now - lastBotDataUpdate < 1000) return;
+    lastBotDataUpdate = now;
+    const data = payload.data;
 
     if (data.health !== undefined) {
         const healthStat = document.getElementById('healthStat');
@@ -423,9 +524,6 @@ function trim(num) {
     return Number(num).toFixed(2);
 }
 
-// Bot Inventory event is now handled by the iframe, but we can still listen for metadata if needed.
-// However, to keep it clean, we'll remove the legacy listener.
-
 socket.on('botPlayers', (payload) => {
     if (currentBot !== payload.username) return;
     renderPlayerList(payload.players || []);
@@ -438,7 +536,7 @@ function renderPlayerList(players) {
     if (playerCount) playerCount.innerText = players.length;
     if (!playerList) return;
 
-    // Smart Render: Update existing, Add new, Remove old
+
     const existingEls = new Map();
     playerList.querySelectorAll('.player-item').forEach(el => {
         existingEls.set(el.dataset.username, el);
@@ -451,26 +549,33 @@ function renderPlayerList(players) {
         let el = existingEls.get(p.username);
 
         if (el) {
-            // Update existing
+
             const pingEl = el.querySelector('.ping-text');
             if (pingEl && pingEl.innerText !== `${p.ping}ms`) {
                 pingEl.innerText = `${p.ping}ms`;
+                let pingColor = '#22c55e';
+                if (p.ping > 150) pingColor = '#fbbf24';
+                if (p.ping > 300) pingColor = '#ef4444';
+                pingEl.style.color = pingColor;
             }
         } else {
-            // Create new
+
             el = document.createElement('div');
             el.className = 'player-item';
             el.dataset.username = p.username;
             el.style.cssText = 'display:flex; align-items:center; gap:8px; padding:4px; animate: fadeIn 0.2s;';
+            let pingColor = '#22c55e';
+            if (p.ping > 150) pingColor = '#fbbf24';
+            if (p.ping > 300) pingColor = '#ef4444';
             el.innerHTML = `
                 <span style="flex:1;">${p.username}</span>
-                <span class="ping-text" style="color:var(--text-muted); font-size:0.8rem;">${p.ping}ms</span>
+                <span class="ping-text" style="color:${pingColor}; font-size:0.8rem;">${p.ping}ms</span>
             `;
             playerList.appendChild(el);
         }
     });
 
-    // Remove old items
+
     existingEls.forEach((el, username) => {
         if (!activeUsernames.has(username)) {
             el.remove();
@@ -485,7 +590,7 @@ socket.on('spammerConfig', (payload) => {
     const config = payload.config;
 
     if (config) {
-        // Compare with last known server state (ignore re-broadcasts)
+
         const currentConfigStr = JSON.stringify(config);
         if (currentConfigStr === lastSpammerConfigStr) return;
         lastSpammerConfigStr = currentConfigStr;
@@ -512,21 +617,82 @@ socket.on('spammerConfig', (payload) => {
     }
 });
 
+socket.on('pluginList', (payload) => {
+    if (currentBot !== payload.username) return;
+    renderPlugins(payload.plugins || []);
+});
+
+function renderPlugins(plugins) {
+    const pluginsList = document.getElementById('pluginsList');
+    if (!pluginsList) return;
+    pluginsList.innerHTML = '';
+
+    if (plugins.length === 0) {
+        pluginsList.innerHTML = '<div style="color: var(--text-muted); font-size: 0.9rem;">No plugins loaded</div>';
+        return;
+    }
+
+    plugins.forEach(plugin => {
+        const item = document.createElement('div');
+        item.className = 'plugin-item';
+
+        const isEnabled = plugin.enabled;
+        const hasError = plugin.hasError;
+
+        item.innerHTML = `
+            <div class="plugin-info">
+                <div class="plugin-name">${plugin.name}</div>
+                <div class="plugin-desc">${plugin.description}</div>
+            </div>
+            <label class="switch">
+                <input type="checkbox" ${isEnabled ? 'checked' : ''} ${hasError ? 'disabled' : ''} 
+                    onchange="togglePlugin('${plugin.name}', this.checked)">
+                <span class="slider"></span>
+            </label>
+        `;
+        pluginsList.appendChild(item);
+    });
+}
+
+window.togglePlugin = (name, enabled) => {
+    if (!currentBot) return;
+    socket.emit('botAction', {
+        username: currentBot,
+        action: 'togglePlugin',
+        payload: { pluginName: name, enabled }
+    });
+};
+
 socket.on('notification', (data) => {
     console.log('Notification:', data);
     showNotification(data.message, data.type);
 });
 
 
-// ----------------------
-// Bot Selection
-// ----------------------
+
+
+
 
 function selectBot(username) {
     currentBot = username;
-    lastSpammerConfigStr = ''; // Reset spammer cache to force UI update
+    lastSpammerConfigStr = '';
 
-    // Update UI active state
+    // Clear dashboard data for a clean switch
+    analyticsData = {};
+    if (typeof renderPlugins === 'function') renderPlugins([]);
+
+    const playerList = document.getElementById('playerList');
+    if (playerList) playerList.innerHTML = '';
+
+    const healthStat = document.getElementById('healthStat');
+    if (healthStat) healthStat.innerText = '0';
+
+    const foodStat = document.getElementById('foodStat');
+    if (foodStat) foodStat.innerText = '0';
+
+    const posStat = document.getElementById('posStat');
+    if (posStat) posStat.innerText = '0, 0, 0';
+
     document.querySelectorAll('.bot-item').forEach(el => {
         if (el.innerText.includes(username)) el.classList.add('active');
         else el.classList.remove('active');
@@ -543,6 +709,9 @@ function selectBot(username) {
 
     socket.emit('requestBotData', { username });
     updateInventoryFrame();
+
+    // Reset viewer to placeholder until the new bot's viewer data arrives
+    viewerContainer.innerHTML = '<div class="placeholder">Viewer Offline</div>';
 }
 
 function updateInventoryFrame() {
@@ -553,7 +722,7 @@ function updateInventoryFrame() {
     const status = (bot.status || '').toLowerCase();
 
     if (bot && status === 'online' && bot.inventoryPort) {
-        // Use hostname to ensure it works in various environments
+
         const url = `http://${window.location.hostname}:${bot.inventoryPort}`;
         if (iframe.src !== url) {
             iframe.src = url;
@@ -578,7 +747,7 @@ function updateInventoryFrame() {
 function updateViewer(port) {
     if (!port) return;
     const viewerFrame = viewerContainer.querySelector('iframe');
-    const newSrc = `http://localhost:${port}`;
+    const newSrc = `http://${window.location.hostname}:${port}`;
     if (!viewerFrame) {
         viewerContainer.innerHTML = `<iframe src="${newSrc}" style="width:100%; height:100%; border:none;"></iframe>`;
     } else if (viewerFrame.src !== newSrc) {
@@ -587,7 +756,7 @@ function updateViewer(port) {
 }
 
 socket.on('botViewer', (data) => {
-    // Update config locally
+
     if (bots.has(data.username)) {
         const botConfig = bots.get(data.username).config;
         botConfig.viewerPort = data.port;
@@ -604,7 +773,7 @@ socket.on('botViewer', (data) => {
 });
 
 socket.on('chatHistory', (payload) => {
-    // Correctly handle packaged payload
+
     const username = payload.username;
     const history = payload.history;
 
@@ -623,10 +792,10 @@ socket.on('chatHistory', (payload) => {
 });
 
 socket.on('botChat', (payload) => {
-    // payload: { username, message, type, raw }
+
     if (!currentBot || !payload.username || currentBot.toLowerCase() !== payload.username.toLowerCase()) return;
 
-    // UI-side deduplication
+
     const lastMsg = chatBox.lastElementChild;
     const now = Date.now();
     const compareText = payload.raw || payload.message;
@@ -634,7 +803,7 @@ socket.on('botChat', (payload) => {
 
     if (lastMsg && lastMsg.dataset.rawMessage === compareText && lastMsg.dataset.sender === sender) {
         const lastTime = parseInt(lastMsg.dataset.timestamp);
-        if ((now - lastTime) < 500) return; // Skip duplicate
+        if ((now - lastTime) < 500) return;
     }
 
     const msgObj = {
@@ -644,15 +813,18 @@ socket.on('botChat', (payload) => {
         raw: compareText,
         timestamp: now
     };
+    const isAtBottom = (chatBox.scrollHeight - chatBox.scrollTop - chatBox.clientHeight) < 50;
     renderChatMessage(msgObj);
-    chatBox.scrollTop = chatBox.scrollHeight;
+    if (isAtBottom) {
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
 });
 
 function renderChatMessage(msg) {
     const div = document.createElement('div');
     div.className = `chat-message ${msg.type || 'info'}`;
 
-    // Store metadata for deduplication
+
     div.dataset.rawMessage = msg.raw || msg.message;
     div.dataset.sender = msg.username || '[Server]';
     div.dataset.timestamp = msg.timestamp || Date.now();
@@ -669,7 +841,7 @@ function renderChatMessage(msg) {
         const nameSpan = document.createElement('span');
         nameSpan.style.fontWeight = 'bold';
         nameSpan.style.marginRight = '5px';
-        // Use formatChat for username too to support formatted names from servers
+
         nameSpan.innerHTML = formatChat(msg.username) + ':';
         div.appendChild(nameSpan);
     }
@@ -680,12 +852,12 @@ function renderChatMessage(msg) {
 
     chatBox.appendChild(div);
 }
-// Or if msg has timestamp? It probably doesn't currently.
 
 
-// ----------------------
-// Tabs
-// ----------------------
+
+
+
+
 tabBtns.forEach(btn => {
     btn.onclick = () => {
         tabBtns.forEach(b => b.classList.remove('active'));
@@ -697,12 +869,15 @@ tabBtns.forEach(btn => {
         if (currentTab === 'inventory') {
             updateInventoryFrame();
         }
+        if (currentTab === 'analyticsPane') {
+            updateAnalyticsGraphs();
+        }
     };
 });
 
-// ----------------------
-// Modals
-// ----------------------
+
+
+
 addBotBtn.onclick = () => {
     addBotModal.classList.add('active');
 };
@@ -710,15 +885,29 @@ window.toggleRealmsFields = function (select, prfx) {
     const isRealms = select.value === 'realms';
     document.getElementById(`${prfx}ServerFields`).style.display = isRealms ? 'none' : 'block';
     document.getElementById(`${prfx}RealmsFields`).style.display = isRealms ? 'block' : 'none';
+    const authSelect = document.querySelector(`#${prfx}BotForm [name="auth"]`);
+    if (authSelect && isRealms) {
+        authSelect.value = 'microsoft';
+        authSelect.disabled = true;
+    } else if (authSelect) {
+        authSelect.disabled = false;
+    }
 };
 
 cancelAddBot.onclick = () => {
     addBotModal.classList.remove('active');
 };
 
-window.onclick = (e) => {
-    if (e.target === addBotModal) addBotModal.classList.remove('active');
-    if (e.target === editBotModal) editBotModal.classList.remove('active');
+window.toggleProxyFields = function (prfx) {
+    const typeSelect = document.getElementById(`${prfx}BotProxyType`);
+    const detailsDiv = document.getElementById(`${prfx}BotProxyDetails`);
+    if (typeSelect && detailsDiv) {
+        if (typeSelect.value === 'none') {
+            detailsDiv.style.display = 'none';
+        } else {
+            detailsDiv.style.display = 'block';
+        }
+    }
 };
 
 addBotForm.onsubmit = (e) => {
@@ -726,18 +915,23 @@ addBotForm.onsubmit = (e) => {
     const formData = new FormData(addBotForm);
     const data = Object.fromEntries(formData.entries());
 
-    // Connection Logic
+
     if (data.connectionType === 'realms') {
+        if (data.auth === 'offline') {
+            showNotification('Realms requires Microsoft authentication.', 'error');
+            return;
+        }
         data.realms = {
             [data.realmType === 'id' ? 'realmId' : (data.realmType === 'name' ? 'realmName' : 'realmInvite')]: data.realmIdentifier
         };
-        // Clear host/port for realms
+
         data.host = '';
         data.port = 0;
     }
 
-    // Fix types
+
     data.port = parseInt(data.port) || 0;
+    data.proxyPort = parseInt(data.proxyPort) || 0;
     data.firstPerson = formData.get('firstPerson') === 'on';
     data.autoReconnect = formData.get('autoReconnect') === 'on';
     data.registerConfirm = formData.get('registerConfirm') === 'on';
@@ -745,7 +939,7 @@ addBotForm.onsubmit = (e) => {
     socket.emit('createBot', data);
     addBotModal.classList.remove('active');
     addBotForm.reset();
-    // Reset fields visibility
+
     document.getElementById('addServerFields').style.display = 'block';
     document.getElementById('addRealmsFields').style.display = 'none';
 };
@@ -760,7 +954,13 @@ function openEditModal(bot) {
     if (form.auth) form.auth.value = bot.config.auth || 'offline';
     if (form.webhookUrl) form.webhookUrl.value = bot.config.webhookUrl || '';
 
-    // Realms logic
+    if (form.proxyType) form.proxyType.value = bot.config.proxyType || 'none';
+    if (form.proxyHost) form.proxyHost.value = bot.config.proxyHost || '';
+    if (form.proxyPort) form.proxyPort.value = bot.config.proxyPort || '';
+    if (form.proxyUser) form.proxyUser.value = bot.config.proxyUser || '';
+    if (form.proxyPass) form.proxyPass.value = bot.config.proxyPass || '';
+
+
     if (bot.config.realms) {
         form.connectionType.value = 'realms';
         document.getElementById('editServerFields').style.display = 'none';
@@ -796,7 +996,7 @@ editBotForm.onsubmit = (e) => {
     const formData = new FormData(editBotForm);
     const data = Object.fromEntries(formData.entries());
 
-    // Connection Logic
+
     if (data.connectionType === 'realms') {
         data.realms = {
             [data.realmType === 'id' ? 'realmId' : (data.realmType === 'name' ? 'realmName' : 'realmInvite')]: data.realmIdentifier
@@ -804,10 +1004,11 @@ editBotForm.onsubmit = (e) => {
         data.host = '';
         data.port = 0;
     } else {
-        data.realms = null; // Clear if switching back
+        data.realms = null;
     }
 
     data.port = parseInt(data.port) || 0;
+    data.proxyPort = parseInt(data.proxyPort) || 0;
     data.firstPerson = formData.get('firstPerson') === 'on';
     data.autoReconnect = formData.get('autoReconnect') === 'on';
     data.registerConfirm = formData.get('registerConfirm') === 'on';
@@ -819,17 +1020,42 @@ editBotForm.onsubmit = (e) => {
 cancelEditBot.onclick = () => {
     editBotModal.classList.remove('active');
 };
-// ----------------------
-// Chat
-// ----------------------
+
+
+
+let chatHistory = [];
+let historyIndex = -1;
+
 chatInput.onkeydown = (e) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (chatHistory.length > 0) {
+            if (historyIndex < chatHistory.length - 1) {
+                historyIndex++;
+                chatInput.value = chatHistory[historyIndex];
+            }
+        }
+    } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (historyIndex > -1) {
+            historyIndex--;
+            if (historyIndex === -1) {
+                chatInput.value = '';
+            } else {
+                chatInput.value = chatHistory[historyIndex];
+            }
+        }
+    } else if (e.key === 'Enter') {
         if (!currentBot) {
             showNotification('Please select a bot first');
             return;
         }
         const text = chatInput.value;
         if (text.trim()) {
+            chatHistory.unshift(text.trim());
+            if (chatHistory.length > 10) chatHistory.pop();
+            historyIndex = -1;
+
             socket.emit('botAction', {
                 username: currentBot,
                 action: 'chat',
@@ -840,10 +1066,25 @@ chatInput.onkeydown = (e) => {
     }
 };
 
+const botSearchInput = document.getElementById('botSearchInput');
+if (botSearchInput) {
+    botSearchInput.addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase();
+        const items = document.querySelectorAll('.bot-item');
+        items.forEach(item => {
+            const nameEl = item.querySelector('.bot-name');
+            if (nameEl) {
+                const name = nameEl.innerText.toLowerCase();
+                item.style.display = name.includes(term) ? 'flex' : 'none';
+            }
+        });
+    });
+}
 
-// ----------------------
-// Spammer
-// ----------------------
+
+
+
+
 function addSpammerInput(value = '') {
     const div = document.createElement('div');
     div.className = 'spammer-input-group';
@@ -881,22 +1122,22 @@ if (importSpamBtn && importSpamFile) {
             const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
 
             if (lines.length > 0) {
-                // Determine if we should clear or append. 
-                // User said "import... with every new line", usually implies loading a config.
-                // Let's clear existing sample "ImperialsBot OP" if it's the only one, otherwise append.
-                // Actually, safer to just append to avoid data loss.
+
+
+
+
                 lines.forEach(line => addSpammerInput(line));
                 showNotification(`Imported ${lines.length} messages`, 'success');
             } else {
                 showNotification('File is empty', 'warning');
             }
-            importSpamFile.value = ''; // Reset
+            importSpamFile.value = '';
         };
         reader.readAsText(file);
     };
 }
 
-// Feature Toggles
+
 const autoReconnectBtn = document.getElementById('autoReconnectBtn');
 const autoAuthBtn = document.getElementById('autoAuthBtn');
 const antiAfkBtn = document.getElementById('antiAfkBtn');
@@ -924,7 +1165,7 @@ setupToggle(killauraBtn, 'toggleKillaura', 'Killaura', 'Killaura');
 socket.on('botToggles', (data) => {
     if (currentBot !== data.username) return;
 
-    // Helper to update btn state
+
     const updateBtn = (btn, enabled, label) => {
         if (!btn) return;
         if (enabled) {
@@ -974,9 +1215,9 @@ spammerBtn.onclick = () => {
 
 
 
-// ----------------------
-// Bot Actions
-// ----------------------
+
+
+
 suicideBtn.onclick = () => {
     if (!currentBot) {
         showNotification('Please select a bot first');
@@ -1000,6 +1241,7 @@ document.querySelectorAll('[data-action="stop"]').forEach(btn => {
         if (!currentBot) return;
         if (confirm('Disconnect bot from server? (Config will be saved)')) {
             socket.emit('botAction', { username: currentBot, action: 'stop' });
+            showNotification('Disconnecting ' + currentBot + '...', 'info');
         }
     };
 });
@@ -1034,7 +1276,7 @@ controls.forEach(control => {
     });
 });
 
-// Click Actions
+
 const btnLeftClick = document.getElementById('btnLeftClick');
 const btnRightClick = document.getElementById('btnRightClick');
 const viewModeBtn = document.getElementById('viewModeBtn');
@@ -1125,7 +1367,7 @@ document.addEventListener('keydown', (e) => {
 
     const key = e.key.toLowerCase();
 
-    // Prevent Spacebar scrolling
+
     if (key === ' ') {
         e.preventDefault();
     }
@@ -1170,12 +1412,12 @@ exportChatBtn.onclick = () => {
         return;
     }
 
-    // Get text content processing
+
     let content = '';
-    // Iterate over chat messages to format them nicely
+
     const messages = chatBox.querySelectorAll('.chat-message');
     messages.forEach(msg => {
-        // Simple text extraction
+
         content += msg.innerText + '\n';
     });
 
@@ -1192,7 +1434,7 @@ exportChatBtn.onclick = () => {
     showNotification('Chat exported!', 'success');
 };
 
-// Theme Switching Logic (with View Transitions)
+
 const themeSelect = document.getElementById('themeSelect');
 
 socket.on('settings', (settings) => {
@@ -1205,7 +1447,7 @@ socket.on('settings', (settings) => {
 themeSelect.onchange = (e) => {
     const newTheme = e.target.value;
 
-    // View Transition API (Fall back if not supported)
+
     if (!document.startViewTransition) {
         document.body.className = newTheme;
         socket.emit('saveSettings', { theme: newTheme });
@@ -1218,33 +1460,54 @@ themeSelect.onchange = (e) => {
     });
 };
 
-// =========================================
-// Visual Overhaul: Mouse Effects & Parallax
-// =========================================
 
-// 1. Spotlight Effect (Accumulated + Optimized)
-let mouseX = 0, mouseY = 0;
-let currentHoverResult = null;
+
+
+
+
+let lastHoverable = null;
+
+document.body.style.setProperty('--mouse-active', '0');
+
+window.addEventListener('mouseenter', () => {
+    document.body.style.setProperty('--mouse-active', '1');
+});
+
+window.addEventListener('mouseleave', () => {
+    document.body.style.setProperty('--mouse-active', '0');
+    if (lastHoverable) {
+        lastHoverable.style.setProperty('--mouse-x', '-999px');
+        lastHoverable.style.setProperty('--mouse-y', '-999px');
+    }
+});
 
 document.addEventListener('mousemove', (e) => {
-    // Parallax (Lightweight)
     const moveX = (e.clientX - window.innerWidth / 2) * 0.01;
     const moveY = (e.clientY - window.innerHeight / 2) * 0.01;
     document.body.style.setProperty('--parallax-x', `${moveX}px`);
     document.body.style.setProperty('--parallax-y', `${moveY}px`);
 
-    // Spotlight (Efficient)
-    const hoverable = e.target.closest('.btn, .card, .bot-item, .nav-input');
+    const hoverable = e.target.closest('.btn, .card, .bot-item, .nav-input, .tab-btn');
+
+    if (lastHoverable && lastHoverable !== hoverable) {
+        lastHoverable.style.setProperty('--mouse-x', '-999px');
+        lastHoverable.style.setProperty('--mouse-y', '-999px');
+    }
+
     if (hoverable) {
         const rect = hoverable.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
         hoverable.style.setProperty('--mouse-x', `${x}px`);
         hoverable.style.setProperty('--mouse-y', `${y}px`);
+        document.body.style.setProperty('--mouse-active', '1');
+        lastHoverable = hoverable;
+    } else {
+        document.body.style.setProperty('--mouse-active', '1');
     }
 });
 
-// Start update label
+
 const spammerLenLabel = document.getElementById('spammerLenLabel');
 if (spammerLen && spammerLenLabel) {
     spammerLen.addEventListener('input', () => {
@@ -1252,7 +1515,7 @@ if (spammerLen && spammerLenLabel) {
     });
 }
 
-// Navigation Controls
+
 const navToggleBtn = document.getElementById('navToggleBtn');
 const navX = document.getElementById('navX');
 const navY = document.getElementById('navY');
@@ -1265,7 +1528,7 @@ if (navToggleBtn) {
         if (!currentBot) return showNotification('Select a bot first');
 
         if (isNavigating) {
-            // Stop logic
+
             socket.emit('botAction', {
                 username: currentBot,
                 action: 'stopNavigation',
@@ -1275,7 +1538,7 @@ if (navToggleBtn) {
             navToggleBtn.textContent = 'Go';
             navToggleBtn.className = 'nav-btn go';
         } else {
-            // Start logic
+
             const x = parseFloat(navX.value);
             const y = parseFloat(navY.value);
             const z = parseFloat(navZ.value);
@@ -1295,7 +1558,7 @@ if (navToggleBtn) {
         }
     };
 }
-// Listen for arrival/stop from server to reset button (optional but good)
+
 socket.on('botStatus', (data) => {
     if (data.username === currentBot) {
         if (data.status === 'Arrived' || data.status === 'Navigation Stopped') {
@@ -1308,7 +1571,163 @@ socket.on('botStatus', (data) => {
     }
 });
 
-// Global Settings Logic
+
+
+
+let analyticsData = {};
+let analyticsCharts = {};
+const metricsConfig = {
+    ping: { label: 'Ping', unit: 'ms', color: '#22c55e' },
+    tps: { label: 'TPS', unit: '', color: '#f97316', max: 20 }
+};
+
+socket.on('analyticsUpdate', (data) => {
+    if (currentBot !== data.username) return;
+    if (!document.getElementById('analyticsPane').classList.contains('active')) return;
+
+    const chartsGrid = document.getElementById('analyticsChartsGrid');
+    const timestamp = data.stat.timestamp;
+    const metrics = Object.keys(data.stat).filter(k => k !== 'timestamp');
+
+    metrics.forEach(key => {
+        const val = data.stat[key];
+        const config = metricsConfig[key] || { label: key, unit: '', color: '#fff' };
+
+        if (!analyticsData[key]) analyticsData[key] = [];
+        analyticsData[key].push({ t: timestamp, v: val });
+        if (analyticsData[key].length > 100) analyticsData[key].shift();
+
+        let card = document.getElementById(`metric-card-${key}`);
+        if (!card) {
+            card = document.createElement('div');
+            card.id = `metric-card-${key}`;
+            card.className = 'metric-card';
+            card.style.cssText = 'background: rgba(0,0,0,0.2); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px; height: 200px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05);';
+            card.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                    <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 500;">${config.label}</div>
+                    <div class="stat-value" style="font-size: 1.1rem; font-weight: bold; color: ${config.color};">--</div>
+                </div>
+                <div style="flex: 1; position: relative; min-height: 0;">
+                    <canvas id="chart-${key}"></canvas>
+                </div>
+            `;
+            chartsGrid.appendChild(card);
+
+            const ctx = document.getElementById(`chart-${key}`).getContext('2d');
+            analyticsCharts[key] = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        borderColor: config.color,
+                        borderWidth: 2,
+                        fill: true,
+                        backgroundColor: config.color + '22',
+                        tension: 0.4,
+                        pointRadius: 0,
+                        pointHoverRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    layout: { padding: { top: 10, bottom: 5, left: 5, right: 15 } },
+                    plugins: { legend: { display: false }, tooltip: { enabled: true, intersect: false, mode: 'index' } },
+                    scales: {
+                        x: { display: false },
+                        y: {
+                            beginAtZero: true,
+                            max: config.max,
+                            grace: '10%',
+                            ticks: {
+                                color: 'rgba(255,255,255,0.4)',
+                                font: { size: 9 },
+                                maxTicksLimit: 5,
+                                callback: (val) => val + (config.unit ? config.unit : '')
+                            },
+                            grid: { color: 'rgba(255,255,255,0.05)', drawTicks: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        card.querySelector('.stat-value').innerText = `${typeof val === 'number' ? val.toFixed(key === 'tps' ? 1 : 0) : val}${config.unit}`;
+    });
+
+    if (lowPerformanceEnabled) {
+        if (!window._lastGraphUpdate || Date.now() - window._lastGraphUpdate > 2000) {
+            updateAnalyticsGraphs();
+            window._lastGraphUpdate = Date.now();
+        }
+    } else {
+        updateAnalyticsGraphs();
+    }
+});
+
+function updateAnalyticsGraphs() {
+    Object.keys(analyticsCharts).forEach(key => {
+        const chart = analyticsCharts[key];
+        const data = analyticsData[key] || [];
+        chart.data.labels = data.map(d => new Date(d.t).toLocaleTimeString());
+        chart.data.datasets[0].data = data.map(d => d.v);
+        chart.update('none');
+    });
+}
+
+const exportAnalyticsBtn = document.getElementById('exportAnalyticsBtn');
+if (exportAnalyticsBtn) {
+    exportAnalyticsBtn.onclick = () => {
+        if (!analyticsData.ping || analyticsData.ping.length === 0) {
+            showNotification('No data to export', 'error');
+            return;
+        }
+
+
+        const metrics = Object.keys(analyticsData);
+        let csv = `Timestamp,${metrics.join(',')}\n`;
+
+
+        let maxLen = 0;
+        metrics.forEach(m => {
+            if (analyticsData[m].length > maxLen) maxLen = analyticsData[m].length;
+        });
+
+        for (let i = 0; i < maxLen; i++) {
+
+            let timestamp = '';
+            for (const m of metrics) {
+                if (analyticsData[m][i]) {
+                    timestamp = new Date(analyticsData[m][i].t).toISOString();
+                    break;
+                }
+            }
+
+            let row = `${timestamp}`;
+            metrics.forEach(m => {
+                const val = analyticsData[m][i] ? analyticsData[m][i].v : '';
+                row += `,${val}`;
+            });
+            csv += row + '\n';
+        }
+
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `analytics_${currentBot}_${Date.now()}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        showNotification('Analytics exported!', 'success');
+    };
+}
+
+
 const settingsModal = document.getElementById('settingsModal');
 const settingsBtn = document.getElementById('settingsBtn');
 const closeSettingsBtn = document.getElementById('closeSettingsBtn');
@@ -1332,10 +1751,17 @@ if (settingsForm) {
         e.preventDefault();
         const delay = parseInt(settingReconnectDelay.value);
         const profile = document.getElementById('settingNavigationProfile').value;
+        const lowPerf = document.getElementById('settingLowPerformance').checked;
+        const proxyListText = document.getElementById('settingProxyList') ? document.getElementById('settingProxyList').value : '';
+        const randomProxy = document.getElementById('settingRandomProxy') ? document.getElementById('settingRandomProxy').checked : false;
+
         const updates = {};
 
         if (!isNaN(delay)) updates.reconnectDelay = delay;
         if (profile) updates.navigationProfile = profile;
+        updates.lowPerformanceMode = lowPerf;
+        updates.proxyList = proxyListText;
+        updates.randomProxy = randomProxy;
 
         if (Object.keys(updates).length > 0) {
             socket.emit('saveSettings', updates);
@@ -1345,7 +1771,7 @@ if (settingsForm) {
     };
 }
 
-// Ensure settings are loaded into the form
+
 socket.on('settings', (settings) => {
     if (settings && settings.reconnectDelay) {
         if (settingReconnectDelay) settingReconnectDelay.value = settings.reconnectDelay;
@@ -1354,11 +1780,110 @@ socket.on('settings', (settings) => {
         const navProfileSelect = document.getElementById('settingNavigationProfile');
         if (navProfileSelect) navProfileSelect.value = settings.navigationProfile;
     }
+    if (settings && settings.lowPerformanceMode !== undefined) {
+        const lowPerfCheckbox = document.getElementById('settingLowPerformance');
+        if (lowPerfCheckbox) lowPerfCheckbox.checked = settings.lowPerformanceMode;
+        if (settings.lowPerformanceMode) {
+            document.body.classList.add('low-perf');
+            lowPerformanceEnabled = true;
+        } else {
+            document.body.classList.remove('low-perf');
+            lowPerformanceEnabled = false;
+        }
+    }
+    if (settings && settings.proxyList !== undefined) {
+        const proxyListEl = document.getElementById('settingProxyList');
+        if (proxyListEl) proxyListEl.value = settings.proxyList;
+    }
+    if (settings && settings.randomProxy !== undefined) {
+        const randomProxyEl = document.getElementById('settingRandomProxy');
+        if (randomProxyEl) randomProxyEl.checked = settings.randomProxy;
+    }
 });
 
-// Close modal on outside click
-window.addEventListener('click', (e) => {
-    if (e.target === settingsModal) {
-        settingsModal.classList.remove('active');
-    }
+
+
+
+const bulkSelectAll = document.getElementById('bulkSelectAll');
+const bulkDeselectAll = document.getElementById('bulkDeselectAll');
+const bulkNavBtn = document.getElementById('bulkNavBtn');
+const bulkChatBtn = document.getElementById('bulkChatBtn');
+const bulkSpammerToggleBtn = document.getElementById('bulkSpammerToggleBtn');
+const bulkReconnectBtn = document.getElementById('bulkReconnectBtn');
+const bulkDisconnectBtn = document.getElementById('bulkDisconnectBtn');
+
+if (bulkSelectAll) {
+    bulkSelectAll.onclick = () => {
+        bots.forEach(bot => selectedBots.add(bot.username));
+        document.querySelectorAll('.bot-checkbox').forEach(cb => cb.checked = true);
+        updateSelectedCount();
+    };
+}
+
+if (bulkDeselectAll) {
+    bulkDeselectAll.onclick = () => {
+        selectedBots.clear();
+        document.querySelectorAll('.bot-checkbox').forEach(cb => cb.checked = false);
+        updateSelectedCount();
+    };
+}
+
+if (bulkNavBtn) {
+    bulkNavBtn.onclick = () => {
+        if (selectedBots.size === 0) return showNotification('No bots selected', 'error');
+        const x = parseFloat(document.getElementById('bulkNavX').value);
+        const y = parseFloat(document.getElementById('bulkNavY').value);
+        const z = parseFloat(document.getElementById('bulkNavZ').value);
+
+        if (isNaN(x) || isNaN(y) || isNaN(z)) return showNotification('Invalid coordinates', 'error');
+
+        socket.emit('bulkAction', {
+            usernames: Array.from(selectedBots),
+            action: 'move',
+            payload: { x, y, z }
+        });
+        showNotification(`Bulk move sent to ${selectedBots.size} bots`, 'info');
+    };
+}
+
+if (bulkReconnectBtn) {
+    bulkReconnectBtn.onclick = () => {
+        if (selectedBots.size === 0) return showNotification('No bots selected', 'error');
+        socket.emit('bulkAction', { usernames: Array.from(selectedBots), action: 'rejoin' });
+    };
+}
+
+if (bulkDisconnectBtn) {
+    bulkDisconnectBtn.onclick = () => {
+        if (selectedBots.size === 0) return showNotification('No bots selected', 'error');
+        if (confirm(`Disconnect ${selectedBots.size} bots?`)) {
+            socket.emit('bulkAction', { usernames: Array.from(selectedBots), action: 'stop' });
+        }
+    };
+}
+
+if (bulkChatBtn) {
+    bulkChatBtn.onclick = () => {
+        if (selectedBots.size === 0) return showNotification('No bots selected', 'error');
+        const msg = document.getElementById('bulkChatInput').value;
+        if (!msg) return showNotification('Message cannot be empty', 'warning');
+
+        socket.emit('bulkAction', { usernames: Array.from(selectedBots), action: 'chat', payload: { message: msg } });
+        document.getElementById('bulkChatInput').value = '';
+        showNotification(`Bulk chat sent to ${selectedBots.size} bots`, 'info');
+    };
+}
+
+if (bulkSpammerToggleBtn) {
+    bulkSpammerToggleBtn.onclick = () => {
+        if (selectedBots.size === 0) return showNotification('No bots selected', 'error');
+
+        socket.emit('bulkAction', { usernames: Array.from(selectedBots), action: 'toggleSpammer' });
+        showNotification(`Toggled spammer for ${selectedBots.size} bots`, 'info');
+    };
+}
+
+socket.on('botRemoved', (username) => {
+    selectedBots.delete(username);
+    updateSelectedCount();
 });

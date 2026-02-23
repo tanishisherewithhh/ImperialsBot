@@ -1,9 +1,8 @@
-/* Plugins */
 .plugins-card {
     min-height: 100px;
     flex: 0 0 auto;
     max-height: 300px;
-    /* Prevent it from growing too large */
+
     overflow-y: auto;
 }
 
@@ -47,7 +46,7 @@
     color: var(--text-muted);
 }
 
-/* Toggle Switch */
+
 .switch {
     position: relative;
     display: inline-block;

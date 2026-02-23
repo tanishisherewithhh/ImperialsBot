@@ -18,7 +18,7 @@ export class Navigation extends BaseFeature {
         this.targetPos = null;
         this.navInterval = null;
 
-        // Steering loop
+
         this.botClient.bot.on('physicsTick', () => this.onTick());
     }
 
@@ -37,7 +37,7 @@ export class Navigation extends BaseFeature {
     setProfile(profileName) {
         this.currentProfile = profileName;
         if (this.active) {
-            // Re-apply goal with new heuristics if active
+
             this.applyGoal();
         }
         this.botClient.log(`Navigation profile switched to: ${profileName}`, 'info');
@@ -50,7 +50,7 @@ export class Navigation extends BaseFeature {
         const weights = this.getProfileWeights();
 
         try {
-            // Create heuristics as per documentation
+
             const distance = bot.movement.heuristic.new('distance')
                 .weight(weights.distance)
                 .radius(4)
@@ -69,7 +69,7 @@ export class Navigation extends BaseFeature {
             const conformity = bot.movement.heuristic.new('conformity')
                 .weight(weights.conformity);
 
-            // Create and set Goal
+
             const goal = new bot.movement.Goal({
                 distance,
                 danger,
@@ -88,7 +88,7 @@ export class Navigation extends BaseFeature {
         if (!bot.entity || !bot.movement || !this.active || !this.targetPos) return;
 
         try {
-            // Steering
+
             const yaw = bot.movement.getYaw();
             if (yaw !== null && !isNaN(yaw)) {
                 bot.movement.steer(yaw);
@@ -97,7 +97,7 @@ export class Navigation extends BaseFeature {
                 bot.setControlState('sprint', this.currentProfile === 'Shortest');
             }
         } catch (err) {
-            // Silent catch for ticking errors
+
         }
     }
 
@@ -135,7 +135,7 @@ export class Navigation extends BaseFeature {
             const pos = this.botClient.bot.entity.position;
             const dist = pos.distanceTo(this.targetPos);
 
-            // Speed calculation
+
             const currentSpeed = pos.distanceTo(lastPos);
             speeds.push(currentSpeed);
             if (speeds.length > 5) speeds.shift();
@@ -156,6 +156,7 @@ export class Navigation extends BaseFeature {
                 const target = this.targetPos;
                 this.stop(true);
                 this.botClient.updateStatus('Arrived');
+                this.botClient.emit('navArrived', target);
                 this.botClient.log(`Arrived at ${target.x.toFixed(0)}, ${target.y.toFixed(0)}, ${target.z.toFixed(0)}`, 'success');
             }
         }, 1000);

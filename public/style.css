@@ -31,7 +31,6 @@ body {
     height: 100%;
 }
 
-/* Sidebar */
 .sidebar {
     width: 260px;
     background: var(--glass-bg);
@@ -125,7 +124,6 @@ body {
     background: var(--primary-hover);
 }
 
-/* Main Content */
 .main-content {
     flex: 1;
     padding: 20px;
@@ -195,6 +193,10 @@ body {
     min-height: 0;
 }
 
+.right-col {
+    gap: 12px;
+}
+
 .card {
     background: var(--glass-bg);
     backdrop-filter: blur(12px);
@@ -213,7 +215,6 @@ body {
     letter-spacing: 0.05em;
 }
 
-/* Viewer */
 .viewer-card {
     flex: 0 0 250px;
 }
@@ -242,7 +243,7 @@ body {
     background: rgba(0, 0, 0, 0.1);
 }
 
-/* Chat */
+
 .chat-card {
     flex: 0 0 500px;
     display: flex;
@@ -287,7 +288,6 @@ body {
     margin-right: 5px;
 }
 
-/* Minecraft Colors */
 .mc-black {
     color: #000000;
 }
@@ -385,7 +385,6 @@ body {
     background: var(--primary-hover);
 }
 
-/* Controls */
 .controls-card {
     flex: 0 0 auto;
 }
@@ -469,7 +468,7 @@ body {
     background: var(--primary);
 }
 
-/* Sliders */
+
 .sliders {
     margin-bottom: 20px;
     background: rgba(0, 0, 0, 0.2);
@@ -493,7 +492,7 @@ input[type=range] {
     width: 100%;
 }
 
-/* Feature Toggles */
+
 .feature-toggles {
     display: flex;
     flex-direction: column;
@@ -591,7 +590,6 @@ input[type=range] {
     color: white;
 }
 
-/* Orange */
 .btn:hover {
     opacity: 0.9;
 }
@@ -603,7 +601,7 @@ input[type=range] {
     border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-/* Players */
+
 .players-card {
     flex: 0 0 200px;
     display: flex;
@@ -636,10 +634,10 @@ input[type=range] {
     border-radius: 2px;
 }
 
-/* Inventory */
+
 .inventory-card {
     flex: 1;
-    min-height: 400px;
+    min-height: 600px;
     display: flex;
     flex-direction: column;
 }
@@ -674,7 +672,7 @@ input[type=range] {
     text-shadow: 1px 1px 0 #000;
 }
 
-/* Modal */
+
 .modal {
     display: none;
     position: fixed;
@@ -698,7 +696,10 @@ input[type=range] {
     padding: 30px;
     border-radius: 16px;
     border: 1px solid var(--glass-border);
-    width: 400px;
+    width: 650px;
+    max-width: 95vw;
+    max-height: 85vh;
+    overflow-y: auto;
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
 }
 
@@ -731,20 +732,15 @@ input[type=range] {
 .checkbox-group label {
     display: flex;
     font-size: 0.9rem;
-    /* Increased from 0.75rem to match checkbox */
     cursor: pointer;
     align-self: flex-start;
     align-items: center;
-    /* Fix alignment */
     gap: 10px;
-    /* Space between box and text */
 }
 
 .checkbox-group input {
     margin: 0;
-    /* Remove default margins */
     flex-shrink: 0;
-    /* Prevent squishing */
 }
 
 .modal-actions {
@@ -771,7 +767,7 @@ input[type=range] {
     cursor: pointer;
 }
 
-/* Feature Toggles & Spammer */
+
 .feature-toggles {
     display: flex;
     flex-direction: column;
@@ -879,7 +875,7 @@ input[type=range] {
     cursor: pointer;
 }
 
-/* Notification styles */
+
 @keyframes slideIn {
     from {
         transform: translateX(400px);
@@ -904,7 +900,7 @@ input[type=range] {
     }
 }
 
-/* 1. Entry Animations (More Pop) */
+
 @keyframes fadeInUp {
     from {
         opacity: 0;
@@ -933,9 +929,9 @@ input[type=range] {
     }
 }
 
-/* 1. Entry Animations (Refined) */
-/* Removed .bot-item to prevent re-render flicker */
-/* Only animate new messages (not history) */
+
+
+
 .chat-message:not(.no-anim),
 .notification {
     animation: fadeInUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
@@ -945,7 +941,7 @@ input[type=range] {
     animation: popIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
 }
 
-/* 2. Mouse Spotlight Effect (Crisper) */
+
 .btn,
 .card,
 .nav-input,
@@ -963,38 +959,34 @@ input[type=range] {
     left: 0;
     width: 100%;
     height: 100%;
-    /* 
-       Using pixels directly from JS now. 
-       Increased size for playfulness (120px). 
-       Added 2nd stop for softer edge.
-    */
-    background: radial-gradient(circle 120px at var(--mouse-x) var(--mouse-y),
-            rgba(255, 255, 255, 0.4),
-            rgba(255, 255, 255, 0.1) 40%,
+
+    background: radial-gradient(circle 80px at var(--mouse-x) var(--mouse-y),
+            rgba(255, 255, 255, 0.3),
+            rgba(255, 255, 255, 0.05) 50%,
             transparent 100%);
     opacity: 0;
-    transition: opacity 0.2s;
+    transition: opacity 0.4s ease, transform 0.2s ease-out;
     pointer-events: none;
     z-index: 2;
     mix-blend-mode: overlay;
 }
 
-/* Playful Hover State */
 .btn:hover::after,
 .card:hover::after,
-.bot-item:hover::after {
-    opacity: 1;
+.bot-item:hover::after,
+.tab-btn:hover::after {
+    opacity: var(--mouse-active, 0);
 }
 
-/* Light Theme Spotlight Adjustment */
+
 body.theme-sky .btn::after,
 body.theme-mint .btn::after,
 body.theme-rose .btn::after,
 body.theme-sky .card::after,
 body.theme-mint .card::after,
 body.theme-rose .card::after {
-    background: radial-gradient(circle 100px at var(--mouse-x) var(--mouse-y),
-            rgba(0, 0, 0, 0.2),
+    background: radial-gradient(circle 70px at var(--mouse-x) var(--mouse-y),
+            rgba(0, 0, 0, 0.15),
             transparent 100%);
     mix-blend-mode: multiply;
 }
@@ -1004,7 +996,7 @@ body.theme-rose .card::after {
     opacity: 1;
 }
 
-/* Global Click "Shrink" Effect */
+
 button:active,
 .btn:active,
 .nav-btn:active,
@@ -1013,7 +1005,7 @@ button:active,
     transition: transform 0.05s ease-out;
 }
 
-/* Light Theme Spotlight Adjustment (Smaller too) */
+
 body.theme-sky .btn::after,
 body.theme-mint .btn::after,
 body.theme-rose .btn::after {
@@ -1023,17 +1015,17 @@ body.theme-rose .btn::after {
     mix-blend-mode: multiply;
 }
 
-/* 3. Parallax (Optimized) */
+
 .dashboard-container {
     transition: transform 0.1s cubic-bezier(0.2, 0.8, 0.2, 1);
     transform: translate(var(--parallax-x, 0px), var(--parallax-y, 0px));
     will-change: transform;
 }
 
-/* 4. View Transitions (Theme Wipe - Slower & Distinct) */
+
 ::view-transition-group(root) {
     animation-duration: 0.8s;
-    /* Slower */
+
 }
 
 ::view-transition-new(root) {
@@ -1044,7 +1036,7 @@ body.theme-rose .btn::after {
 ::view-transition-old(root) {
     animation: none;
     filter: brightness(0.5);
-    /* Dim old theme during wipe */
+
 }
 
 @keyframes revealCircle {
@@ -1057,14 +1049,14 @@ body.theme-rose .btn::after {
     }
 }
 
-/* Control button active state */
+
 [data-control].active {
     background: var(--primary) !important;
     transform: scale(0.95);
     box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-/* Navigation Compact UI */
+
 .nav-container {
     display: flex;
     gap: 8px;
@@ -1083,17 +1075,17 @@ body.theme-rose .btn::after {
     font-size: 1rem;
     text-align: center;
     min-width: 40px;
-    /* Prevent collapse */
+
 }
 
-/* Chrome/Safari - Hide Spinners */
+
 .nav-input::-webkit-outer-spin-button,
 .nav-input::-webkit-inner-spin-button {
     -webkit-appearance: none;
     margin: 0;
 }
 
-/* Firefox */
+
 .nav-input[type=number] {
     -moz-appearance: textfield;
     appearance: textfield;
@@ -1106,9 +1098,9 @@ body.theme-rose .btn::after {
 
 .nav-btn {
     flex: 0 0 70px;
-    /* Wider button */
+
     height: 44px;
-    /* Taller to match inputs */
+
     padding: 0;
     display: flex;
     align-items: center;
@@ -1137,7 +1129,6 @@ body.theme-rose .btn::after {
     transform: translateY(-1px);
 }
 
-/* 5. Custom Checkbox UI (Premium) */
 input[type="checkbox"] {
     appearance: none;
     -webkit-appearance: none;
@@ -1168,7 +1159,6 @@ input[type="checkbox"]:checked::after {
     transform: translate(-50%, -50%);
 }
 
-/* Light Theme Checkbox Fix */
 body.theme-sky input[type="checkbox"],
 body.theme-mint input[type="checkbox"],
 body.theme-rose input[type="checkbox"] {
@@ -1187,17 +1177,13 @@ body.theme-sky input[type="checkbox"]:checked::after,
 body.theme-mint input[type="checkbox"]:checked::after,
 body.theme-rose input[type="checkbox"]:checked::after {
     content: '✔';
-    /* Ensure content is set */
     color: #ffffff !important;
     font-weight: 900;
     text-shadow: 0 0 2px rgba(0, 0, 0, 0.8);
-    /* Very strong shadow */
     font-size: 14px;
     display: block;
-    /* Ensure visibility */
 }
 
-/* 6. Plugin Toggle Animation */
 input[type="checkbox"].plugin-toggle {
     transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -1206,7 +1192,6 @@ input[type="checkbox"].plugin-toggle:checked {
     transform: scale(1.1);
 }
 
-/* 8. Compact Controls */
 .centered-controls {
     display: flex;
     justify-content: center;
@@ -1226,7 +1211,6 @@ input[type="checkbox"].plugin-toggle:checked {
     justify-content: center;
 }
 
-/* Custom Scrollbar */
 ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -1247,7 +1231,6 @@ input[type="checkbox"].plugin-toggle:checked {
     background: var(--text-muted);
 }
 
-/* Light Theme Scrollbar */
 body.theme-sky ::-webkit-scrollbar-thumb,
 body.theme-mint ::-webkit-scrollbar-thumb,
 body.theme-rose ::-webkit-scrollbar-thumb {
@@ -1260,7 +1243,6 @@ body.theme-rose ::-webkit-scrollbar-thumb:hover {
     background: rgba(0, 0, 0, 0.4);
 }
 
-/* 7. Smooth Plugin Toggle Switch */
 .switch {
     position: relative;
     display: inline-block;
@@ -1313,7 +1295,7 @@ input:checked+.slider:before {
     transform: translateX(20px);
 }
 
-/* Light Theme Switch Fix */
+
 body.theme-sky .slider,
 body.theme-mint .slider,
 body.theme-rose .slider {
@@ -1327,7 +1309,6 @@ body.theme-rose input:checked+.slider {
     background-color: var(--primary);
 }
 
-/* Spammer Config UI */
 .spammer-list {
     width: 100%;
     box-sizing: border-box;
@@ -1344,7 +1325,6 @@ body.theme-rose input:checked+.slider {
 .spammer-input-group input {
     flex: 1;
     min-width: 0;
-    /* Important for flex containers */
     padding: 8px;
     background: #2a2a2a;
     border: 1px solid #333;
@@ -1364,13 +1344,11 @@ body.theme-rose input:checked+.slider {
     transition: all 0.2s;
 }
 
-/* Bot Status Indicator */
 .bot-status-indicator {
     width: 10px;
     height: 10px;
     border-radius: 50%;
     background-color: #555;
-    /* Default/Connecting */
     transition: all 0.3s;
     flex-shrink: 0;
 }
@@ -1384,24 +1362,20 @@ body.theme-rose input:checked+.slider {
     background-color: #ef4444;
 }
 
-/* Avatar Polish */
 .bot-avatar {
     width: 32px;
     height: 32px;
     background-size: cover;
     background-position: center;
     border-radius: 8px;
-    /* Softer corners */
     background-color: #333;
-    /* Darker neutral background */
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .bot-avatar.small {
-    width: 28px;
-    height: 28px;
+    width: 26px;
+    height: 26px;
     border-radius: 50%;
-    /* Circle for compact mode */
 }
 
 .btn-icon.delete:hover {
@@ -1409,12 +1383,9 @@ body.theme-rose input:checked+.slider {
     background: rgba(239, 68, 68, 0.1);
 }
 
-/* Compact Bot List Styles */
 .bot-item.compact {
     padding: 8px;
-    /* Reduced from 12px */
     margin-bottom: 6px;
-    /* Reduced */
 }
 
 .bot-avatar.small {
@@ -1424,4 +1395,74 @@ body.theme-rose input:checked+.slider {
 
 .btn-icon.small {
     padding: 2px;
+}
+
+.tabs-header {
+    display: flex;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+    padding: 6px;
+    gap: 4px;
+    margin-bottom: 0;
+    border: 1px solid var(--glass-border);
+}
+
+.tab-btn {
+    padding: 8px 15px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    flex: 1;
+    position: relative;
+    z-index: 1;
+    letter-spacing: 0.5px;
+}
+
+.tab-btn:hover {
+    color: var(--text-main);
+}
+
+.tab-btn.active {
+    background: var(--primary);
+    color: white;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.tab-pane {
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+    height: 100%;
+    min-height: 0;
+}
+
+.tab-pane.active {
+    display: flex;
+}
+
+
+body.low-perf *,
+body.low-perf *::before,
+body.low-perf *::after {
+    animation: none !important;
+    transition: none !important;
+}
+
+body.low-perf .sidebar,
+body.low-perf .top-bar,
+body.low-perf .card,
+body.low-perf .modal {
+    backdrop-filter: none !important;
+    background: var(--bg-color) !important;
+}
+
+body.low-perf .btn::after,
+body.low-perf .card::after,
+body.low-perf .bot-item::after {
+    display: none !important;
 }

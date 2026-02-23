@@ -11,7 +11,7 @@ export class Spammer extends BaseFeature {
             order: 'random',
             appendRandom: false,
             randomLength: 5,
-            ...botClient.config.spammer // Load saved config
+            ...botClient.config.spammer
         };
         this.currentIndex = 0;
     }
@@ -93,7 +93,7 @@ export class Spammer extends BaseFeature {
 
         try {
             this.botClient.bot.chat(msg);
-            // Log to UI
+
             this.botClient.emitChat(this.botClient.username, msg, 'chat');
         } catch (err) {
             this.botClient.log(`Spammer error: ${err.message}`, 'error');

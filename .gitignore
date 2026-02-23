@@ -25,3 +25,4 @@ settings.json
 # Project specific
 tmp/
 public/temp/
+src/plugins/ServerSwitch.js

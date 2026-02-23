@@ -26,7 +26,7 @@ export class ConfigLoader {
 
     static async addBotConfig(config) {
         const bots = await this.loadBots();
-        // Check if exists
+
         const index = bots.findIndex(b => b.username === config.username);
         if (index !== -1) {
             bots[index] = config;
@@ -47,12 +47,12 @@ export class ConfigLoader {
             const data = await fs.readFile(SETTINGS_PATH, 'utf-8');
             return JSON.parse(data);
         } catch (err) {
-            return null; // Return null if not found
+            return null;
         }
     }
 
     static async saveSettings(settings) {
-        // Merge with existing settings
+
         const current = await this.loadSettings() || {};
         const newSettings = { ...current, ...settings };
         await fs.writeFile(SETTINGS_PATH, JSON.stringify(newSettings, null, 2));

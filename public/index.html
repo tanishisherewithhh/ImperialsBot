@@ -12,6 +12,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
         rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="/socket.io/socket.io.js"></script>
 </head>
 
@@ -24,6 +25,10 @@
                 ImperialsBot
             </div>
             <div class="bot-list-header">Active Bots</div>
+            <div style="padding: 0 10px 10px 10px;">
+                <input type="text" id="botSearchInput" placeholder="Search bots..."
+                    style="width: 100%; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); color: var(--text-primary); padding: 6px; border-radius: 4px; font-family: inherit; font-size: 0.85rem;">
+            </div>
             <div class="bot-list" id="botList">
                 <!-- Bot items will be injected here -->
             </div>
@@ -99,7 +104,14 @@
                     </div>
 
                     <div class="card plugins-card">
-                        <h3>Plugins</h3>
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <h3 style="margin: 0;">Plugins</h3>
+                            <button id="docsBtn"
+                                style="background: rgba(59, 130, 246, 0.1); border: 1px solid var(--primary); color: var(--primary); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: 500; transition: all 0.2s; min-width: auto; height: auto;"
+                                onclick="window.open('api_docs.html', '_blank')">Docs</button>
+                        </div>
+
                         <div id="pluginsList" class="plugins-grid">
                             <div style="color: var(--text-muted); font-size: 0.9rem;">No plugins loaded</div>
                         </div>
@@ -119,113 +131,183 @@
 
                 <!-- Right Column (Controls & Viewer) -->
                 <div class="column right-col">
-                    <div class="card viewer-card">
-                        <h3>Visual Feed <span id="viewerPortDisplay"
-                                style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;"></span></h3>
-                        <div class="viewer-container" id="viewerContainer">
-                            <div class="placeholder">Viewer Offline</div>
+                    <div class="tabs-header">
+                        <button class="tab-btn active" data-tab="controlsPane">Controls</button>
+                        <button class="tab-btn" data-tab="analyticsPane">Analytics</button>
+                        <button class="tab-btn" data-tab="bulkPane">Bulk</button>
+                    </div>
+
+                    <div id="controlsPane" class="tab-pane active">
+                        <div class="card viewer-card">
+                            <h3>Visual Feed <span id="viewerPortDisplay"
+                                    style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;"></span>
+                            </h3>
+                            <div class="viewer-container" id="viewerContainer">
+                                <div class="placeholder">Viewer Offline</div>
+                            </div>
+                        </div>
+
+                        <div class="card controls-card">
+                            <h3>Controls</h3>
+                            <div class="control-group">
+                                <button class="btn action-btn" id="rejoinBtn">Join</button>
+                                <button class="btn danger-btn" id="suicideBtn">Suicide</button>
+                                <button class="btn warning-btn" data-action="stop">Disconnect</button>
+                                <button class="btn danger-btn" data-action="delete">Delete Bot</button>
+                            </div>
+
+                            <div class="control-group">
+                                <div class="nav-container">
+                                    <input type="number" id="navX" class="nav-input" placeholder="X">
+                                    <input type="number" id="navY" class="nav-input" placeholder="Y">
+                                    <input type="number" id="navZ" class="nav-input" placeholder="Z">
+                                    <button id="navToggleBtn" class="nav-btn go" title="Start/Stop">Go</button>
+                                </div>
+                            </div>
+
+                            <div class="movement-controls">
+                                <div class="d-pad">
+                                    <button class="btn-move up" data-control="forward">W</button>
+                                    <button class="btn-move left" data-control="left">A</button>
+                                    <button class="btn-move down" data-control="back">S</button>
+                                    <button class="btn-move right" data-control="right">D</button>
+                                </div>
+                                <div class="actions">
+                                    <button class="btn-action" data-control="jump">Jump</button>
+                                    <button class="btn-action" data-control="sprint">Sprint</button>
+                                    <button class="btn-action" data-control="sneak">Sneak</button>
+                                </div>
+                            </div>
+
+                            <div class="sliders">
+                                <div class="slider-group">
+                                    <label>Yaw: <span id="yawVal">0</span></label>
+                                    <input type="range" id="yawSlider" min="-3.14" max="3.14" step="0.1" value="0">
+                                </div>
+                                <div class="slider-group">
+                                    <label>Pitch: <span id="pitchVal">0</span></label>
+                                    <input type="range" id="pitchSlider" min="-1.57" max="1.57" step="0.1" value="0">
+                                </div>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="control-row centered-controls">
+                                <button class="btn-action compact" id="btnLeftClick" title="Left Click">
+                                    Attack
+                                </button>
+                                <button class="btn-action compact" id="btnRightClick" title="Right Click">
+                                    Use
+                                </button>
+                                <button class="btn compact" id="viewModeBtn" title="Switch Perspective">
+                                    View
+                                </button>
+                            </div>
+
+                            <div class="feature-toggles">
+                                <div class="toggle-row">
+                                    <button class="btn toggle-btn" id="killauraBtn">Killaura: OFF</button>
+                                    <button class="btn toggle-btn" id="antiAfkBtn">Anti-AFK: OFF</button>
+                                    <button class="btn toggle-btn" id="autoAuthBtn">AutoAuth: OFF</button>
+                                </div>
+                                <div class="toggle-row">
+                                    <button class="btn toggle-btn" id="autoReconnectBtn">Auto Reconnect: ON</button>
+                                </div>
+
+                                <div class="spammer-controls">
+                                    <h4>Spammer Config</h4>
+                                    <div class="spammer-list" id="spammerList">
+                                        <!-- Dynamic Inputs -->
+                                    </div>
+                                    <div style="display: flex; gap: 5px;">
+                                        <button class="btn-action" id="addSpamMsgBtn" style="flex:1;">+ Add
+                                            Message</button>
+                                        <button class="btn-action secondary" id="importSpamBtn" style="flex:1;"
+                                            title="Import from TXT">Import TXT</button>
+                                        <input type="file" id="importSpamFile" accept=".txt" style="display:none">
+                                    </div>
+
+                                    <div class="spammer-settings">
+                                        <input type="number" id="spammerDelay" placeholder="Delay (ms)" value="3000">
+                                        <select id="spammerOrder">
+                                            <option value="random">Random</option>
+                                            <option value="sequential">Sequential</option>
+                                        </select>
+                                    </div>
+                                    <div class="spammer-settings">
+                                        <label class="checkbox-label"><input type="checkbox" id="spammerAppend"> <span
+                                                id="spammerLenLabel">Anti-Spam Length: 5</span></label>
+                                        <input type="range" id="spammerLen" min="0" max="20" value="5"
+                                            title="Random String Length">
+                                    </div>
+                                    <button class="btn toggle-btn" id="spammerBtn">Start Spammer</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card players-card">
+                            <h3>Online Players (<span id="playerCount">0</span>)</h3>
+                            <div class="player-list" id="playerList"></div>
                         </div>
                     </div>
 
-                    <div class="card controls-card">
-                        <h3>Controls</h3>
-                        <div class="control-group">
-                            <button class="btn action-btn" id="rejoinBtn">Rejoin</button>
-                            <button class="btn danger-btn" id="suicideBtn">Suicide</button>
-                            <button class="btn warning-btn" data-action="stop">Disconnect</button>
-                            <button class="btn danger-btn" data-action="delete">Delete Bot</button>
-                        </div>
-
-                        <div class="control-group">
-                            <div class="nav-container">
-                                <input type="number" id="navX" class="nav-input" placeholder="X">
-                                <input type="number" id="navY" class="nav-input" placeholder="Y">
-                                <input type="number" id="navZ" class="nav-input" placeholder="Z">
-                                <button id="navToggleBtn" class="nav-btn go" title="Start/Stop">Go</button>
+                    <div id="analyticsPane" class="tab-pane">
+                        <div class="card analytics-card" style="flex: 1;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <h3>Live Analytics</h3>
+                                <button id="exportAnalyticsBtn" class="btn action-btn small"
+                                    style="translate: 100% 0%; margin-left: 140px; margin-right: 120px; margin-bottom: 16px; padding: 3px 6px; font-size: 0.8rem;">Export
+                                    CSV</button>
                             </div>
-                        </div>
-
-                        <div class="movement-controls">
-                            <div class="d-pad">
-                                <button class="btn-move up" data-control="forward">W</button>
-                                <button class="btn-move left" data-control="left">A</button>
-                                <button class="btn-move down" data-control="back">S</button>
-                                <button class="btn-move right" data-control="right">D</button>
-                            </div>
-                            <div class="actions">
-                                <button class="btn-action" data-control="jump">Jump</button>
-                                <button class="btn-action" data-control="sprint">Sprint</button>
-                                <button class="btn-action" data-control="sneak">Sneak</button>
-                            </div>
-                        </div>
-
-                        <div class="sliders">
-                            <div class="slider-group">
-                                <label>Yaw: <span id="yawVal">0</span></label>
-                                <input type="range" id="yawSlider" min="-3.14" max="3.14" step="0.1" value="0">
-                            </div>
-                            <div class="slider-group">
-                                <label>Pitch: <span id="pitchVal">0</span></label>
-                                <input type="range" id="pitchSlider" min="-1.57" max="1.57" step="0.1" value="0">
-                            </div>
-                        </div>
-
-                        <!-- Action Buttons -->
-                        <div class="control-row centered-controls">
-                            <button class="btn-action compact" id="btnLeftClick" title="Left Click">
-                                Attack
-                            </button>
-                            <button class="btn-action compact" id="btnRightClick" title="Right Click">
-                                Use
-                            </button>
-                            <button class="btn compact" id="viewModeBtn" title="Switch Perspective">
-                                View
-                            </button>
-                        </div>
-
-                        <div class="feature-toggles">
-                            <div class="toggle-row">
-                                <button class="btn toggle-btn" id="killauraBtn">Killaura: OFF</button>
-                                <button class="btn toggle-btn" id="antiAfkBtn">Anti-AFK: OFF</button>
-                                <button class="btn toggle-btn" id="autoAuthBtn">AutoAuth: OFF</button>
-                            </div>
-                            <div class="toggle-row">
-                                <button class="btn toggle-btn" id="autoReconnectBtn">Auto Reconnect: ON</button>
-                            </div>
-
-                            <div class="spammer-controls">
-                                <h4>Spammer Config</h4>
-                                <div class="spammer-list" id="spammerList">
-                                    <!-- Dynamic Inputs -->
-                                </div>
-                                <div style="display: flex; gap: 5px;">
-                                    <button class="btn-action" id="addSpamMsgBtn" style="flex:1;">+ Add Message</button>
-                                    <button class="btn-action secondary" id="importSpamBtn" style="flex:1;"
-                                        title="Import from TXT">Import TXT</button>
-                                    <input type="file" id="importSpamFile" accept=".txt" style="display:none">
-                                </div>
-
-                                <div class="spammer-settings">
-                                    <input type="number" id="spammerDelay" placeholder="Delay (ms)" value="3000">
-                                    <select id="spammerOrder">
-                                        <option value="random">Random</option>
-                                        <option value="sequential">Sequential</option>
-                                    </select>
-                                </div>
-                                <div class="spammer-settings">
-                                    <label class="checkbox-label"><input type="checkbox" id="spammerAppend"> <span
-                                            id="spammerLenLabel">Anti-Spam Length: 5</span></label>
-                                    <input type="range" id="spammerLen" min="0" max="20" value="5"
-                                        title="Random String Length">
-                                </div>
-                                <button class="btn toggle-btn" id="spammerBtn">Start Spammer</button>
+                            <div id="analyticsChartsGrid"
+                                style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; align-content: start; flex: 1; overflow-y: auto; padding-right: 5px;">
+                                <!-- Dynamic Metric Cards -->
                             </div>
                         </div>
                     </div>
 
-                    <div class="card players-card">
-                        <h3>Online Players (<span id="playerCount">0</span>)</h3>
-                        <div class="player-list" id="playerList"></div>
+                    <div id="bulkPane" class="tab-pane">
+                        <div class="card bulk-card">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <h3>Bulk Actions</h3>
+                                <div style="font-size: 0.8rem; color: var(--text-muted);"><span
+                                        id="selectedCount">0</span> Selected</div>
+                            </div>
+
+                            <div class="control-group">
+                                <button class="btn secondary-btn" id="bulkSelectAll"
+                                    style="background: rgba(255,255,255,0.05); color: white; border: 1px solid var(--glass-border);">Select
+                                    All</button>
+                                <button class="btn secondary-btn" id="bulkDeselectAll"
+                                    style="background: rgba(255,255,255,0.05); color: white; border: 1px solid var(--glass-border);">Deselect
+                                    All</button>
+                            </div>
+
+                            <div class="card" style="margin-bottom: 20px; background: rgba(0,0,0,0.2);">
+                                <h3>Navigation Controller</h3>
+                                <div class="nav-container" style="flex-wrap: wrap; margin-top: 10px;">
+                                    <input type="number" id="bulkNavX" class="nav-input" placeholder="X" step="1">
+                                    <input type="number" id="bulkNavY" class="nav-input" placeholder="Y" step="1">
+                                    <input type="number" id="bulkNavZ" class="nav-input" placeholder="Z" step="1">
+                                    <button class="nav-btn go" id="bulkNavBtn" style="width: 100%;">Go All</button>
+                                </div>
+                            </div>
+
+                            <div class="card" style="margin-bottom: 20px; background: rgba(0,0,0,0.2);">
+                                <h3>Bulk Chat</h3>
+                                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                    <input type="text" id="bulkChatInput" class="nav-input"
+                                        placeholder="Message to all bots..." style="flex: 1;">
+                                    <button class="nav-btn go" id="bulkChatBtn">Send</button>
+                                </div>
+                            </div>
+
+                            <div class="control-group" style="margin-top: 20px;">
+                                <button class="btn warning-btn" id="bulkSpammerToggleBtn"
+                                    style="flex: 1; background: var(--primary);">Toggle Spammers</button>
+                                <button class="btn warning-btn" id="bulkReconnectBtn">Bulk Reconnect</button>
+                                <button class="btn danger-btn" id="bulkDisconnectBtn">Bulk Disconnect</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -268,6 +350,49 @@
                         </select>
                     </div>
                 </div>
+
+                <!-- Proxy Configuration -->
+                <details class="card"
+                    style="margin-bottom: 15px; padding: 15px; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); border-radius: 8px;">
+                    <summary
+                        style="font-weight: 600; color: var(--text-main); font-size: 0.95rem; cursor: pointer; outline: none;">
+                        Proxy Configuration</summary>
+                    <div style="margin-top: 15px;">
+                        <div class="form-group">
+                            <label for="addBotProxyType">Proxy Type</label>
+                            <select id="addBotProxyType" name="proxyType" onchange="toggleProxyFields('add')">
+                                <option value="none">None</option>
+                                <option value="http">HTTP</option>
+                                <option value="socks4">SOCKS4</option>
+                                <option value="socks5">SOCKS5</option>
+                            </select>
+                        </div>
+                        <div id="addBotProxyDetails" style="display: none;">
+                            <div style="display: flex; gap: 10px;">
+                                <div class="form-group" style="flex: 1;">
+                                    <label for="addBotProxyHost">Proxy Host</label>
+                                    <input type="text" id="addBotProxyHost" name="proxyHost"
+                                        placeholder="e.g. 127.0.0.1">
+                                </div>
+                                <div class="form-group" style="width: 100px;">
+                                    <label for="addBotProxyPort">Proxy Port</label>
+                                    <input type="number" id="addBotProxyPort" name="proxyPort" placeholder="1080">
+                                </div>
+                            </div>
+                            <div id="addBotProxyAuth" style="display: flex; gap: 10px;">
+                                <div class="form-group" style="flex: 1;">
+                                    <label for="addBotProxyUser">Proxy Username</label>
+                                    <input type="text" id="addBotProxyUser" name="proxyUser" placeholder="Optional">
+                                </div>
+                                <div class="form-group" style="flex: 1;">
+                                    <label for="addBotProxyPass">Proxy Password</label>
+                                    <input type="password" id="addBotProxyPass" name="proxyPass" placeholder="Optional">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
                 <div class="form-group">
                     <label>Auth Type</label>
                     <select name="auth">
@@ -280,7 +405,7 @@
                     <input type="text" name="username" placeholder="BotName / Email" required>
                 </div>
                 <div class="form-group">
-                    <label>Password (Optional)</label>
+                    <label>Password (Optional) (Encrypted)</label>
                     <input type="password" name="password" placeholder="For AutoAuth">
                 </div>
                 <div class="form-group checkbox-group">
@@ -328,6 +453,21 @@
                         <option value="Easiest">Easiest (Breaks Blocks)</option>
                     </select>
                 </div>
+                <div class="form-group">
+                    <label>Global Proxy List (One per line)</label>
+                    <textarea id="settingProxyList" name="proxyList"
+                        placeholder="socks5://user:pass@127.0.0.1:1080&#10;http://127.0.0.1:8080"
+                        style="width: 100%; height: 80px; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); color: white; padding: 8px; border-radius: 4px; font-family: monospace; resize: vertical; margin-bottom: 10px;"></textarea>
+
+                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 5px;">
+                        <input type="checkbox" id="settingRandomProxy" name="randomProxy">
+                        <span>Assign Random Proxy from List on Bot Creation/Rejoin</span>
+                    </label>
+                </div>
+                <div class="form-group checkbox-group">
+                    <label><input type="checkbox" id="settingLowPerformance" name="lowPerformanceMode"> Low Performance
+                        Mode (Disables animations/blur)</label>
+                </div>
                 <div class="modal-actions">
                     <button type="button" id="closeSettingsBtn" class="btn-secondary">Close</button>
                     <button type="submit" class="btn-primary">Save Settings</button>
@@ -358,6 +498,50 @@
                         <input type="number" name="port">
                     </div>
                 </div>
+
+                <!-- Proxy Configuration -->
+                <details class="card"
+                    style="margin-bottom: 15px; padding: 15px; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); border-radius: 8px;">
+                    <summary
+                        style="font-weight: 600; color: var(--text-main); font-size: 0.95rem; cursor: pointer; outline: none;">
+                        Proxy Configuration</summary>
+                    <div style="margin-top: 15px;">
+                        <div class="form-group">
+                            <label for="editBotProxyType">Proxy Type</label>
+                            <select id="editBotProxyType" name="proxyType" onchange="toggleProxyFields('edit')">
+                                <option value="none">None</option>
+                                <option value="http">HTTP</option>
+                                <option value="socks4">SOCKS4</option>
+                                <option value="socks5">SOCKS5</option>
+                            </select>
+                        </div>
+                        <div id="editBotProxyDetails" style="display: none;">
+                            <div style="display: flex; gap: 10px;">
+                                <div class="form-group" style="flex: 1;">
+                                    <label for="editBotProxyHost">Proxy Host</label>
+                                    <input type="text" id="editBotProxyHost" name="proxyHost"
+                                        placeholder="e.g. 127.0.0.1">
+                                </div>
+                                <div class="form-group" style="width: 100px;">
+                                    <label for="editBotProxyPort">Proxy Port</label>
+                                    <input type="number" id="editBotProxyPort" name="proxyPort" placeholder="1080">
+                                </div>
+                            </div>
+                            <div id="editBotProxyAuth" style="display: flex; gap: 10px;">
+                                <div class="form-group" style="flex: 1;">
+                                    <label for="editBotProxyUser">Proxy Username</label>
+                                    <input type="text" id="editBotProxyUser" name="proxyUser" placeholder="Optional">
+                                </div>
+                                <div class="form-group" style="flex: 1;">
+                                    <label for="editBotProxyPass">Proxy Password</label>
+                                    <input type="password" id="editBotProxyPass" name="proxyPass"
+                                        placeholder="Optional">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
                 <div id="editRealmsFields" style="display: none;">
                     <div class="form-group">
                         <label>Realm ID / Name / Invite</label>
@@ -384,7 +568,7 @@
                     <input type="text" name="username" readonly style="opacity: 0.7; cursor: not-allowed;">
                 </div>
                 <div class="form-group">
-                    <label>Password (Optional)</label>
+                    <label>Password (Optional) (Encrypted)</label>
                     <input type="password" name="password" placeholder="For AutoAuth">
                 </div>
                 <div class="form-group checkbox-group">

@@ -35,23 +35,28 @@ export class SocketServer {
         });
 
         botManager.on('botSpawn', (username) => {
-            // updates handled by botList
+
         });
 
         botManager.on('botViewer', (data) => {
             this.io.emit('botViewer', data);
         });
 
-        botManager.on('botData', (data) => {
-            this.io.emit('botData', data);
+        botManager.on('analyticsUpdate', (data) => {
+            this.io.emit('analyticsUpdate', data);
         });
 
-        botManager.on('botInventory', (data) => {
-            this.io.emit('botInventory', data);
+        botManager.on('pluginsUpdated', (data) => {
+            this.io.emit('pluginList', data);
         });
 
-        botManager.on('botPlayers', (data) => {
-            this.io.emit('botPlayers', data);
+        botManager.on('botRemoved', (username) => {
+            this.io.emit('botRemoved', username);
+            this.io.emit('botList', botManager.getAllBots());
+        });
+
+        botManager.on('botEnd', (username) => {
+            this.io.emit('botList', botManager.getAllBots());
         });
     }
 
@@ -78,7 +83,8 @@ export class SocketServer {
 
             socket.on('createBot', async (config) => {
                 try {
-                    await botManager.createBot(config);
+                    // Create bot but don't auto-start (manual join requirement)
+                    await botManager.createBot(config, true, false);
                     socket.emit('notification', { type: 'success', message: `Bot ${config.username} created` });
                     this.io.emit('botList', botManager.getAllBots());
                 } catch (err) {
@@ -101,7 +107,7 @@ export class SocketServer {
                 const bot = botManager.getBot(username);
                 if (!bot) return;
 
-                // Sync UI State
+
                 socket.emit('chatHistory', { username: bot.username, history: bot.chatHistory || [] });
                 this.broadcastToggles(username);
 
@@ -113,7 +119,7 @@ export class SocketServer {
                     socket.emit('spammerConfig', { username, config: bot.config.spammer });
                 }
 
-                // Instance Data
+
                 if (bot.bot && bot.bot.entity) {
                     socket.emit('botData', {
                         username,
@@ -141,9 +147,8 @@ export class SocketServer {
                     }));
                     socket.emit('botInventory', { username, items: inventory });
 
-                    if (bot.inventoryPort) {
-                        socket.emit('botStatus', { username, status: bot.status, inventoryPort: bot.inventoryPort });
-                    }
+                    // Always emit status so UI knows it's online, even if port isn't ready yet
+                    socket.emit('botStatus', { username, status: bot.status, inventoryPort: bot.inventoryPort });
 
                     if (bot.viewerPort) {
                         socket.emit('botViewer', {
@@ -190,7 +195,7 @@ export class SocketServer {
                                 spammer.stop();
                             }
 
-                            // Persist Spammer Config
+
                             if (payload.config) {
                                 if (!bot.config.spammer) bot.config.spammer = {};
                                 bot.config.spammer = { ...bot.config.spammer, ...payload.config };
@@ -247,19 +252,19 @@ export class SocketServer {
                         if (payload.type === 'left') {
                             bot.bot.swingArm('right');
 
-                            // 1. Check for block at cursor (max 4 blocks range)
+
                             const block = bot.bot.blockAtCursor(4);
                             if (block) {
                                 bot.bot.dig(block, true);
                             } else {
-                                // 2. Fallback to attacking nearby entity
+
                                 const entity = bot.bot.nearestEntity(e => (e.type === 'player' || e.type === 'mob') && bot.bot.entity.position.distanceTo(e.position) < 4);
                                 if (entity) {
                                     bot.bot.attack(entity);
                                 }
                             }
                         } else if (payload.type === 'right') {
-                            bot.bot.activateItem(); // Use Item
+                            bot.bot.activateItem();
                         }
                         break;
                     case 'toggleView':
@@ -292,9 +297,42 @@ export class SocketServer {
                     try {
                         botClient.bot.setControlState(control, state);
                     } catch (error) {
-                        // Ignore
+
                     }
                 }
+            });
+
+            socket.on('bulkAction', (data) => {
+                const { usernames, action, payload } = data;
+                usernames.forEach(username => {
+                    const bot = botManager.getBot(username);
+                    if (!bot) return;
+
+                    switch (action) {
+                        case 'move':
+                            const nav = bot.featureManager.getFeature('navigation');
+                            if (nav) nav.moveTo(payload.x, payload.y, payload.z);
+                            break;
+                        case 'chat':
+                            const chat = bot.featureManager.getFeature('chat');
+                            if (chat) chat.send(payload.message);
+                            break;
+                        case 'toggleSpammer':
+                            const spammer = bot.featureManager.getFeature('spammer');
+                            if (spammer) {
+                                if (spammer.config.enabled) spammer.stop();
+                                else spammer.start();
+                                this.broadcastToggles(username);
+                            }
+                            break;
+                        case 'rejoin':
+                            bot.rejoin();
+                            break;
+                        case 'stop':
+                            bot.stop();
+                            break;
+                    }
+                });
             });
         });
 
@@ -304,8 +342,8 @@ export class SocketServer {
             const bot = botManager.getBot(username);
             if (!bot) return;
 
-            // These are now handled by global botManager events in bindGlobalEvents
-            // which avoid duplicate listeners and memory leaks.
+
+
 
             botManager.on('pluginsUpdated', () => {
                 if (bot.pluginManager) {

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ImperialsBot Plugin API Documentation</title>
+    <link rel="stylesheet" href="index.css">
+    <style>
+        body {
+            background: #0d1117;
+            color: #c9d1d9;
+            padding: 40px;
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        h1, h2, h3 { color: var(--primary); }
+        code {
+            background: rgba(255,255,255,0.05);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            color: #79c0ff;
+        }
+        pre {
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid var(--glass-border);
+            overflow-x: auto;
+        }
+        .method-card {
+            background: rgba(255,255,255,0.03);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border-left: 4px solid var(--primary);
+        }
+        .method-signature {
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: #ffca28;
+            margin-bottom: 10px;
+        }
+        .category-tag {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Plugin API Reference</h1>
+    <p>ImperialsBot plugins use the <code>api</code> object passed to the <code>init(bot, api)</code> method. This object provides high-level control over the bot's features and movement.</p>
+
+    <div class="method-card">
+        <span class="category-tag">Movement</span>
+        <div class="method-signature">api.move(x, y, z)</div>
+        <p>Tells the bot to navigate to the specified coordinates using the pathfinder.</p>
+    </div>
+
+    <div class="method-card">
+        <span class="category-tag">Movement</span>
+        <div class="method-signature">api.stop()</div>
+        <p>Stops all current movement and navigation. Clears control states.</p>
+    </div>
+
+    <div class="method-card">
+        <span class="category-tag">Movement</span>
+        <div class="method-signature">api.jump(active = true)</div>
+        <p>Sets the jump control state.</p>
+    </div>
+
+    <div class="method-card">
+        <span class="category-tag">Movement</span>
+        <div class="method-signature">api.getPos()</div>
+        <p>Returns the bot's current <code>Vec3</code> position.</p>
+    </div>
+
+    <div class="method-card">
+        <span class="category-tag">Combat</span>
+        <div class="method-signature">api.attack(entity)</div>
+        <p>Attacks the specified entity using the PvP module.</p>
+    </div>
+
+    <div class="method-card">
+        <span class="category-tag">Interactions</span>
+        <div class="method-signature">api.breakBlock(block, direction?)</div>
+        <p>Tells the bot to dig/break the specified block.</p>
+    </div>
+
+    <div class="method-card">
+        <span class="category-tag">Interactions</span>
+        <div class="method-signature">api.equip(item, destination?)</div>
+        <p>Equips an item from inventory to a slot (e.g., 'hand', 'off-hand').</p>
+    </div>
+
+    <div class="method-card">
+        <span class="category-tag">Features</span>
+        <div class="method-signature">api.setKillaura(enabled)</div>
+        <p>Enables or disables the Killaura feature.</p>
+    </div>
+
+    <div class="method-card">
+        <span class="category-tag">Features</span>
+        <div class="method-signature">api.setSpammer(enabled, config?)</div>
+        <p>Controls the Spammer feature. Config is optional.</p>
+    </div>
+
+    <div class="method-card">
+        <span class="category-tag">System</span>
+        <div class="method-signature">api.log(message, type?)</div>
+        <p>Logs a message to the bot's console and dashboard with the plugin prefix.</p>
+    </div>
+
+    <div class="method-card">
+        <span class="category-tag">System</span>
+        <div class="method-signature">api.chat(message)</div>
+        <p>Makes the bot send a message to the server chat.</p>
+    </div>
+
+    <div class="method-card">
+        <span class="category-tag">System</span>
+        <div class="method-signature">api.reconnect()</div>
+        <p>Forces the bot to disconnect and reconnect.</p>
+    </div>
+
+    <script>
+        // Parallax and glow effects can be added here if desired
+    </script>
+</body>
+</html>

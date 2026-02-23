@@ -7,7 +7,7 @@ export class Discord extends BaseFeature {
         this.queue = [];
         this.processing = false;
 
-        // Loop to process queue (1.2s delay for rate limits)
+
         setInterval(() => this.processQueue(), 1200);
     }
 
@@ -61,22 +61,22 @@ export class Discord extends BaseFeature {
     }
 
     sendWebhookMessage(content) {
-        // Legacy support or fallback
+
         this.sendEmbed('info', 'System', content);
     }
 
     sendEmbed(type, title, description) {
         if (!this.webhookUrl) return;
 
-        let color = 0x5865F2; // Blurple
+        let color = 0x5865F2;
         let prefix = '';
 
         switch (type) {
-            case 'spawn': color = 0x57F287; break; // Green
-            case 'death': color = 0xED4245; break; // Red
-            case 'kick': color = 0xFEE75C; break; // Yellow
-            case 'chat': color = 0xFFFFFF; break; // White
-            case 'info': color = 0x3498db; break; // Blue
+            case 'spawn': color = 0x57F287; break;
+            case 'death': color = 0xED4245; break;
+            case 'kick': color = 0xFEE75C; break;
+            case 'chat': color = 0xFFFFFF; break;
+            case 'info': color = 0x3498db; break;
         }
 
         const embed = {
@@ -87,7 +87,7 @@ export class Discord extends BaseFeature {
             }
         };
 
-        // Queue the payload
+
         this.queue.push({
             username: `${this.botClient.username} (${this.botClient.config.host}) ImperialsBot`,
             embeds: [embed]
@@ -102,7 +102,7 @@ export class Discord extends BaseFeature {
                 body: JSON.stringify(payload)
             });
         } catch (err) {
-            // console.error('Webhook failed', err); 
+
         }
     }
 

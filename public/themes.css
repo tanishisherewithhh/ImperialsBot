@@ -71,6 +71,11 @@ body.theme-simple-dark .bot-item.active {
     border-color: #fff;
 }
 
+body.theme-simple-dark .tab-btn.active {
+    background: #e0e0e0 !important;
+    color: #121212 !important;
+}
+
 /* Emerald (Green) */
 body.theme-emerald {
     --bg-color: #022c22;

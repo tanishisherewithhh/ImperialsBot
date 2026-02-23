@@ -32,6 +32,7 @@ export class AutoAuth extends BaseFeature {
 
     async handleAuth() {
         if (!this.enabled) return;
+        if (!this.botClient.bot || !this.botClient.bot._client) return;
 
         const password = this.botClient.config.password;
         if (!password) return;
@@ -47,6 +48,11 @@ export class AutoAuth extends BaseFeature {
                 this.botClient.bot.chat(registerCmd);
                 await new Promise(resolve => setTimeout(resolve, 1200));
                 this.botClient.bot.chat(`/login ${password}`);
+
+                // Signal completion
+                setTimeout(() => {
+                    this.botClient.emit('authCompleted');
+                }, 1000);
             } else {
                 this.botClient.log('AutoAuth: chat function missing', 'error');
             }

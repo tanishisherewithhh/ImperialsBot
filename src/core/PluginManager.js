@@ -1,10 +1,13 @@
+import { EventEmitter } from 'events';
 import fs from 'fs';
 import path from 'path';
 import { pathToFileURL } from 'url';
 import { PluginWrapper } from './PluginWrapper.js';
+import { PluginAPI } from './PluginAPI.js';
 
-export class PluginManager {
+export class PluginManager extends EventEmitter {
     constructor(botClient) {
+        super();
         this.botClient = botClient;
         this.plugins = new Map();
         this.pluginsDir = path.join(process.cwd(), 'src', 'plugins');
@@ -23,6 +26,7 @@ export class PluginManager {
             await this.loadPlugin(file);
         }
 
+        this.emit('pluginsUpdated', { username: this.botClient.username, plugins: this.getAllPlugins() });
         this.startWatcher();
     }
 
@@ -34,7 +38,7 @@ export class PluginManager {
         this.watcher = fs.watch(this.pluginsDir, (eventType, filename) => {
             if (!filename || !filename.endsWith('.js')) return;
 
-            // Debounce to prevent double-firing on some OSs
+
             if (debounceTimer) clearTimeout(debounceTimer);
             debounceTimer = setTimeout(() => {
                 this.handleFileChange(eventType, filename);
@@ -48,25 +52,21 @@ export class PluginManager {
         const filePath = path.join(this.pluginsDir, filename);
 
         if (!fs.existsSync(filePath)) {
-            // Deleted
+
             this.unloadPlugin(filename);
             this.botClient.log(`Plugin ${filename} deleted.`, 'warning');
         } else {
-            // Created or Modified
+
             this.botClient.log(`Reloading plugin: ${filename}...`, 'info');
             await this.loadPlugin(filename, true);
         }
 
         if (this.botClient.emit) {
-            //custom event from BotClient that SocketServer handles.
             this.botClient.emit('pluginsUpdated');
         }
     }
 
     unloadPlugin(filename) {
-        // Find plugin by filename (need to map filename to plugin name or store filename)
-        // For simplicity, let's assume one plugin per file and we search.
-        // Or store filename in wrapper.
         for (const [name, wrapper] of this.plugins.entries()) {
             if (wrapper.filename === filename) {
                 wrapper.disable();
@@ -80,10 +80,10 @@ export class PluginManager {
     async loadPlugin(file, isReload = false) {
         try {
             const filePath = path.join(this.pluginsDir, file);
-            // Cache busting for hot reload
+
             const fileUrl = pathToFileURL(filePath).href + '?t=' + Date.now();
 
-            // Dynamic Import
+
             const module = await import(fileUrl);
             const PluginClass = module.default || module.Plugin;
 
@@ -92,37 +92,31 @@ export class PluginManager {
                 return;
             }
 
-            // Unload previous version if exists (by checking active plugins for same filename or name)
-            // If we reload, we might have a name collision if the name didn't change.
-            // Best to unload by filename first if we are reloading a specific file.
             if (isReload) this.unloadPlugin(file);
 
             const pluginInstance = new PluginClass();
-            // API Helper for plugins
-            const api = {
-                log: (msg, type) => {
-                    const color = pluginInstance.color || 'f';
-                    this.botClient.log(`§${color}[${pluginInstance.name || 'Plugin'}]§r ${msg}`, type);
-                },
-                chat: (msg) => this.botClient.bot?.chat(msg)
-            };
+
+            const api = new PluginAPI(this.botClient);
 
             const wrapper = new PluginWrapper(pluginInstance, this.botClient, api);
-            wrapper.filename = file; // Store filename for unloading
+            wrapper.filename = file;
 
-            // Check if we effectively replaced an existing one by name (if unload by filename missed it or logic differs)
+            // Preserve state if reloading
             if (this.plugins.has(wrapper.name)) {
-                this.plugins.get(wrapper.name).disable();
+                const old = this.plugins.get(wrapper.name);
+                wrapper.enabled = old.enabled;
+                old.disable();
                 this.plugins.delete(wrapper.name);
+            } else {
+                wrapper.enabled = false;
             }
 
             this.plugins.set(wrapper.name, wrapper);
 
             if (this.botClient.bot) {
                 wrapper.init();
+                api._bindPlugin(pluginInstance);
             }
-
-
 
             console.log(`Loaded plugin: ${wrapper.name}`);
             if (isReload) {

@@ -1,33 +1,4 @@
-/**
- * Minecraft Color & Formatting Codes Reference
- * Use these codes with the '§' symbol (e.g., '§c' for Red) in api.log or chat.
- *
- * Colors:
- * §0 - Black
- * §1 - Dark Blue
- * §2 - Dark Green
- * §3 - Dark Aqua
- * §4 - Dark Red
- * §5 - Dark Purple
- * §6 - Gold
- * §7 - Gray
- * §8 - Dark Gray
- * §9 - Blue
- * §a - Green
- * §b - Aqua
- * §c - Red
- * §d - Light Purple
- * §e - Yellow
- * §f - White
- *
- * Formatting:
- * §k - Obfuscated
- * §l - Bold
- * §m - Strikethrough
- * §n - Underline
- * §o - Italic
- * §r - Reset
- */
+
 export class PluginWrapper {
     constructor(plugin, botClient, api) {
         this.plugin = plugin;
@@ -37,12 +8,18 @@ export class PluginWrapper {
         this.description = plugin.description || 'No description';
         this.enabled = false;
         this.hasError = false;
-        this.settings = plugin.settings || {}; // Definition
-        this.config = {}; // Runtime values
+        this.settings = plugin.settings || {};
+        this.config = {};
     }
 
     safeCall(method, ...args) {
         if (this.hasError) return;
+
+        // Lifecycle methods are always callable
+        const isLifecycle = ['init', 'enable', 'disable', 'onConfigUpdate'].includes(method);
+
+        if (!isLifecycle && !this.enabled) return;
+
         if (typeof this.plugin[method] !== 'function') return;
 
         try {
@@ -55,20 +32,23 @@ export class PluginWrapper {
     handleError(context, err) {
         this.hasError = true;
         this.enabled = false;
+        if (this.api && typeof this.api._cleanup === 'function') {
+            this.api._cleanup();
+        }
         const msg = `Plugin '${this.name}' crashed in ${context}: ${err.message}`;
         console.error(msg);
-
-        // Notify via BotClient log which goes to Socket -> UI
         this.botClient.log(msg, 'error');
 
-        // Emit specific plugin error event
         if (this.botClient.emit) {
             this.botClient.emit('pluginError', { name: this.name, error: err.message });
         }
     }
 
     init() {
-        this.safeCall('init', this.botClient.bot, this.api); // Pass safe API here if needed
+        if (this.api && typeof this.api._setWrapper === 'function') {
+            this.api._setWrapper(this);
+        }
+        this.safeCall('init', this.botClient.bot, this.api);
     }
 
     enable() {
@@ -76,18 +56,28 @@ export class PluginWrapper {
         this.enabled = true;
         this.safeCall('enable');
         this.botClient.log(`Plugin '${this.name}' enabled`, 'success');
+
+        // Notify frontend
+        if (this.botClient.emit) this.botClient.emit('pluginsUpdated');
     }
 
     disable() {
         this.enabled = false;
         this.safeCall('disable');
+
+        // Cleanup guarded listeners
+        if (this.api && typeof this.api._cleanup === 'function') {
+            this.api._cleanup();
+        }
+
         this.botClient.log(`Plugin '${this.name}' disabled`, 'warning');
+
+        // Notify frontend
+        if (this.botClient.emit) this.botClient.emit('pluginsUpdated');
     }
 
     onTick() {
-        if (this.enabled && !this.hasError) {
-            this.safeCall('onTick');
-        }
+        this.safeCall('onTick');
     }
 
     updateConfig(newConfig) {

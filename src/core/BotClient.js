@@ -7,6 +7,7 @@ import inventoryViewer from 'mineflayer-web-inventory';
 import { NetworkUtils } from '../utils/NetworkUtils.js';
 import { MinecraftColorUtils } from '../utils/MinecraftColorUtils.js';
 import { Logger } from '../utils/Logger.js';
+import { ProxyAgent } from 'proxy-agent';
 
 export class BotClient extends EventEmitter {
     constructor(config) {
@@ -16,19 +17,26 @@ export class BotClient extends EventEmitter {
         this.bot = null;
         this.featureManager = new FeatureManager(this);
         this.pluginManager = new PluginManager(this);
-        this.status = 'Created';
+        this.status = 'Offline';
         this.chatHistory = [];
         this.viewerPort = null;
         this.reconnectTimer = null;
+        this.reconnectAttempts = 0;
         this.manuallyStopped = false;
         this.recentMessages = new Set();
         this.inventoryPort = null;
+
+        this.pluginManager.on('pluginsUpdated', (data) => {
+            this.emit('pluginsUpdated', data);
+        });
 
         this.on('viewerStarted', (data) => {
             this.viewerPort = data.port;
         });
 
         this.mcColors = MinecraftColorUtils;
+
+        this.log('Bot initialized but offline. Click the "Join" button to start!', 'info');
     }
 
 
@@ -114,7 +122,7 @@ export class BotClient extends EventEmitter {
 
     rejoin() {
         this.log('Manual rejoin triggered...', 'warning');
-        this.manuallyStopped = false; // Reset flag
+        this.manuallyStopped = false;
         this.stop();
         if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
         this.reconnectTimer = setTimeout(() => {
@@ -123,13 +131,38 @@ export class BotClient extends EventEmitter {
         }, 1000);
     }
 
+    async sendWebhook(title, description, color) {
+        if (!this.config.webhookUrl) return;
+
+        const payload = {
+            embeds: [
+                {
+                    title: title,
+                    description: description,
+                    color: color,
+                    timestamp: new Date().toISOString()
+                }
+            ]
+        };
+
+        try {
+            await fetch(this.config.webhookUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+        } catch (error) {
+            this.log(`Failed to send Discord webhook: ${error.message}`, 'error', false);
+        }
+    }
+
     setLook(yaw, pitch) {
         if (this.bot) {
             this.bot.look(yaw, pitch);
         }
     }
 
-    init() {
+    async init() {
         this.manuallyStopped = false;
         if (this.reconnectTimer) {
             clearTimeout(this.reconnectTimer);
@@ -140,23 +173,79 @@ export class BotClient extends EventEmitter {
             try {
                 this.bot.removeAllListeners();
                 this.bot.quit();
+                this.bot = null;
             } catch (e) {
             }
         }
 
+
+        if (this.manuallyStopped === false && !this.reconnectTimer) {
+            this.reconnectAttempts = 0;
+        }
+
         this.updateStatus('Connecting');
+
+        try {
+            const settings = await ConfigLoader.loadSettings();
+            if (settings && settings.randomProxy && settings.proxyList) {
+                const proxies = settings.proxyList.split('\n').map(p => p.trim()).filter(p => p.length > 0 && p.includes('://'));
+                if (proxies.length > 0) {
+                    const randomProxyStr = proxies[Math.floor(Math.random() * proxies.length)];
+                    try {
+                        const parsed = new URL(randomProxyStr);
+                        this.config.proxyType = parsed.protocol.replace(':', '');
+                        this.config.proxyHost = parsed.hostname;
+                        this.config.proxyPort = parsed.port || (this.config.proxyType.startsWith('socks') ? 1080 : 80);
+                        this.config.proxyUser = decodeURIComponent(parsed.username || '');
+                        this.config.proxyPass = decodeURIComponent(parsed.password || '');
+                        this.log(`Selected random proxy: ${this.config.proxyHost}`, 'info');
+                    } catch (e) {
+                        this.log(`Failed to parse random proxy URL: ${randomProxyStr}`, 'warning');
+                    }
+                }
+            }
+        } catch (err) {
+            this.log(`Failed to load global settings: ${err.message}`, 'warning');
+        }
+
         const botOptions = {
             username: this.config.username,
             password: this.config.password,
             auth: this.config.auth || 'offline',
-            version: this.config.version
+            version: this.config.version,
+            connectTimeout: 30000
         };
 
         if (this.config.realms) {
+            if ((this.config.auth || 'offline') === 'offline') {
+                this.log('Realms requires Microsoft authentication. Cannot use offline/cracked auth.', 'error');
+                this.updateStatus('Error: Realms requires Microsoft auth');
+                return;
+            }
             botOptions.realms = this.config.realms;
         } else {
             botOptions.host = this.config.host;
             botOptions.port = this.config.port;
+        }
+
+
+        if (this.config.proxyType && this.config.proxyType !== 'none') {
+            const { proxyType, proxyHost, proxyPort, proxyUser, proxyPass } = this.config;
+            let authStr = '';
+            if (proxyUser && proxyPass) {
+                authStr = `${encodeURIComponent(proxyUser)}:${encodeURIComponent(proxyPass)}@`;
+            } else if (proxyUser) {
+                authStr = `${encodeURIComponent(proxyUser)}@`;
+            }
+
+
+            const proxyUrl = `${proxyType}://${authStr}${proxyHost}:${proxyPort}`;
+            try {
+                this.log(`Attempting connection via proxy: ${proxyType}://${proxyHost}:${proxyPort}`, 'info');
+                botOptions.agent = new ProxyAgent({ getProxyForUrl: () => proxyUrl });
+            } catch (proxyErr) {
+                this.log(`Failed to create proxy agent: ${proxyErr.message}`, 'error');
+            }
         }
 
         try {
@@ -167,7 +256,7 @@ export class BotClient extends EventEmitter {
             return;
         }
 
-        // Web Inventory Integration
+
         const startInvPort = 4000 + Math.floor(Math.random() * 1000);
         NetworkUtils.findFreePort(startInvPort).then(port => {
             this.inventoryPort = port;
@@ -192,12 +281,25 @@ export class BotClient extends EventEmitter {
 
     bindEvents() {
         this.bot.on('spawn', () => {
+            this.reconnectAttempts = 0;
             this.updateStatus('Online');
             this.emit('spawn');
             this.log(`${this.username} spawned`, 'success');
             this.lastSpawnTime = Date.now();
 
-            this.pluginManager.onBotSpawn();
+            // Coordination: Delay plugin spawn event if AutoAuth is active
+            const autoAuth = this.featureManager.getFeature('autoauth');
+            const needsAuth = autoAuth && autoAuth.enabled;
+
+            if (needsAuth) {
+                this.log('Waiting for AutoAuth to complete before starting plugins...', 'info');
+                this.once('authCompleted', () => {
+                    this.log('AutoAuth complete! Starting plugins.', 'success');
+                    this.pluginManager.onBotSpawn();
+                });
+            } else {
+                this.pluginManager.onBotSpawn();
+            }
             if (this.bot.inventory) {
                 this.bot.inventory.removeAllListeners('updateSlot');
                 let invUpdateTimeout = null;
@@ -211,7 +313,7 @@ export class BotClient extends EventEmitter {
                             count: item.count
                         }));
                         this.emit('inventoryUpdate', inventory);
-                    }, 100);
+                    }, 300);
                 });
             }
         });
@@ -222,7 +324,7 @@ export class BotClient extends EventEmitter {
 
             if (this.bot.entity) {
                 const now = Date.now();
-                if (now - (this.lastDataEmit || 0) > 500) {
+                if (now - (this.lastDataEmit || 0) > 1000) {
                     this.lastDataEmit = now;
                     this.emit('dataUpdate', {
                         position: this.bot.entity.position,
@@ -237,17 +339,34 @@ export class BotClient extends EventEmitter {
 
         this.bot.on('end', async () => {
             if (this.manuallyStopped || this.reconnectTimer) return;
-            this.updateStatus('Offline');
-            this.emit('end');
-            this.log(`${this.username} disconnected`, 'error');
 
             const isAuto = this.config.autoReconnect === true || this.config.autoReconnect === 'true';
+            if (isAuto || this.isTransferring) {
+                this.updateStatus('Transferring');
+            } else {
+                this.updateStatus('Offline');
+            }
+
+            if (this.isTransferring) {
+                this.isTransferring = false;
+            } else {
+                this.log(`${this.username} disconnected`, 'error');
+            }
+
+            this.emit('end');
+
             if (isAuto) {
                 const settings = await ConfigLoader.loadSettings() || {};
-                let delay = parseInt(settings.reconnectDelay) || 5000;
-                if (delay < 2000) delay = 2000;
+                let baseDelay = parseInt(settings.reconnectDelay) || 5000;
+                if (baseDelay < 2000) baseDelay = 2000;
 
-                this.updateStatus(`Reconnecting in ${delay / 1000}s...`);
+
+                const maxDelay = 60000;
+                let delay = baseDelay * Math.pow(1.5, this.reconnectAttempts);
+                if (delay > maxDelay) delay = maxDelay;
+                this.reconnectAttempts++;
+
+                this.log(`Reconnecting in ${Math.round(delay / 1000)}s (Attempt ${this.reconnectAttempts})...`, 'info');
 
                 this.reconnectTimer = setTimeout(() => {
                     this.reconnectTimer = null;
@@ -259,23 +378,38 @@ export class BotClient extends EventEmitter {
         this.bot.on('respawn', () => {
             this.log('Dimension/World change detected.', 'info');
             this.lastSpawnTime = Date.now();
-            // Rich Aqua Notification
-            this.emitChat('[Server]', '\x1b[1;36mBOT RESPAWNED\x1b[0m', 'chat');
+            this.emitChat('[Server]', '\x1b[1;36mDIMENSION CHANGE\x1b[0m', 'chat');
         });
 
         this.bot.on('kicked', (reason) => {
             const reasonStr = this.parseReason(reason);
             this.log(`Kicked: ${reasonStr}`, 'error');
             this.updateStatus('Kicked');
+
+            if (this.config.webhookUrl) {
+                this.sendWebhook(`**${this.username}** was kicked!`, `**Reason:**\n${reasonStr}`, 16711680);
+            }
         });
 
         this.bot.on('error', (err) => {
+            if (err.code === 'ECONNRESET' && this.lastSpawnTime && (Date.now() - this.lastSpawnTime) < 10000) {
+                this.log('Connection reset during server transfer, reconnecting...', 'info');
+                this.isTransferring = true;
+                return;
+            }
+
+            // Handle AggregateError (timeouts) gracefully
+            let msg = err.message;
+            if (err.name === 'AggregateError' && err.errors && err.errors.length > 0) {
+                msg = err.errors[0].message || msg;
+            }
+
             this.emit('error', err);
-            this.updateStatus(`Error: ${err.message}`);
-            this.log(`${this.username} error: ${err.message}`, 'error');
+            this.updateStatus(`Error: ${msg}`);
+            this.log(`${this.username} error: ${msg}`, 'error');
         });
 
-        // Player Updates
+
         let playerUpdateTimeout = null;
         const emitPlayerList = () => {
             if (playerUpdateTimeout) clearTimeout(playerUpdateTimeout);
@@ -334,8 +468,12 @@ export class BotClient extends EventEmitter {
                 posStr = `${Math.floor(pos.x)}, ${Math.floor(pos.y)}, ${Math.floor(pos.z)}`;
             }
             this.updateStatus(`Died at ${posStr}`);
-            // Rich Aqua Notification
+
             this.emitChat('[Server]', `\x1b[1;36mBOT DIED AT ${posStr}\x1b[0m`, 'chat');
+
+            if (this.config.webhookUrl) {
+                this.sendWebhook(`**${this.username}** died!`, `Location: ${posStr}`, 16711680);
+            }
         });
 
         this.bot.on('playerJoined', (player) => {
@@ -367,5 +505,6 @@ export class BotClient extends EventEmitter {
         if (this.bot) {
             this.bot.quit();
         }
+        this.updateStatus('Offline');
     }
 }

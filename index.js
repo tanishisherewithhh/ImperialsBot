@@ -11,7 +11,7 @@ const start = async () => {
     process.on('uncaughtException', (err) => {
         Logger.originalConsole.error('UNCAUGHT EXCEPTION:', err);
         Logger.log(`UNCAUGHT EXCEPTION: ${err.stack || err.message}`, 'CRITICAL');
-        // Removed process.exit(1) to keep the application and other bots alive
+
     });
 
     process.on('unhandledRejection', (reason, promise) => {
@@ -23,7 +23,7 @@ const start = async () => {
     let port = 3000;
 
     if (!settings || !settings.port) {
-        // Prompt user only if port is missing
+
         if (!settings) {
             const rl = readline.createInterface({
                 input: process.stdin,
@@ -45,7 +45,7 @@ const start = async () => {
             await ConfigLoader.saveSettings({ port });
             console.log(`Port ${port} saved to settings.json.`);
         } else {
-            // Settings exist but port might be missing? defaulting to 3000 if so
+
             await ConfigLoader.saveSettings({ port });
         }
 

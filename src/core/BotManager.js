@@ -8,7 +8,7 @@ class BotManager extends EventEmitter {
         this.bots = new Map();
     }
 
-    async createBot(config, save = true) {
+    async createBot(config, save = true, autoStart = true) {
         if (this.bots.has(config.username)) {
             throw new Error(`Bot ${config.username} already exists`);
         }
@@ -20,10 +20,9 @@ class BotManager extends EventEmitter {
         this.emit('botCreated', config.username);
 
         bot.on('spawn', () => this.emit('botSpawn', config.username));
-        bot.on('error', (err) => console.error(`Bot ${config.username} error:`, err.message));
         bot.on('end', () => this.emit('botEnd', config.username));
-
         bot.on('error', (err) => {
+            console.error(`Bot ${config.username} error:`, err.message);
             this.emit('botError', { username: config.username, error: err });
         });
 
@@ -51,21 +50,21 @@ class BotManager extends EventEmitter {
             this.emit('botStatus', { username: config.username, ...payload });
         });
 
-        bot.on('dataUpdate', (data) => {
-            this.emit('botData', { username: config.username, data });
-        });
-
-        bot.on('inventoryUpdate', (data) => {
-            this.emit('botInventory', { username: config.username, data });
-        });
-
-        bot.on('playerList', (players) => {
-            this.emit('botPlayers', { username: config.username, players });
-        });
-
         bot.on('viewerStarted', (data) => {
             this.emit('botViewer', { username: config.username, ...data });
         });
+
+        bot.on('analyticsUpdate', (stat) => {
+            this.emit('analyticsUpdate', { username: config.username, stat });
+        });
+
+        bot.on('pluginsUpdated', () => {
+            this.emit('pluginsUpdated', { username: config.username, plugins: bot.pluginManager.getAllPlugins() });
+        });
+
+        if (autoStart) {
+            bot.init();
+        }
 
         return bot;
     }
@@ -93,7 +92,7 @@ class BotManager extends EventEmitter {
         const savedBots = await ConfigLoader.loadBots();
         for (const config of savedBots) {
             try {
-                await this.createBot(config, false);
+                await this.createBot(config, false, false);
             } catch (err) {
                 console.error(`Failed to load saved bot ${config.username}:`, err);
             }
@@ -117,13 +116,13 @@ class BotManager extends EventEmitter {
             throw new Error(`Bot ${config.username} not found`);
         }
 
-        // Update config on disk
+
         await ConfigLoader.addBotConfig(config);
 
         bot.config = config;
 
-        // If we wanted to auto-restart:
-        // if (bot.status === 'Online') bot.rejoin();
+
+
     }
 
     updateAllNavigationProfiles(profileName) {
