@@ -2,6 +2,9 @@
 
 ### Setup
 
+> [!IMPORTANT]
+> **Download** the source files from [here](https://github.com/tanishisherewithhh/ImperialsBot/archive/refs/heads/main.zip)
+
 > [!NOTE]
 > You will need to have [Node.JS](https://nodejs.org/en) installed.
 
