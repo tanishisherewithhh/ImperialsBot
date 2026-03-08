@@ -2,6 +2,9 @@
 
 ### Setup
 
+> [!IMPORTANT]
+> **Download** the source files from [here](https://github.com/tanishisherewithhh/ImperialsBot/archive/refs/heads/main.zip)
+
 > [!NOTE]
 > You will need to have [Node.JS](https://nodejs.org/en) installed.
 
@@ -48,7 +51,7 @@ To connect to a Realm:
 - **Auto-Reconnect**: If ticked, the bot will automatically try to log back in if it gets disconnected or kicked (waiting a few seconds between attempts).
 - **First Person View**: If ticked, the real-time viewer will show the world from the bot's eyes. If unticked, it uses a third-person camera.
 
-**Updating**: To change a bot's settings, click the gear icon on the bot in the sidebar. You can change the IP or version without deleting the bot.
+**Updating**: To change a bot's settings, click the edit (📝) icon on the bot in the sidebar. You can change the IP or version without deleting the bot.
 
 ---
 
