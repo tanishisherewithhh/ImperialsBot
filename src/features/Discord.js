@@ -4,45 +4,61 @@ export class Discord extends BaseFeature {
     constructor(botClient) {
         super(botClient);
         this.webhookUrl = null;
+        this.botToken = null;
+        this.channelId = null;
         this.queue = [];
         this.processing = false;
-
-
         setInterval(() => this.processQueue(), 1200);
     }
 
     init() {
-        this.webhookUrl = this.botClient.config.webhookUrl;
-        if (this.webhookUrl) this.sendEmbed('info', 'System', 'Bot Initialized');
+        const mode = this.botClient.config.discordIntegrationMode || 'none';
+
+        if (mode === 'webhook') {
+            this.webhookUrl = this.botClient.config.webhookUrl;
+            this.botToken = null;
+            this.channelId = null;
+        } else if (mode === 'bot') {
+            this.webhookUrl = null;
+            this.botToken = this.botClient.config.discordBotToken;
+            this.channelId = this.botClient.config.discordChannelId;
+        } else {
+            this.webhookUrl = null;
+            this.botToken = null;
+            this.channelId = null;
+        }
+
+        if (this.webhookUrl || (this.botToken && this.channelId)) {
+            this.sendEmbed('info', 'System', 'Bot Initialized');
+        }
 
         if (this.botClient.bot) {
             this.botClient.bot.on('spawn', () => {
-                if (this.webhookUrl) this.sendEmbed('spawn', 'Status', 'Spawned Successfully');
+                this.sendEmbed('spawn', 'Status', 'Spawned Successfully');
             });
 
             this.botClient.bot.on('end', () => {
-                if (this.webhookUrl) this.sendEmbed('kick', 'Status', 'Disconnected');
+                this.sendEmbed('kick', 'Status', 'Disconnected');
             });
 
             this.botClient.bot.on('death', () => {
-                if (this.webhookUrl) this.sendEmbed('death', 'Status', 'Died');
+                this.sendEmbed('death', 'Status', 'Died');
             });
 
             this.botClient.bot.on('kicked', (reason) => {
                 const reasonStr = typeof reason === 'object' ? JSON.stringify(reason) : reason;
-                if (this.webhookUrl) this.sendEmbed('kick', 'Kicked', reasonStr);
+                this.sendEmbed('kick', 'Kicked', reasonStr);
             });
 
             this.botClient.bot.on('error', (err) => {
-                if (this.webhookUrl) this.sendEmbed('kick', 'Error', err.message);
+                this.sendEmbed('kick', 'Error', err.message);
             });
         }
 
         this.chatListener = (data) => {
-            if (this.webhookUrl) {
-                if (this.isSensitive(data.message)) return;
-                this.sendEmbed('chat', data.username, data.message);
-            }
+            if (this.isSensitive(data.message)) return;
+            const senderName = data.sender === '[Server]' ? 'Server Status' : (data.sender || 'Unknown');
+            this.sendEmbed('chat', senderName, data.raw || data.message);
         };
         this.botClient.on('chat', this.chatListener);
     }
@@ -55,21 +71,34 @@ export class Discord extends BaseFeature {
     }
 
     processQueue() {
-        if (this.queue.length === 0) return;
+        if (this.queue.length === 0 || this.processing) return;
+        this.processing = true;
+
+        const mode = this.botClient.config.discordIntegrationMode || 'none';
         const payload = this.queue.shift();
-        this.postToWebhook(payload);
+
+        if (mode === 'bot' && this.botToken && this.channelId) {
+            this.sendToBot(payload).finally(() => { this.processing = false; });
+        } else if (mode === 'webhook' && this.webhookUrl) {
+            this.postToWebhook(payload).finally(() => { this.processing = false; });
+        } else {
+            this.processing = false;
+        }
     }
 
     sendWebhookMessage(content) {
-
         this.sendEmbed('info', 'System', content);
     }
 
+    stripAnsi(str) {
+        if (typeof str !== 'string') return str;
+        return str.replace(/\x1b\[[0-9;]*m/g, '').trim();
+    }
+
     sendEmbed(type, title, description) {
-        if (!this.webhookUrl) return;
+        if (!this.webhookUrl && !(this.botToken && this.channelId)) return;
 
         let color = 0x5865F2;
-        let prefix = '';
 
         switch (type) {
             case 'spawn': color = 0x57F287; break;
@@ -80,30 +109,47 @@ export class Discord extends BaseFeature {
         }
 
         const embed = {
-            description: `**${title}**: ${description}`,
+            title: `${this.stripAnsi(title)}`,
+            description: this.stripAnsi(description),
             color: color,
             footer: {
-                text: new Date().toLocaleTimeString()
-            }
+                text: `ImperialsBot`
+            },
+            timestamp: new Date().toISOString()
         };
 
-
         this.queue.push({
-            username: `${this.botClient.username} (${this.botClient.config.host}) ImperialsBot`,
+            content: null,
             embeds: [embed]
         });
     }
 
+    async sendToBot(payload) {
+        try {
+            await fetch(`https://discord.com/api/v10/channels/${this.channelId}/messages`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bot ${this.botToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+        } catch (err) { }
+    }
+
     async postToWebhook(payload) {
         try {
+            const webhookPayload = {
+                username: `${this.botClient.username} (ImperialsBot)`,
+                avatar_url: `https://minotar.net/avatar/${this.botClient.username}/64`,
+                ...payload
+            };
             await fetch(this.webhookUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                body: JSON.stringify(webhookPayload)
             });
-        } catch (err) {
-
-        }
+        } catch (err) { }
     }
 
     dispose() {

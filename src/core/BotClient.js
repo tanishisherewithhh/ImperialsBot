@@ -13,6 +13,7 @@ export class BotClient extends EventEmitter {
     constructor(config) {
         super();
         this.config = config;
+        this.config.plugins = this.config.plugins || {};
         this.username = config.username;
         this.bot = null;
         this.featureManager = new FeatureManager(this);
@@ -38,7 +39,6 @@ export class BotClient extends EventEmitter {
 
         this.log('Bot initialized but offline. Click the "Join" button to start!', 'info');
     }
-
 
     emitChat(username, message, type = 'chat', ansi = null) {
         if (!message) return;
@@ -119,7 +119,6 @@ export class BotClient extends EventEmitter {
         Logger.log(`[${this.username}] ${msgStr}`, type);
     }
 
-
     rejoin() {
         this.log('Manual rejoin triggered...', 'warning');
         this.manuallyStopped = false;
@@ -132,6 +131,12 @@ export class BotClient extends EventEmitter {
     }
 
     async sendWebhook(title, description, color) {
+        const discord = this.featureManager.getFeature('discord');
+        if (discord && (discord.webhookUrl || (discord.botToken && discord.channelId))) {
+            discord.sendEmbed('info', title, description);
+            return;
+        }
+
         if (!this.config.webhookUrl) return;
 
         const payload = {
@@ -178,12 +183,19 @@ export class BotClient extends EventEmitter {
             }
         }
 
-
         if (this.manuallyStopped === false && !this.reconnectTimer) {
             this.reconnectAttempts = 0;
         }
 
         this.updateStatus('Connecting');
+
+        // Load plugins early to allow pre-join hooks to execute
+        try {
+            await this.pluginManager.loadPlugins();
+            await this.pluginManager.runPreJoinHooks();
+        } catch (err) {
+            this.log(`PreJoin hook error: ${err.message}`, 'error');
+        }
 
         try {
             const settings = await ConfigLoader.loadSettings();
@@ -228,7 +240,6 @@ export class BotClient extends EventEmitter {
             botOptions.port = this.config.port;
         }
 
-
         if (this.config.proxyType && this.config.proxyType !== 'none') {
             const { proxyType, proxyHost, proxyPort, proxyUser, proxyPass } = this.config;
             let authStr = '';
@@ -237,7 +248,6 @@ export class BotClient extends EventEmitter {
             } else if (proxyUser) {
                 authStr = `${encodeURIComponent(proxyUser)}@`;
             }
-
 
             const proxyUrl = `${proxyType}://${authStr}${proxyHost}:${proxyPort}`;
             try {
@@ -250,12 +260,12 @@ export class BotClient extends EventEmitter {
 
         try {
             this.bot = mineflayer.createBot(botOptions);
+            this.pluginManager.onBotCreated();
         } catch (err) {
             this.log(`Fatal Initialization Error: ${err.message}`, 'error');
             this.updateStatus(`Fatal Error: ${err.message}`);
             return;
         }
-
 
         const startInvPort = 4000 + Math.floor(Math.random() * 1000);
         NetworkUtils.findFreePort(startInvPort).then(port => {
@@ -272,10 +282,18 @@ export class BotClient extends EventEmitter {
         this.bindEvents();
         try {
             this.featureManager.loadFeatures();
-            this.pluginManager.loadPlugins();
+            // Plugins are now loaded at the start of init()
         } catch (err) {
-            console.error(`Failed to load features/plugins for ${this.username}:`, err);
+            console.error(`Failed to load features for ${this.username}:`, err);
             this.log(`Load error: ${err.message}`, 'error');
+        }
+    }
+
+    async savePluginStates() {
+        try {
+            await ConfigLoader.addBotConfig(this.config);
+        } catch (e) {
+            this.log(`Failed to save plugin config: ${e.message}`, 'error');
         }
     }
 
@@ -287,7 +305,6 @@ export class BotClient extends EventEmitter {
             this.log(`${this.username} spawned`, 'success');
             this.lastSpawnTime = Date.now();
 
-            // Coordination: Delay plugin spawn event if AutoAuth is active
             const autoAuth = this.featureManager.getFeature('autoauth');
             const needsAuth = autoAuth && autoAuth.enabled;
 
@@ -324,14 +341,15 @@ export class BotClient extends EventEmitter {
 
             if (this.bot.entity) {
                 const now = Date.now();
-                if (now - (this.lastDataEmit || 0) > 1000) {
+                if (now - (this.lastDataEmit || 0) > 250) {
                     this.lastDataEmit = now;
                     this.emit('dataUpdate', {
                         position: this.bot.entity.position,
                         health: this.bot.health,
                         food: this.bot.food,
                         yaw: this.bot.entity.yaw,
-                        pitch: this.bot.entity.pitch
+                        pitch: this.bot.entity.pitch,
+                        dimension: this.bot.game ? this.bot.game.dimension : 'overworld'
                     });
                 }
             }
@@ -359,7 +377,6 @@ export class BotClient extends EventEmitter {
                 const settings = await ConfigLoader.loadSettings() || {};
                 let baseDelay = parseInt(settings.reconnectDelay) || 5000;
                 if (baseDelay < 2000) baseDelay = 2000;
-
 
                 const maxDelay = 60000;
                 let delay = baseDelay * Math.pow(1.5, this.reconnectAttempts);
@@ -398,7 +415,6 @@ export class BotClient extends EventEmitter {
                 return;
             }
 
-            // Handle AggregateError (timeouts) gracefully
             let msg = err.message;
             if (err.name === 'AggregateError' && err.errors && err.errors.length > 0) {
                 msg = err.errors[0].message || msg;
@@ -408,7 +424,6 @@ export class BotClient extends EventEmitter {
             this.updateStatus(`Error: ${msg}`);
             this.log(`${this.username} error: ${msg}`, 'error');
         });
-
 
         let playerUpdateTimeout = null;
         const emitPlayerList = () => {
@@ -505,6 +520,7 @@ export class BotClient extends EventEmitter {
         if (this.bot) {
             this.bot.quit();
         }
-        this.updateStatus('Offline');
+        this.log(`${this.username} manually stopped.`, 'warning');
+        this.updateStatus('Disconnected');
     }
 }

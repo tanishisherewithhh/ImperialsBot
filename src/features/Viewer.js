@@ -3,7 +3,6 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const { mineflayer: viewer } = require('prismarine-viewer');
 
-import net from 'net';
 import { NetworkUtils } from '../utils/NetworkUtils.js';
 
 export class Viewer extends BaseFeature {
@@ -19,17 +18,22 @@ export class Viewer extends BaseFeature {
     }
 
     async startViewer() {
-        if (!this.botClient.config.viewerPort) {
+        if (this.viewerInstance) {
+            try {
+                this.viewerInstance.close();
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            } catch (e) { }
+            this.viewerInstance = null;
+        }
 
+        if (!this.botClient.config.viewerPort) {
             this.botClient.config.viewerPort = 3000 + Math.floor(Math.random() * 5000);
         }
 
         try {
             const port = await NetworkUtils.findFreePort(this.botClient.config.viewerPort);
 
-
-
-            viewer(this.botClient.bot, {
+            this.viewerInstance = viewer(this.botClient.bot, {
                 port: port,
                 firstPerson: !!this.botClient.config.firstPerson
             });
@@ -46,6 +50,16 @@ export class Viewer extends BaseFeature {
     toggleView() {
         this.botClient.config.firstPerson = !this.botClient.config.firstPerson;
         this.startViewer();
+    }
+
+    async dispose() {
+        if (this.viewerInstance) {
+            try {
+                this.viewerInstance.close();
+                await new Promise(resolve => setTimeout(resolve, 500));
+            } catch (e) { }
+            this.viewerInstance = null;
+        }
     }
 
 

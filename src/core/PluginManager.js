@@ -38,11 +38,10 @@ export class PluginManager extends EventEmitter {
         this.watcher = fs.watch(this.pluginsDir, (eventType, filename) => {
             if (!filename || !filename.endsWith('.js')) return;
 
-
             if (debounceTimer) clearTimeout(debounceTimer);
             debounceTimer = setTimeout(() => {
                 this.handleFileChange(eventType, filename);
-            }, 100);
+            }, 5000);
         });
 
         console.log('Plugin watcher started.');
@@ -52,11 +51,9 @@ export class PluginManager extends EventEmitter {
         const filePath = path.join(this.pluginsDir, filename);
 
         if (!fs.existsSync(filePath)) {
-
             this.unloadPlugin(filename);
             this.botClient.log(`Plugin ${filename} deleted.`, 'warning');
         } else {
-
             this.botClient.log(`Reloading plugin: ${filename}...`, 'info');
             await this.loadPlugin(filename, true);
         }
@@ -80,9 +77,7 @@ export class PluginManager extends EventEmitter {
     async loadPlugin(file, isReload = false) {
         try {
             const filePath = path.join(this.pluginsDir, file);
-
             const fileUrl = pathToFileURL(filePath).href + '?t=' + Date.now();
-
 
             const module = await import(fileUrl);
             const PluginClass = module.default || module.Plugin;
@@ -95,20 +90,26 @@ export class PluginManager extends EventEmitter {
             if (isReload) this.unloadPlugin(file);
 
             const pluginInstance = new PluginClass();
-
             const api = new PluginAPI(this.botClient);
 
             const wrapper = new PluginWrapper(pluginInstance, this.botClient, api);
             wrapper.filename = file;
 
-            // Preserve state if reloading
             if (this.plugins.has(wrapper.name)) {
                 const old = this.plugins.get(wrapper.name);
                 wrapper.enabled = old.enabled;
+                wrapper.config = old.config;
                 old.disable();
                 this.plugins.delete(wrapper.name);
             } else {
-                wrapper.enabled = false;
+                const savedStates = this.botClient.config.plugins || {};
+                const saved = savedStates[wrapper.name];
+                if (saved) {
+                    wrapper.enabled = !!saved.enabled;
+                    if (saved.config) wrapper.config = { ...wrapper.config, ...saved.config };
+                } else {
+                    wrapper.enabled = false;
+                }
             }
 
             this.plugins.set(wrapper.name, wrapper);
@@ -116,6 +117,9 @@ export class PluginManager extends EventEmitter {
             if (this.botClient.bot) {
                 wrapper.init();
                 api._bindPlugin(pluginInstance);
+                if (wrapper.enabled) {
+                    wrapper.enable();
+                }
             }
 
             console.log(`Loaded plugin: ${wrapper.name}`);
@@ -129,9 +133,41 @@ export class PluginManager extends EventEmitter {
         }
     }
 
+    async runPreJoinHooks() {
+        for (const wrapper of this.plugins.values()) {
+            if (wrapper.enabled) {
+                try {
+                    await wrapper.safeCall('beforeJoin', wrapper.api, this.botClient);
+                } catch (err) {
+                    this.botClient.log(`PreJoin hook failed for ${wrapper.name}: ${err.message}`, 'error');
+                }
+            }
+        }
+    }
+
+    saveStates() {
+        if (!this.botClient.config.plugins) this.botClient.config.plugins = {};
+        for (const [name, wrapper] of this.plugins.entries()) {
+            this.botClient.config.plugins[name] = wrapper.toJSON();
+        }
+        if (typeof this.botClient.savePluginStates === 'function') {
+            this.botClient.savePluginStates();
+        }
+    }
+
     onBotSpawn() {
         this.plugins.forEach(wrapper => {
             wrapper.safeCall('onSpawn');
+        });
+    }
+
+    onBotCreated() {
+        this.plugins.forEach(wrapper => {
+            wrapper.init();
+            wrapper.api._bindPlugin(wrapper.plugin);
+            if (wrapper.enabled) {
+                wrapper.enable();
+            }
         });
     }
 
@@ -159,6 +195,7 @@ export class PluginManager extends EventEmitter {
         if (wrapper) {
             if (enabled) wrapper.enable();
             else wrapper.disable();
+            this.saveStates();
             return true;
         }
         return false;
@@ -168,6 +205,7 @@ export class PluginManager extends EventEmitter {
         const wrapper = this.plugins.get(name);
         if (wrapper) {
             wrapper.updateConfig(config);
+            this.saveStates();
         }
     }
 }

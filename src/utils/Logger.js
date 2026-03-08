@@ -34,6 +34,13 @@ export class Logger {
 
 
     static initGlobalLogging() {
+        // Truncate the log file on every startup
+        try {
+            fs.writeFileSync(this.logFile, '', 'utf8');
+        } catch (err) {
+            this.originalConsole.error('Failed to truncate log.txt:', err.message);
+        }
+
         console.log = (...args) => {
             this.originalConsole.log(...args);
             this.log(args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' '), 'INFO');

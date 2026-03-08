@@ -7,6 +7,24 @@ let bots = new Map();
 let activeKeys = new Set();
 let spammerEnabled = false;
 let lowPerformanceEnabled = false;
+let chatVisible = true;
+
+const chatToggleBtn = document.getElementById('chatToggleBtn');
+if (chatToggleBtn) {
+    chatToggleBtn.onclick = () => {
+        chatVisible = !chatVisible;
+        chatToggleBtn.title = chatVisible ? 'Hide Chat' : 'Show Chat';
+
+        if (chatVisible) {
+            chatToggleBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+        } else {
+            chatToggleBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-10-7-10-7a22.19 22.19 0 0 1 1.63-2.17M9.91 4.39A10.29 10.29 0 0 1 12 4c7 0 10 7 10 7a20.44 20.44 0 0 1-2.14 2.86"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
+        }
+
+        const chatContainer = document.querySelector('.chat-container');
+        if (chatContainer) chatContainer.style.display = chatVisible ? '' : 'none';
+    };
+}
 
 
 const keyMap = {
@@ -66,6 +84,12 @@ const cancelEditBot = document.getElementById('cancelEditBot');
 const addBotForm = document.getElementById('addBotForm');
 const editBotForm = document.getElementById('editBotForm');
 const chatForm = document.getElementById('chatForm');
+
+const bulkGenerateModal = document.getElementById('bulkGenerateModal');
+const bulkGenerateBtn = document.getElementById('bulkGenerateBtn');
+const cancelBulkGenerate = document.getElementById('cancelBulkGenerate');
+const bulkGenerateForm = document.getElementById('bulkGenerateForm');
+const bulkPluginsList = document.getElementById('bulkPluginsList');
 
 let chatInputHistory = [];
 let chatInputHistoryIndex = -1;
@@ -143,6 +167,19 @@ socket.on('connect', () => {
     loadingOverlay.classList.remove('active');
 });
 
+window.toggleDiscordFields = (val, prefix = '') => {
+    const webhookGroup = document.getElementById(prefix ? `${prefix}DiscordWebhookFields` : 'discordWebhookFields');
+    const botGroup = document.getElementById(prefix ? `${prefix}DiscordBotFields` : 'discordBotFields');
+    if (webhookGroup) webhookGroup.style.display = val === 'webhook' ? 'block' : 'none';
+    if (botGroup) botGroup.style.display = val === 'bot' ? 'block' : 'none';
+
+    // Update the other modal if it exists to keep them in sync or just for safety
+    const otherPrefix = prefix === 'add' ? '' : 'add';
+    const otherWebhookGroup = document.getElementById(otherPrefix ? `${otherPrefix}DiscordWebhookFields` : 'discordWebhookFields');
+    const otherBotGroup = document.getElementById(otherPrefix ? `${otherPrefix}DiscordBotFields` : 'discordBotFields');
+    // We don't necessarily want to sync them, but the function should be robust.
+};
+
 socket.on('disconnect', () => {
     connectionStatus.style.background = '#ef4444';
     connectionStatus.title = 'Disconnected';
@@ -158,22 +195,25 @@ socket.on('botList', (data) => {
         const item = document.createElement('div');
         item.className = `bot-item compact ${currentBot === bot.username ? 'active' : ''}`;
 
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.className = 'bot-checkbox';
-        checkbox.checked = selectedBots.has(bot.username);
-        checkbox.style.width = '18px';
-        checkbox.style.height = '16px';
-        checkbox.style.marginRight = '4px';
-        checkbox.onclick = (e) => {
-            e.stopPropagation();
-            if (checkbox.checked) selectedBots.add(bot.username);
-            else selectedBots.delete(bot.username);
-            updateSelectedCount();
-        };
+        if (selectedBots.has(bot.username)) {
+            item.classList.add('selected');
+        }
 
         item.onclick = (e) => {
-            if (!e.target.closest('.btn-icon') && !e.target.closest('.bot-checkbox')) {
+            if (!e.target.closest('.btn-icon') && !e.target.closest('.bot-avatar')) {
+                if (e.ctrlKey || e.metaKey) {
+                    // Toggle selection with Ctrl/Meta key
+                    if (selectedBots.has(bot.username)) {
+                        selectedBots.delete(bot.username);
+                        item.classList.remove('selected');
+                    } else {
+                        selectedBots.add(bot.username);
+                        item.classList.add('selected');
+                    }
+                    updateSelectedCount();
+                }
+
+                // Always switch view on item click (if not an icon/avatar)
                 selectBot(bot.username);
             }
         };
@@ -181,16 +221,27 @@ socket.on('botList', (data) => {
         const statusClass = bot.status === 'online' ? 'online' : (bot.status === 'offline' ? 'offline' : 'connecting');
 
         item.innerHTML = '';
-        item.appendChild(checkbox);
 
         const avatar = document.createElement('div');
         avatar.className = 'bot-avatar small';
         avatar.style.backgroundImage = `url('https://mc-heads.net/avatar/${bot.username}')`;
+        avatar.title = 'Click to select for bulk actions';
+        avatar.onclick = (e) => {
+            e.stopPropagation();
+            if (selectedBots.has(bot.username)) {
+                selectedBots.delete(bot.username);
+                item.classList.remove('selected');
+            } else {
+                selectedBots.add(bot.username);
+                item.classList.add('selected');
+            }
+            updateSelectedCount();
+        };
         item.appendChild(avatar);
 
         const name = document.createElement('div');
         name.className = 'bot-name';
-        name.style.cssText = 'flex: 1; margin: 0 8px; font-size: 0.9rem;';
+        name.style.cssText = 'flex: 1; margin: 0 8px; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;';
         name.innerText = bot.username;
         item.appendChild(name);
 
@@ -263,6 +314,7 @@ if (searchInputBox) {
 
 socket.on('logs', (payload) => {
     if (currentBot !== payload.username) return;
+    if (!chatVisible) return;
     const { message, type } = payload;
 
     const div = document.createElement('div');
@@ -494,7 +546,7 @@ socket.on('botData', (payload) => {
 
     if (currentBot !== payload.username) return;
     const now = Date.now();
-    if (now - lastBotDataUpdate < 1000) return;
+    if (now - lastBotDataUpdate < 250) return;
     lastBotDataUpdate = now;
     const data = payload.data;
 
@@ -508,15 +560,31 @@ socket.on('botData', (payload) => {
     }
     if (data.position) {
         const posStat = document.getElementById('posStat');
-        if (posStat) posStat.innerText = `${data.position.x.toFixed(0)}, ${data.position.y.toFixed(0)}, ${data.position.z.toFixed(0)}`;
+        const dimPosStat = document.getElementById('dimPosStat');
+        const x = parseFloat(data.position.x);
+        const y = parseFloat(data.position.y);
+        const z = parseFloat(data.position.z);
+        if (posStat) posStat.innerText = `${x.toFixed(0)}, ${y.toFixed(0)}, ${z.toFixed(0)}`;
+        if (dimPosStat && data.dimension) {
+            const dim = data.dimension;
+            if (dim === 'the_nether' || dim === 'minecraft:the_nether') {
+                dimPosStat.innerText = `OW: ${(x * 8).toFixed(0)}, ${y.toFixed(0)}, ${(z * 8).toFixed(0)}`;
+            } else if (dim === 'overworld' || dim === 'minecraft:overworld') {
+                dimPosStat.innerText = `Nether: ${(x / 8).toFixed(0)}, ${y.toFixed(0)}, ${(z / 8).toFixed(0)}`;
+            } else {
+                dimPosStat.innerText = '';
+            }
+        }
     }
     if (data.yaw !== undefined && document.activeElement !== yawSlider) {
-        yawSlider.value = data.yaw;
-        if (yawVal) yawVal.innerText = trim(data.yaw);
+        const yawDeg = Math.round(data.yaw * 180 / Math.PI);
+        yawSlider.value = yawDeg;
+        if (yawVal) yawVal.innerText = yawDeg;
     }
     if (data.pitch !== undefined && document.activeElement !== pitchSlider) {
-        pitchSlider.value = data.pitch;
-        pitchVal.innerText = trim(data.pitch);
+        const pitchDeg = Math.round(data.pitch * 180 / Math.PI);
+        pitchSlider.value = pitchDeg;
+        pitchVal.innerText = pitchDeg;
     }
 });
 
@@ -638,17 +706,33 @@ function renderPlugins(plugins) {
 
         const isEnabled = plugin.enabled;
         const hasError = plugin.hasError;
+        const hasSettings = plugin.settings && Object.keys(plugin.settings).length > 0;
+
+        let settingsBtnHtml = '';
+        if (hasSettings) {
+            settingsBtnHtml = `
+                <button class="btn compact" style="padding: 4px 8px; margin-right: 8px; background: rgba(148, 163, 184, 0.1); border: 1px solid var(--text-muted); color: var(--text-muted); display: flex; align-items: center; justify-content: center;" onclick="openPluginSettings('${plugin.name}', '${encodeURIComponent(JSON.stringify(plugin.settings))}', '${encodeURIComponent(JSON.stringify(plugin.config || {}))}')">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                </button>
+            `;
+        }
 
         item.innerHTML = `
             <div class="plugin-info">
                 <div class="plugin-name">${plugin.name}</div>
                 <div class="plugin-desc">${plugin.description}</div>
             </div>
-            <label class="switch">
-                <input type="checkbox" ${isEnabled ? 'checked' : ''} ${hasError ? 'disabled' : ''} 
-                    onchange="togglePlugin('${plugin.name}', this.checked)">
-                <span class="slider"></span>
-            </label>
+            <div style="display: flex; align-items: center;">
+                ${settingsBtnHtml}
+                <label class="switch">
+                    <input type="checkbox" ${isEnabled ? 'checked' : ''} ${hasError ? 'disabled' : ''} 
+                        onchange="togglePlugin('${plugin.name}', this.checked)">
+                    <span class="slider"></span>
+                </label>
+            </div>
         `;
         pluginsList.appendChild(item);
     });
@@ -662,6 +746,124 @@ window.togglePlugin = (name, enabled) => {
         payload: { pluginName: name, enabled }
     });
 };
+
+window.openPluginSettings = (name, settingsJson, configJson) => {
+    const settings = JSON.parse(decodeURIComponent(settingsJson));
+    const config = JSON.parse(decodeURIComponent(configJson));
+
+    const titleEl = document.getElementById('pluginSettingsTitle');
+    if (titleEl) titleEl.innerText = `${name} Settings`;
+
+    const nameEl = document.getElementById('pluginSettingsName');
+    if (nameEl) nameEl.value = name;
+
+    const container = document.getElementById('pluginSettingsContainer');
+    if (!container) return;
+    container.innerHTML = '';
+    container.style.marginTop = '20px'; // Space from heading
+
+    for (const [key, schema] of Object.entries(settings)) {
+        const val = config[key] !== undefined ? config[key] : (schema.value !== undefined ? schema.value : (schema.default !== undefined ? schema.default : ''));
+
+        const group = document.createElement('div');
+        group.className = 'form-group';
+        group.style.background = 'rgba(0,0,0,0.15)';
+        group.style.padding = '12px';
+        group.style.borderRadius = '8px';
+        group.style.marginBottom = '8px';
+        group.style.border = '1px solid rgba(255,255,255,0.05)';
+
+        const labelText = schema.label || key;
+
+        if (schema.type === 'boolean') {
+            const row = document.createElement('div');
+            row.style.display = 'flex';
+            row.style.justifyContent = 'space-between';
+            row.style.alignItems = 'center';
+            row.style.width = '100%';
+
+            const label = document.createElement('label');
+            label.innerText = labelText;
+            label.style.margin = '0';
+            label.style.fontSize = '0.9rem';
+            label.style.color = 'var(--text-main)';
+            row.appendChild(label);
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.name = key;
+            checkbox.checked = !!val;
+            checkbox.style.width = '18px';
+            checkbox.style.height = '18px';
+            checkbox.style.cursor = 'pointer';
+            row.appendChild(checkbox);
+
+            group.appendChild(row);
+        } else {
+            const label = document.createElement('label');
+            label.innerText = labelText;
+            label.style.marginBottom = '8px';
+            label.style.display = 'block';
+            label.style.fontSize = '0.85rem';
+            label.style.color = 'var(--text-muted)';
+            group.appendChild(label);
+
+            const input = document.createElement('input');
+            input.type = schema.type === 'number' ? 'number' : 'text';
+            input.name = key;
+            input.value = val;
+            input.style.width = '100%';
+            input.style.padding = '8px';
+            input.style.background = 'rgba(0,0,0,0.2)';
+            input.style.border = '1px solid var(--glass-border)';
+            input.style.borderRadius = '4px';
+            input.style.color = 'white';
+            group.appendChild(input);
+        }
+
+        container.appendChild(group);
+    }
+
+    const modal = document.getElementById('pluginSettingsModal');
+    if (modal) modal.classList.add('active');
+};
+
+const closePluginSettingsBtn = document.getElementById('closePluginSettingsBtn');
+if (closePluginSettingsBtn) {
+    closePluginSettingsBtn.onclick = () => {
+        document.getElementById('pluginSettingsModal').classList.remove('active');
+    };
+}
+
+const pluginSettingsForm = document.getElementById('pluginSettingsForm');
+if (pluginSettingsForm) {
+    pluginSettingsForm.onsubmit = (e) => {
+        e.preventDefault();
+        const formData = new FormData(pluginSettingsForm);
+        const name = formData.get('pluginName');
+        const config = {};
+
+        const container = document.getElementById('pluginSettingsContainer');
+        container.querySelectorAll('input').forEach(input => {
+            if (input.type === 'checkbox') {
+                config[input.name] = input.checked;
+            } else if (input.type === 'number') {
+                config[input.name] = parseFloat(input.value) || 0;
+            } else {
+                config[input.name] = input.value;
+            }
+        });
+
+        socket.emit('botAction', {
+            username: currentBot,
+            action: 'updatePluginConfig',
+            payload: { pluginName: name, config }
+        });
+
+        document.getElementById('pluginSettingsModal').classList.remove('active');
+        showNotification(`${name} settings applied`, 'success');
+    };
+}
 
 socket.on('notification', (data) => {
     console.log('Notification:', data);
@@ -792,18 +994,35 @@ socket.on('chatHistory', (payload) => {
 });
 
 socket.on('botChat', (payload) => {
-
     if (!currentBot || !payload.username || currentBot.toLowerCase() !== payload.username.toLowerCase()) return;
-
 
     const lastMsg = chatBox.lastElementChild;
     const now = Date.now();
     const compareText = payload.raw || payload.message;
     const sender = payload.sender || '[Server]';
 
+    // Deduplication logic: Merge identical consecutive messages
     if (lastMsg && lastMsg.dataset.rawMessage === compareText && lastMsg.dataset.sender === sender) {
-        const lastTime = parseInt(lastMsg.dataset.timestamp);
-        if ((now - lastTime) < 500) return;
+        let count = parseInt(lastMsg.dataset.repeatCount) || 1;
+        count++;
+        lastMsg.dataset.repeatCount = count;
+        lastMsg.dataset.timestamp = now; // Update timestamp to latest
+
+        let repeatSpan = lastMsg.querySelector('.repeat-count');
+        if (!repeatSpan) {
+            repeatSpan = document.createElement('span');
+            repeatSpan.className = 'repeat-count';
+            repeatSpan.style.cssText = 'color: var(--primary); font-weight: bold; margin-left: 8px; font-size: 0.85em; opacity: 0.8;';
+            lastMsg.appendChild(repeatSpan);
+        }
+        repeatSpan.innerText = `(x${count})`;
+
+        // Keep scroll at bottom if it was already there
+        const isAtBottom = (chatBox.scrollHeight - chatBox.scrollTop - chatBox.clientHeight) < 100;
+        if (isAtBottom) {
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+        return;
     }
 
     const msgObj = {
@@ -813,10 +1032,13 @@ socket.on('botChat', (payload) => {
         raw: compareText,
         timestamp: now
     };
-    const isAtBottom = (chatBox.scrollHeight - chatBox.scrollTop - chatBox.clientHeight) < 50;
-    renderChatMessage(msgObj);
-    if (isAtBottom) {
-        chatBox.scrollTop = chatBox.scrollHeight;
+
+    if (chatVisible) {
+        const isAtBottom = (chatBox.scrollHeight - chatBox.scrollTop - chatBox.clientHeight) < 50;
+        renderChatMessage(msgObj);
+        if (isAtBottom) {
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
     }
 });
 
@@ -824,10 +1046,10 @@ function renderChatMessage(msg) {
     const div = document.createElement('div');
     div.className = `chat-message ${msg.type || 'info'}`;
 
-
     div.dataset.rawMessage = msg.raw || msg.message;
     div.dataset.sender = msg.username || '[Server]';
     div.dataset.timestamp = msg.timestamp || Date.now();
+    div.dataset.repeatCount = "1";
 
     const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
 
@@ -841,12 +1063,12 @@ function renderChatMessage(msg) {
         const nameSpan = document.createElement('span');
         nameSpan.style.fontWeight = 'bold';
         nameSpan.style.marginRight = '5px';
-
         nameSpan.innerHTML = formatChat(msg.username) + ':';
         div.appendChild(nameSpan);
     }
 
     const textSpan = document.createElement('span');
+    textSpan.className = 'message-content';
     textSpan.innerHTML = formatChat(msg.message);
     div.appendChild(textSpan);
 
@@ -910,6 +1132,110 @@ window.toggleProxyFields = function (prfx) {
     }
 };
 
+window.toggleBulkServerFields = function (val) {
+    const srv = document.getElementById('bulkServerFields');
+    const rlm = document.getElementById('bulkRealmsFields');
+    if (val === 'server') {
+        srv.style.display = 'block';
+        rlm.style.display = 'none';
+    } else {
+        srv.style.display = 'none';
+        rlm.style.display = 'block';
+    }
+};
+
+if (bulkGenerateBtn) {
+    bulkGenerateBtn.onclick = () => {
+        bulkGenerateModal.classList.add('active');
+        // Populate initial plugins list
+        const firstBot = Array.from(bots.values())[0];
+        if (firstBot && firstBot.plugins) {
+            renderBulkPlugins(firstBot.plugins);
+        } else {
+            socket.emit('getAvailablePlugins');
+        }
+    };
+}
+
+socket.on('availablePlugins', (plugins) => {
+    renderBulkPlugins(plugins);
+});
+
+function renderBulkPlugins(plugins) {
+    if (!bulkPluginsList) return;
+    bulkPluginsList.innerHTML = plugins.map(p => `
+        <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-muted); cursor: pointer;">
+            <input type="checkbox" name="plugin_${p.name}" ${p.name === 'Pre-Join Ping' ? 'checked' : ''}>
+            <span>${p.name}</span>
+        </label>
+    `).join('');
+}
+
+if (cancelBulkGenerate) {
+    cancelBulkGenerate.onclick = () => {
+        bulkGenerateModal.classList.remove('active');
+    };
+}
+
+if (bulkGenerateForm) {
+    bulkGenerateForm.onsubmit = (e) => {
+        e.preventDefault();
+        const formData = new FormData(bulkGenerateForm);
+        const rawData = Object.fromEntries(formData.entries());
+
+        const count = parseInt(rawData.count) || 1;
+        const nameFormat = rawData.nameFormat || 'bot_%d';
+
+        const baseConfig = {
+            host: rawData.host,
+            port: parseInt(rawData.port) || 25565,
+            version: rawData.version || '1.21.4',
+            auth: rawData.auth || 'offline',
+            password: rawData.password || '',
+            autoReconnect: formData.get('autoReconnect') === 'on',
+            firstPerson: formData.get('firstPerson') === 'on',
+            plugins: {}
+        };
+
+        if (rawData.connectionType === 'realms') {
+            baseConfig.realms = {
+                [rawData.realmType === 'id' ? 'realmId' : (rawData.realmType === 'name' ? 'realmName' : 'realmInvite')]: rawData.realmIdentifier
+            };
+            baseConfig.host = '';
+            baseConfig.port = 0;
+        }
+
+        // Collect enabled plugins
+        const enabledPlugins = [];
+        for (const key in rawData) {
+            if (key.startsWith('plugin_')) {
+                enabledPlugins.push(key.replace('plugin_', ''));
+            }
+        }
+
+        const configs = [];
+        for (let i = 1; i <= count; i++) {
+            const botName = nameFormat.replace('%d', i);
+            const config = {
+                ...baseConfig,
+                username: botName,
+                plugins: {}
+            };
+
+            enabledPlugins.forEach(pName => {
+                config.plugins[pName] = { enabled: true, config: {} };
+            });
+
+            configs.push(config);
+        }
+
+        socket.emit('bulkCreateBots', configs);
+        bulkGenerateModal.classList.remove('active');
+        bulkGenerateForm.reset();
+        showNotification(`Generating ${count} bots...`, 'info');
+    };
+}
+
 addBotForm.onsubmit = (e) => {
     e.preventDefault();
     const formData = new FormData(addBotForm);
@@ -936,6 +1262,17 @@ addBotForm.onsubmit = (e) => {
     data.autoReconnect = formData.get('autoReconnect') === 'on';
     data.registerConfirm = formData.get('registerConfirm') === 'on';
 
+    if (data.discordIntegrationMode === 'none') {
+        data.webhookUrl = '';
+        data.discordBotToken = '';
+        data.discordChannelId = '';
+    } else if (data.discordIntegrationMode === 'webhook') {
+        data.discordBotToken = '';
+        data.discordChannelId = '';
+    } else if (data.discordIntegrationMode === 'bot') {
+        data.webhookUrl = '';
+    }
+
     socket.emit('createBot', data);
     addBotModal.classList.remove('active');
     addBotForm.reset();
@@ -952,7 +1289,12 @@ function openEditModal(bot) {
     if (form.version) form.version.value = bot.config.version || '';
     if (form.password) form.password.value = bot.config.password || '';
     if (form.auth) form.auth.value = bot.config.auth || 'offline';
+    if (form.discordIntegrationMode) form.discordIntegrationMode.value = bot.config.discordIntegrationMode || 'none';
     if (form.webhookUrl) form.webhookUrl.value = bot.config.webhookUrl || '';
+    if (form.discordBotToken) form.discordBotToken.value = bot.config.discordBotToken || '';
+    if (form.discordChannelId) form.discordChannelId.value = bot.config.discordChannelId || '';
+
+    if (window.toggleDiscordFields) window.toggleDiscordFields(form.discordIntegrationMode.value);
 
     if (form.proxyType) form.proxyType.value = bot.config.proxyType || 'none';
     if (form.proxyHost) form.proxyHost.value = bot.config.proxyHost || '';
@@ -996,7 +1338,6 @@ editBotForm.onsubmit = (e) => {
     const formData = new FormData(editBotForm);
     const data = Object.fromEntries(formData.entries());
 
-
     if (data.connectionType === 'realms') {
         data.realms = {
             [data.realmType === 'id' ? 'realmId' : (data.realmType === 'name' ? 'realmName' : 'realmInvite')]: data.realmIdentifier
@@ -1004,7 +1345,18 @@ editBotForm.onsubmit = (e) => {
         data.host = '';
         data.port = 0;
     } else {
-        data.realms = null;
+        delete data.realms;
+    }
+
+    if (data.discordIntegrationMode === 'none') {
+        data.webhookUrl = '';
+        data.discordBotToken = '';
+        data.discordChannelId = '';
+    } else if (data.discordIntegrationMode === 'webhook') {
+        data.discordBotToken = '';
+        data.discordChannelId = '';
+    } else if (data.discordIntegrationMode === 'bot') {
+        data.webhookUrl = '';
     }
 
     data.port = parseInt(data.port) || 0;
@@ -1182,6 +1534,48 @@ socket.on('botToggles', (data) => {
     updateBtn(antiAfkBtn, data.antiAfkEnabled, 'Anti-AFK');
     updateBtn(killauraBtn, data.killauraEnabled, 'Killaura');
     updateBtn(spammerBtn, data.spammerEnabled, 'Spammer');
+
+    const kaSettings = document.getElementById('killauraSettings');
+    if (kaSettings) kaSettings.style.display = data.killauraEnabled ? 'block' : 'none';
+});
+
+const kaApplyBtn = document.getElementById('kaApplyBtn');
+if (kaApplyBtn) {
+    kaApplyBtn.onclick = () => {
+        if (!currentBot) return showNotification('Select a bot first', 'warning');
+        socket.emit('botAction', {
+            username: currentBot,
+            action: 'updateKillauraConfig',
+            payload: {
+                config: {
+                    attackRange: parseFloat(document.getElementById('kaAttackRange').value) || 4,
+                    followRange: parseFloat(document.getElementById('kaFollowRange').value) || 6,
+                    viewDistance: parseFloat(document.getElementById('kaViewDistance').value) || 16,
+                    attackPlayers: document.getElementById('kaAttackPlayers').checked,
+                    attackHostileMobs: document.getElementById('kaAttackHostile').checked,
+                    attackPassiveMobs: document.getElementById('kaAttackPassive').checked
+                }
+            }
+        });
+        showNotification('Killaura settings applied', 'success');
+    };
+}
+
+socket.on('killauraConfig', (data) => {
+    if (currentBot !== data.username) return;
+    const c = data.config;
+    const kaAR = document.getElementById('kaAttackRange');
+    const kaFR = document.getElementById('kaFollowRange');
+    const kaVD = document.getElementById('kaViewDistance');
+    const kaAP = document.getElementById('kaAttackPlayers');
+    const kaAH = document.getElementById('kaAttackHostile');
+    const kaAPa = document.getElementById('kaAttackPassive');
+    if (kaAR) kaAR.value = c.attackRange;
+    if (kaFR) kaFR.value = c.followRange;
+    if (kaVD) kaVD.value = c.viewDistance;
+    if (kaAP) kaAP.checked = c.attackPlayers;
+    if (kaAH) kaAH.checked = c.attackHostileMobs;
+    if (kaAPa) kaAPa.checked = c.attackPassiveMobs;
 });
 
 addSpammerInput('ImperialsBot OP');
@@ -1319,6 +1713,16 @@ if (viewModeBtn) {
     };
 }
 
+const powerBtn = document.getElementById('powerBtn');
+if (powerBtn) {
+    powerBtn.onclick = () => {
+        if (confirm('Are you sure you want to SHUTDOWN the entire application? All bots will be disconnected.')) {
+            socket.emit('shutdownServer');
+            showNotification('Shutting down server...', 'warning');
+        }
+    };
+}
+
 function sendControl(control, state) {
     if (!currentBot) return;
     socket.emit('control', {
@@ -1334,8 +1738,8 @@ function sendLook() {
         username: currentBot,
         action: 'setLook',
         payload: {
-            yaw: parseFloat(yawSlider.value),
-            pitch: parseFloat(pitchSlider.value)
+            yaw: parseFloat(yawSlider.value) * Math.PI / 180,
+            pitch: parseFloat(pitchSlider.value) * Math.PI / 180
         }
     });
 }
@@ -1750,18 +2154,23 @@ if (settingsForm) {
     settingsForm.onsubmit = (e) => {
         e.preventDefault();
         const delay = parseInt(settingReconnectDelay.value);
-        const profile = document.getElementById('settingNavigationProfile').value;
         const lowPerf = document.getElementById('settingLowPerformance').checked;
         const proxyListText = document.getElementById('settingProxyList') ? document.getElementById('settingProxyList').value : '';
         const randomProxy = document.getElementById('settingRandomProxy') ? document.getElementById('settingRandomProxy').checked : false;
+        const autoAuthRegister = document.getElementById('settingAutoAuthRegister') ? document.getElementById('settingAutoAuthRegister').value : '';
+        const autoAuthLogin = document.getElementById('settingAutoAuthLogin') ? document.getElementById('settingAutoAuthLogin').value : '';
 
         const updates = {};
 
+        const font = document.getElementById('settingDashboardFont').value;
+        if (font) updates.dashboardFont = font;
+
         if (!isNaN(delay)) updates.reconnectDelay = delay;
-        if (profile) updates.navigationProfile = profile;
         updates.lowPerformanceMode = lowPerf;
         updates.proxyList = proxyListText;
         updates.randomProxy = randomProxy;
+        if (autoAuthRegister !== '') updates.autoAuthRegister = autoAuthRegister;
+        if (autoAuthLogin !== '') updates.autoAuthLogin = autoAuthLogin;
 
         if (Object.keys(updates).length > 0) {
             socket.emit('saveSettings', updates);
@@ -1775,10 +2184,6 @@ if (settingsForm) {
 socket.on('settings', (settings) => {
     if (settings && settings.reconnectDelay) {
         if (settingReconnectDelay) settingReconnectDelay.value = settings.reconnectDelay;
-    }
-    if (settings && settings.navigationProfile) {
-        const navProfileSelect = document.getElementById('settingNavigationProfile');
-        if (navProfileSelect) navProfileSelect.value = settings.navigationProfile;
     }
     if (settings && settings.lowPerformanceMode !== undefined) {
         const lowPerfCheckbox = document.getElementById('settingLowPerformance');
@@ -1795,9 +2200,22 @@ socket.on('settings', (settings) => {
         const proxyListEl = document.getElementById('settingProxyList');
         if (proxyListEl) proxyListEl.value = settings.proxyList;
     }
+    if (settings && settings.autoAuthRegister !== undefined) {
+        const autoAuthRegEl = document.getElementById('settingAutoAuthRegister');
+        if (autoAuthRegEl) autoAuthRegEl.value = settings.autoAuthRegister;
+    }
+    if (settings && settings.autoAuthLogin !== undefined) {
+        const autoAuthLogEl = document.getElementById('settingAutoAuthLogin');
+        if (autoAuthLogEl) autoAuthLogEl.value = settings.autoAuthLogin;
+    }
     if (settings && settings.randomProxy !== undefined) {
         const randomProxyEl = document.getElementById('settingRandomProxy');
         if (randomProxyEl) randomProxyEl.checked = settings.randomProxy;
+    }
+    if (settings && settings.dashboardFont) {
+        document.documentElement.style.setProperty('--dashboard-font', settings.dashboardFont);
+        const fontSelect = document.getElementById('settingDashboardFont');
+        if (fontSelect) fontSelect.value = settings.dashboardFont;
     }
 });
 
@@ -1811,11 +2229,12 @@ const bulkChatBtn = document.getElementById('bulkChatBtn');
 const bulkSpammerToggleBtn = document.getElementById('bulkSpammerToggleBtn');
 const bulkReconnectBtn = document.getElementById('bulkReconnectBtn');
 const bulkDisconnectBtn = document.getElementById('bulkDisconnectBtn');
+const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
 
 if (bulkSelectAll) {
     bulkSelectAll.onclick = () => {
         bots.forEach(bot => selectedBots.add(bot.username));
-        document.querySelectorAll('.bot-checkbox').forEach(cb => cb.checked = true);
+        document.querySelectorAll('.bot-item').forEach(item => item.classList.add('selected'));
         updateSelectedCount();
     };
 }
@@ -1823,7 +2242,7 @@ if (bulkSelectAll) {
 if (bulkDeselectAll) {
     bulkDeselectAll.onclick = () => {
         selectedBots.clear();
-        document.querySelectorAll('.bot-checkbox').forEach(cb => cb.checked = false);
+        document.querySelectorAll('.bot-item').forEach(item => item.classList.remove('selected'));
         updateSelectedCount();
     };
 }
@@ -1858,6 +2277,18 @@ if (bulkDisconnectBtn) {
         if (selectedBots.size === 0) return showNotification('No bots selected', 'error');
         if (confirm(`Disconnect ${selectedBots.size} bots?`)) {
             socket.emit('bulkAction', { usernames: Array.from(selectedBots), action: 'stop' });
+        }
+    };
+}
+
+if (bulkDeleteBtn) {
+    bulkDeleteBtn.onclick = () => {
+        if (selectedBots.size === 0) return showNotification('No bots selected', 'error');
+        if (confirm(`PERMANENTLY DELETE ${selectedBots.size} bots? This cannot be undone.`)) {
+            socket.emit('bulkDelete', Array.from(selectedBots));
+            selectedBots.clear();
+            updateSelectedCount();
+            document.querySelectorAll('.bot-item.selected').forEach(el => el.classList.remove('selected'));
         }
     };
 }

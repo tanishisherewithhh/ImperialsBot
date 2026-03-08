@@ -94,26 +94,25 @@ export class PluginAPI {
         if (nav) nav.moveTo(x, y, z);
     }
 
-    stop() {
+    stopNav() {
         const nav = this.botClient.featureManager.getFeature('navigation');
         if (nav) nav.stop();
-        this.bot?.clearControlStates();
     }
 
     jump(active = true) {
-        this.bot?.setControlState('jump', active);
+        if (typeof this.bot?.setControlState === 'function') this.bot.setControlState('jump', active);
     }
 
     sprint(active = true) {
-        this.bot?.setControlState('sprint', active);
+        if (typeof this.bot?.setControlState === 'function') this.bot.setControlState('sprint', active);
     }
 
     sneak(active = true) {
-        this.bot?.setControlState('sneak', active);
+        if (typeof this.bot?.setControlState === 'function') this.bot.setControlState('sneak', active);
     }
 
     setControlState(control, active) {
-        this.bot?.setControlState(control, active);
+        if (typeof this.bot?.setControlState === 'function') this.bot.setControlState(control, active);
     }
 
     getPos() {

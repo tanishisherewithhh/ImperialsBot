@@ -1,110 +1,52 @@
 import { BaseFeature } from './BaseFeature.js';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const { pathfinder } = require('mineflayer-pathfinder');
-const { plugin: movement } = require('mineflayer-movement');
+const { pathfinder, Movements, goals } = require('mineflayer-pathfinder');
 const Vec3 = require('vec3');
-import { ConfigLoader } from '../config/ConfigLoader.js';
 
 export class Navigation extends BaseFeature {
     async init() {
         this.botClient.bot.loadPlugin(pathfinder);
-        this.botClient.bot.loadPlugin(movement);
-
-        const settings = await ConfigLoader.loadSettings() || {};
-        this.currentProfile = settings.navigationProfile || 'Shortest';
 
         this.active = false;
         this.targetPos = null;
         this.navInterval = null;
 
+        this.botClient.bot.on('goal_reached', () => {
+            if (this.active && this.targetPos) {
+                const target = this.targetPos;
+                this.stop(true);
+                this.botClient.updateStatus('Arrived');
+                this.botClient.emit('navArrived', target);
+                this.botClient.log(`Arrived at ${target.x.toFixed(0)}, ${target.y.toFixed(0)}, ${target.z.toFixed(0)}`, 'success');
+            }
+        });
 
-        this.botClient.bot.on('physicsTick', () => this.onTick());
-    }
-
-    getProfileWeights() {
-        switch (this.currentProfile) {
-            case 'Safest':
-                return { danger: 1.0, distance: 0.8, proximity: 0.4, conformity: 0.2 };
-            case 'Easiest':
-                return { danger: 0.4, distance: 0.2, proximity: 0.8, conformity: 0.6 };
-            case 'Shortest':
-            default:
-                return { danger: 0.3, distance: 0.5, proximity: 1.0, conformity: 0.6 };
-        }
-    }
-
-    setProfile(profileName) {
-        this.currentProfile = profileName;
-        if (this.active) {
-
-            this.applyGoal();
-        }
-        this.botClient.log(`Navigation profile switched to: ${profileName}`, 'info');
+        this.botClient.bot.on('path_update', (r) => {
+            if (this.active && r.status === 'noPath') {
+                this.botClient.log('Navigation: No path found', 'error');
+                this.stop(true);
+            }
+        });
     }
 
     applyGoal() {
         const bot = this.botClient.bot;
-        if (!bot.movement || !this.targetPos) return;
-
-        const weights = this.getProfileWeights();
+        if (!bot.pathfinder || !this.targetPos) return;
 
         try {
-
-            const distance = bot.movement.heuristic.new('distance')
-                .weight(weights.distance)
-                .radius(4)
-                .height(2)
-                .count(8);
-
-            const danger = bot.movement.heuristic.new('danger')
-                .weight(weights.danger)
-                .radius(2)
-                .depth(3);
-
-            const proximity = bot.movement.heuristic.new('proximity')
-                .weight(weights.proximity)
-                .target(this.targetPos);
-
-            const conformity = bot.movement.heuristic.new('conformity')
-                .weight(weights.conformity);
-
-
-            const goal = new bot.movement.Goal({
-                distance,
-                danger,
-                proximity,
-                conformity
-            });
-
-            bot.movement.setGoal(goal);
+            const defaultMove = new Movements(bot);
+            bot.pathfinder.setMovements(defaultMove);
+            bot.pathfinder.setGoal(new goals.GoalNear(this.targetPos.x, this.targetPos.y, this.targetPos.z, 1));
         } catch (err) {
             this.botClient.log(`Error setting navigation goal: ${err.message}`, 'error');
         }
     }
 
-    onTick() {
-        const bot = this.botClient.bot;
-        if (!bot.entity || !bot.movement || !this.active || !this.targetPos) return;
-
-        try {
-
-            const yaw = bot.movement.getYaw();
-            if (yaw !== null && !isNaN(yaw)) {
-                bot.movement.steer(yaw);
-                bot.setControlState('forward', true);
-                bot.setControlState('jump', bot.entity.isCollidedHorizontally);
-                bot.setControlState('sprint', this.currentProfile === 'Shortest');
-            }
-        } catch (err) {
-
-        }
-    }
-
     moveTo(x, y, z) {
         const bot = this.botClient.bot;
-        if (!bot.movement) {
-            this.botClient.log('Movement plugin not ready', 'error');
+        if (!bot.pathfinder) {
+            this.botClient.log('Pathfinder plugin not ready', 'error');
             return;
         }
 
@@ -119,7 +61,7 @@ export class Navigation extends BaseFeature {
         this.applyGoal();
 
         this.botClient.updateStatus('Moving');
-        this.botClient.log(`Starting navigation to ${x}, ${y}, ${z} (${this.currentProfile})`);
+        this.botClient.log(`Starting navigation to ${x}, ${y}, ${z}`);
 
         if (this.navInterval) clearInterval(this.navInterval);
 
@@ -134,7 +76,6 @@ export class Navigation extends BaseFeature {
 
             const pos = this.botClient.bot.entity.position;
             const dist = pos.distanceTo(this.targetPos);
-
 
             const currentSpeed = pos.distanceTo(lastPos);
             speeds.push(currentSpeed);
@@ -151,14 +92,6 @@ export class Navigation extends BaseFeature {
 
             lastPos = pos.clone();
             this.botClient.updateStatus(`Moving: ${dist.toFixed(0)}m away (ETA: ${etaStr})`);
-
-            if (dist < 1.8) {
-                const target = this.targetPos;
-                this.stop(true);
-                this.botClient.updateStatus('Arrived');
-                this.botClient.emit('navArrived', target);
-                this.botClient.log(`Arrived at ${target.x.toFixed(0)}, ${target.y.toFixed(0)}, ${target.z.toFixed(0)}`, 'success');
-            }
         }, 1000);
     }
 
@@ -170,9 +103,10 @@ export class Navigation extends BaseFeature {
         }
 
         const bot = this.botClient.bot;
-        if (bot) {
-            bot.clearControlStates();
-            if (bot.movement) bot.movement.setGoal(null);
+        if (bot && bot.pathfinder) {
+            try {
+                bot.pathfinder.stop();
+            } catch (err) { }
         }
 
         if (!silent) {

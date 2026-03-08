@@ -1,13 +1,8 @@
-/* Dark Themes (Default is Blue) */
-
-/* Simple Dark */
 body.theme-simple-dark {
     --bg-color: #121212;
     --glass-bg: rgba(30, 30, 30, 0.85);
-    /* More opaque */
     --glass-border: rgba(255, 255, 255, 0.15);
     --primary: #e0e0e0;
-    /* Light grey for text/icons */
     --primary-hover: #ffffff;
     --text-main: #e0e0e0;
     --text-muted: #a0a0a0;
@@ -16,7 +11,6 @@ body.theme-simple-dark {
     background-color: #121212;
 }
 
-/* Button Overrides for Simple Dark */
 body.theme-simple-dark .btn,
 body.theme-simple-dark .toggle-btn,
 body.theme-simple-dark .add-bot-btn,
@@ -60,7 +54,6 @@ body.theme-simple-dark .nav-input {
     color: #e0e0e0 !important;
 }
 
-/* Modal Overrides for Simple Dark */
 body.theme-simple-dark .modal-content {
     background: #121212 !important;
     border-color: #404040;
@@ -76,7 +69,6 @@ body.theme-simple-dark .tab-btn.active {
     color: #121212 !important;
 }
 
-/* Emerald (Green) */
 body.theme-emerald {
     --bg-color: #022c22;
     --glass-bg: rgba(6, 78, 59, 0.6);
@@ -86,7 +78,6 @@ body.theme-emerald {
     background-image: radial-gradient(circle at 50% 50%, #064e3b 0%, #022c22 100%);
 }
 
-/* Crimson (Red) */
 body.theme-crimson {
     --bg-color: #450a0a;
     --glass-bg: rgba(127, 29, 29, 0.6);
@@ -96,7 +87,6 @@ body.theme-crimson {
     background-image: radial-gradient(circle at 50% 50%, #7f1d1d 0%, #450a0a 100%);
 }
 
-/* Amethyst (Purple) */
 body.theme-amethyst {
     --bg-color: #2e1065;
     --glass-bg: rgba(88, 28, 135, 0.6);
@@ -106,26 +96,19 @@ body.theme-amethyst {
     background-image: radial-gradient(circle at 50% 50%, #581c87 0%, #2e1065 100%);
 }
 
-/* Espresso (Coffee) */
 body.theme-espresso {
     --bg-color: #271c19;
-    /* Very dark brown */
     --glass-bg: rgba(67, 48, 43, 0.6);
-    /* Dark roast */
     --primary: #d4a373;
-    /* Latte foam color */
     --primary-hover: #bc8a5f;
     --text-main: #faedcd;
-    /* Cream */
     --text-muted: #d4a373;
     --accent-warm: #d4a373;
     background-image: radial-gradient(circle at 50% 50%, #43302b 0%, #271c19 100%);
 }
 
-/* Amber (Yellow/Gold) */
 body.theme-amber {
     --bg-color: #2a1b00;
-    /* Dark gold */
     --glass-bg: rgba(120, 53, 15, 0.6);
     --primary: #f59e0b;
     --primary-hover: #d97706;
@@ -133,9 +116,6 @@ body.theme-amber {
     background-image: radial-gradient(circle at 50% 50%, #451a03 0%, #2a1b00 100%);
 }
 
-/* Light Themes */
-
-/* Sky (Light Blue) */
 body.theme-sky {
     --bg-color: #f0f9ff;
     --glass-bg: rgba(255, 255, 255, 0.7);
@@ -147,7 +127,6 @@ body.theme-sky {
     background-image: radial-gradient(circle at 50% 50%, #e0f2fe 0%, #f0f9ff 100%);
 }
 
-/* Light Theme Chat Overrides */
 body.theme-sky .chat-box {
     background: rgba(255, 255, 255, 0.85);
     border: 1px solid rgba(0, 0, 0, 0.1);
@@ -176,7 +155,6 @@ body.theme-sky .bot-item:hover {
     background: rgba(255, 255, 255, 0.9);
 }
 
-/* Mint (Light Green) */
 body.theme-mint {
     --bg-color: #f0fdf4;
     --glass-bg: rgba(255, 255, 255, 0.7);
@@ -195,7 +173,6 @@ body.theme-mint .sidebar {
     color: #052e16;
 }
 
-/* Shared Light Theme Overrides (Sky, Mint, Rose) */
 body.theme-sky .chat-box,
 body.theme-mint .chat-box,
 body.theme-rose .chat-box {
@@ -215,7 +192,6 @@ body.theme-rose .chat-message strong {
     color: #0f172a;
 }
 
-/* Fix Button Visibility in Light Themes (WASD, Controls, Spammer) */
 body.theme-sky .btn,
 body.theme-mint .btn,
 body.theme-rose .btn,
@@ -257,7 +233,6 @@ body.theme-rose .btn-action:hover {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-/* Fix Light Theme Modals */
 body.theme-sky .modal-content,
 body.theme-mint .modal-content,
 body.theme-rose .modal-content {
@@ -281,7 +256,6 @@ body.theme-rose .modal-content label {
     color: #475569 !important;
 }
 
-/* Fix Spammer Config Background */
 body.theme-sky .spammer-config,
 body.theme-mint .spammer-config,
 body.theme-rose .spammer-config {
@@ -289,7 +263,6 @@ body.theme-rose .spammer-config {
     border: 1px solid rgba(0, 0, 0, 0.1) !important;
 }
 
-/* Ensure Inputs are also distinct */
 body.theme-sky input,
 body.theme-sky select,
 body.theme-mint input,
@@ -301,7 +274,6 @@ body.theme-rose select {
     color: #1a1a1a !important;
 }
 
-/* Rose (Light Red/Pink) */
 body.theme-rose {
     --bg-color: #fff1f2;
     --glass-bg: rgba(255, 255, 255, 0.7);
@@ -320,7 +292,6 @@ body.theme-rose .sidebar {
     color: #881337;
 }
 
-/* Theme Selector Styles */
 .theme-selector-container {
     margin-top: auto;
     padding-top: 20px;
@@ -367,7 +338,7 @@ body.theme-rose .sidebar {
 
 .select-arrow {
     position: absolute;
-    right: 15px;
+    right: 8px;
     top: 50%;
     transform: translateY(-50%);
     pointer-events: none;
@@ -380,10 +351,6 @@ body.theme-rose .sidebar {
     color: white;
     padding: 10px;
 }
-
-/* ═══════════════════════════════════════════════════
-   TERMINAL MODE — CRT green-on-black with parallax bg
-   ═══════════════════════════════════════════════════ */
 
 body.theme-terminal {
     --bg-color: #050505;
@@ -403,7 +370,6 @@ body.theme-terminal {
     position: relative;
 }
 
-/* Parallax translucent background image */
 body.theme-terminal::before {
     content: '';
     position: fixed;
@@ -420,13 +386,11 @@ body.theme-terminal::before {
     pointer-events: none;
 }
 
-/* Ensure all content sits above the bg */
 body.theme-terminal .app-container {
     position: relative;
     z-index: 1;
 }
 
-/* Scanline overlay for CRT feel */
 body.theme-terminal::after {
     content: '';
     position: fixed;
@@ -443,13 +407,11 @@ body.theme-terminal::after {
     pointer-events: none;
 }
 
-/* Global font override */
 body.theme-terminal,
 body.theme-terminal *:not(svg):not(path):not(use) {
     font-family: 'JetBrains Mono', monospace !important;
 }
 
-/* Sharp corners everywhere */
 body.theme-terminal .card,
 body.theme-terminal .sidebar,
 body.theme-terminal .top-bar,
@@ -468,11 +430,11 @@ body.theme-terminal .nav-input,
 body.theme-terminal .spammer-config,
 body.theme-terminal .control-btn,
 body.theme-terminal .btn-move,
-body.theme-terminal .btn-action {
+body.theme-terminal .btn-action,
+body.theme-terminal .power-off-btn {
     border-radius: 0 !important;
 }
 
-/* Sidebar */
 body.theme-terminal .sidebar {
     width: 290px !important;
     background: rgba(0, 0, 0, 0.85);
@@ -500,7 +462,6 @@ body.theme-terminal .bot-list-header {
     letter-spacing: 0.1em;
 }
 
-/* Logo  */
 body.theme-terminal .logo {
     background: none;
     -webkit-text-fill-color: #4af626;
@@ -509,20 +470,17 @@ body.theme-terminal .logo {
     margin-bottom: 15px !important;
 }
 
-/* Search input */
 body.theme-terminal #botSearchInput {
     padding: 8px 10px !important;
     font-size: 0.85rem !important;
     margin-bottom: 5px;
 }
 
-/* Cards */
 body.theme-terminal .card {
     background: rgba(0, 0, 0, 0.7);
     border: 1px solid rgba(74, 246, 38, 0.2);
 }
 
-/* Buttons */
 body.theme-terminal .btn,
 body.theme-terminal .toggle-btn,
 body.theme-terminal .add-bot-btn,
@@ -560,7 +518,6 @@ body.theme-terminal .nav-btn.go {
     color: #4af626 !important;
 }
 
-/* Inputs */
 body.theme-terminal input,
 body.theme-terminal select,
 body.theme-terminal .nav-input {
@@ -575,7 +532,6 @@ body.theme-terminal select:focus {
     box-shadow: 0 0 6px rgba(74, 246, 38, 0.3);
 }
 
-/* Tabs */
 body.theme-terminal .tab-btn {
     color: #5a8a52;
     border-bottom: 2px solid transparent;
@@ -587,7 +543,6 @@ body.theme-terminal .tab-btn.active {
     font-weight: bold;
 }
 
-/* Bot items */
 body.theme-terminal .bot-item {
     border: 1px solid transparent;
 }
@@ -602,7 +557,12 @@ body.theme-terminal .bot-item.active {
     border-color: #4af626;
 }
 
-/* Chat */
+body.theme-terminal .bot-item.selected {
+    outline: 2px solid #facc15;
+    outline-offset: -2px;
+    background: rgba(250, 204, 21, 0.1);
+}
+
 body.theme-terminal .chat-box {
     background: rgba(0, 0, 0, 0.85);
     border: 1px solid rgba(74, 246, 38, 0.2);
@@ -613,11 +573,10 @@ body.theme-terminal .chat-message {
 }
 
 body.theme-terminal .chat-input-area {
-    border-top: 1px solid rgba(74, 246, 38, 0.2);
+    border-top: none;
     background: rgba(0, 0, 0, 0.7);
 }
 
-/* Modal */
 body.theme-terminal .modal-content {
     background: #0a0a0a !important;
     border: 2px solid #4af626;
@@ -633,26 +592,22 @@ body.theme-terminal .modal-content label {
     color: #5a8a52 !important;
 }
 
-/* Status indicators */
 body.theme-terminal .status-dot.online {
     background: #4af626;
     box-shadow: 0 0 6px #4af626;
 }
 
-/* Plugin cards */
 body.theme-terminal .plugin-card {
     background: rgba(0, 0, 0, 0.6);
     border: 1px solid rgba(74, 246, 38, 0.15);
 }
 
-/* Theme selector adjustment */
 body.theme-terminal .theme-selector-container {
     border-top: none !important;
     margin-top: 10px;
     padding-top: 10px;
 }
 
-/* Scrollbars */
 body.theme-terminal ::-webkit-scrollbar {
     width: 6px;
 }
@@ -669,13 +624,11 @@ body.theme-terminal ::-webkit-scrollbar-thumb:hover {
     background: #4af626;
 }
 
-/* Spammer config */
 body.theme-terminal .spammer-config {
     background: rgba(0, 0, 0, 0.6) !important;
     border: 1px solid rgba(74, 246, 38, 0.15) !important;
 }
 
-/* Control buttons (WASD etc) */
 body.theme-terminal .control-btn,
 body.theme-terminal .btn-move,
 body.theme-terminal .btn-action,

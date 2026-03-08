@@ -1,4 +1,5 @@
 import { BaseFeature } from './BaseFeature.js';
+import { ConfigLoader } from '../config/ConfigLoader.js';
 
 export class AutoAuth extends BaseFeature {
     init() {
@@ -39,15 +40,18 @@ export class AutoAuth extends BaseFeature {
 
         this.botClient.log('AutoAuth: Attempting authentication...', 'info');
 
-        const registerCmd = this.botClient.config.registerConfirm !== false
-            ? `/register ${password} ${password}`
-            : `/register ${password}`;
-
         try {
+            const settings = await ConfigLoader.loadSettings() || {};
+            let registerCmdStr = settings.autoAuthRegister || '/register {password}';
+            let loginCmdStr = settings.autoAuthLogin || '/login {password}';
+
+            const registerCmd = registerCmdStr.replace(/{password}/g, password);
+            const loginCmd = loginCmdStr.replace(/{password}/g, password);
+
             if (typeof this.botClient.bot.chat === 'function') {
                 this.botClient.bot.chat(registerCmd);
                 await new Promise(resolve => setTimeout(resolve, 1200));
-                this.botClient.bot.chat(`/login ${password}`);
+                this.botClient.bot.chat(loginCmd);
 
                 // Signal completion
                 setTimeout(() => {

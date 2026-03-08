@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="plugins.css">
     <link rel="stylesheet" href="themes.css">
     <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Roboto:wght@400;500&family=Syne:wght@600&family=Montserrat:wght@500;600&family=Comfortaa:wght@500;600&display=swap"
         rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="/socket.io/socket.io.js"></script>
@@ -25,9 +25,19 @@
                 ImperialsBot
             </div>
             <div class="bot-list-header">Active Bots</div>
-            <div style="padding: 0 10px 10px 10px;">
+            <div style="padding: 0 10px 10px 3px; display: flex; gap: 8px; align-items: center;">
+                <button id="bulkGenerateBtn" title="Bulk Generate Bots"
+                    style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: var(--text-muted); padding: 6px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                </button>
                 <input type="text" id="botSearchInput" placeholder="Search bots..."
-                    style="width: 100%; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); color: var(--text-primary); padding: 6px; border-radius: 4px; font-family: inherit; font-size: 0.85rem;">
+                    style="flex: 1; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); color: var(--text-primary); padding: 6px; border-radius: 4px; font-family: inherit; font-size: 0.85rem;">
             </div>
             <div class="bot-list" id="botList">
                 <!-- Bot items will be injected here -->
@@ -67,6 +77,13 @@
                             <circle cx="12" cy="12" r="3"></circle>
                         </svg>
                     </button>
+                    <button id="powerBtn" title="Safe Shutdown" class="power-off-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
+                            <line x1="12" y1="2" x2="12" y2="12"></line>
+                        </svg>
+                    </button>
                 </div>
             </div>
         </aside>
@@ -82,6 +99,7 @@
 
                 <div class="stats-panel" id="statsPanel">
                     <div class="stat-item">Pos: <span id="posStat">0, 0, 0</span></div>
+                    <div class="stat-item" id="dimPosStat" style="opacity: 0.7; font-size: 0.85em;"></div>
                     <div class="stat-item">Health: <span id="healthStat">20</span></div>
                     <div class="stat-item">Food: <span id="foodStat">20</span></div>
                 </div>
@@ -93,8 +111,19 @@
                     <div class="card chat-card">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <h3>Chat</h3>
-                            <button id="exportChatBtn"
-                                style="background: rgba(59, 130, 246, 0.1); border: 1px solid var(--primary); color: var(--primary); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: 500; transition: all 0.2s;">Export</button>
+                            <div style="display: flex; gap: 6px;">
+                                <button id="chatToggleBtn" title="Hide Chat"
+                                    style="background: rgba(59, 130, 246, 0.1); border: 1px solid var(--primary); color: var(--primary); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: 500; transition: all 0.2s; display: flex; align-items: center; justify-content: center;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                        <circle cx="12" cy="12" r="3"></circle>
+                                    </svg>
+                                </button>
+                                <button id="exportChatBtn"
+                                    style="background: rgba(59, 130, 246, 0.1); border: 1px solid var(--primary); color: var(--primary); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: 500; transition: all 0.2s;">Export</button>
+                            </div>
                         </div>
                         <div class="chat-container">
                             <div class="chat-box" id="chatBox"></div>
@@ -183,12 +212,12 @@
 
                             <div class="sliders">
                                 <div class="slider-group">
-                                    <label>Yaw: <span id="yawVal">0</span></label>
-                                    <input type="range" id="yawSlider" min="-3.14" max="3.14" step="0.1" value="0">
+                                    <label>Yaw: <span id="yawVal">0</span>°</label>
+                                    <input type="range" id="yawSlider" min="-180" max="180" step="1" value="0">
                                 </div>
                                 <div class="slider-group">
-                                    <label>Pitch: <span id="pitchVal">0</span></label>
-                                    <input type="range" id="pitchSlider" min="-1.57" max="1.57" step="0.1" value="0">
+                                    <label>Pitch: <span id="pitchVal">0</span>°</label>
+                                    <input type="range" id="pitchSlider" min="-90" max="90" step="1" value="0">
                                 </div>
                             </div>
 
@@ -210,6 +239,47 @@
                                     <button class="btn toggle-btn" id="killauraBtn">Killaura: OFF</button>
                                     <button class="btn toggle-btn" id="antiAfkBtn">Anti-AFK: OFF</button>
                                     <button class="btn toggle-btn" id="autoAuthBtn">AutoAuth: OFF</button>
+                                </div>
+
+                                <div class="killaura-settings" id="killauraSettings"
+                                    style="display:none; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; margin-top: 5px;">
+                                    <h4
+                                        style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase;">
+                                        Killaura Settings</h4>
+                                    <div
+                                        style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                                        <div>
+                                            <label style="font-size: 0.75rem; color: var(--text-muted);">Attack
+                                                Range</label>
+                                            <input type="number" id="kaAttackRange" value="4" min="1" max="10"
+                                                step="0.5"
+                                                style="width:100%; padding:4px; border-radius:4px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white;">
+                                        </div>
+                                        <div>
+                                            <label style="font-size: 0.75rem; color: var(--text-muted);">Follow
+                                                Range</label>
+                                            <input type="number" id="kaFollowRange" value="6" min="1" max="32"
+                                                step="0.5"
+                                                style="width:100%; padding:4px; border-radius:4px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white;">
+                                        </div>
+                                        <div>
+                                            <label style="font-size: 0.75rem; color: var(--text-muted);">View
+                                                Distance</label>
+                                            <input type="number" id="kaViewDistance" value="16" min="1" max="64"
+                                                step="1"
+                                                style="width:100%; padding:4px; border-radius:4px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white;">
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; gap: 12px; margin-bottom: 8px;">
+                                        <label class="checkbox-label"><input type="checkbox" id="kaAttackPlayers"
+                                                checked> Players</label>
+                                        <label class="checkbox-label"><input type="checkbox" id="kaAttackHostile"
+                                                checked> Hostile Mobs</label>
+                                        <label class="checkbox-label"><input type="checkbox" id="kaAttackPassive">
+                                            Passive Mobs</label>
+                                    </div>
+                                    <button class="btn-action" id="kaApplyBtn" style="width:100%;">Apply
+                                        Settings</button>
                                 </div>
                                 <div class="toggle-row">
                                     <button class="btn toggle-btn" id="autoReconnectBtn">Auto Reconnect: ON</button>
@@ -306,8 +376,9 @@
                             <div class="control-group" style="margin-top: 20px;">
                                 <button class="btn warning-btn" id="bulkSpammerToggleBtn"
                                     style="flex: 1; background: var(--primary);">Toggle Spammers</button>
-                                <button class="btn warning-btn" id="bulkReconnectBtn">Bulk Reconnect</button>
-                                <button class="btn danger-btn" id="bulkDisconnectBtn">Bulk Disconnect</button>
+                                <button class="btn warning-btn" id="bulkReconnectBtn">Reconnect</button>
+                                <button class="btn danger-btn" id="bulkDisconnectBtn">Disconnect</button>
+                                <button class="btn danger-btn" id="bulkDeleteBtn">Delete Selected</button>
                             </div>
                         </div>
                     </div>
@@ -410,17 +481,35 @@
                     <label>Password (Optional) (Encrypted)</label>
                     <input type="password" name="password" placeholder="For AutoAuth">
                 </div>
-                <div class="form-group checkbox-group">
-                    <label><input type="checkbox" name="registerConfirm" checked> Register with Confirm (/reg pass
-                        pass)</label>
-                </div>
+
                 <div class="form-group">
                     <label>Version</label>
-                    <input type="text" name="version" placeholder="1.21.4" value="1.21.4">
+                    <input type="text" name="version" placeholder="Auto (if empty)">
                 </div>
                 <div class="form-group">
-                    <label>Discord Webhook URL (Optional)</label>
-                    <input type="text" name="webhookUrl" placeholder="https://discord.com/api/webhooks/...">
+                    <label>Discord Integration</label>
+                    <select id="addDiscordIntegrationMode" name="discordIntegrationMode"
+                        onchange="toggleDiscordFields(this.value, 'add')">
+                        <option value="none">None</option>
+                        <option value="webhook">Webhook</option>
+                        <option value="bot">Discord Bot</option>
+                    </select>
+                </div>
+                <div class="discord-webhook-group" id="addDiscordWebhookFields" style="display: none;">
+                    <div class="form-group">
+                        <label>Discord Webhook URL</label>
+                        <input type="text" name="webhookUrl" placeholder="https://discord.com/api/webhooks/...">
+                    </div>
+                </div>
+                <div class="discord-bot-group" id="addDiscordBotFields" style="display: none;">
+                    <div class="form-group">
+                        <label>Discord Bot Token</label>
+                        <input type="password" name="discordBotToken" placeholder="MTE5...">
+                    </div>
+                    <div class="form-group">
+                        <label>Discord Channel ID (Required for Bot Token)</label>
+                        <input type="text" name="discordChannelId" placeholder="123456789...">
+                    </div>
                 </div>
 
                 <div class="form-group checkbox-group">
@@ -429,6 +518,7 @@
                 <div class="form-group checkbox-group">
                     <label><input type="checkbox" name="autoReconnect" checked> Auto Reconnect</label>
                 </div>
+
                 <div class="modal-actions">
                     <button type="button" id="cancelAddBot" class="btn-secondary">Cancel</button>
                     <button type="submit" class="btn-primary">Add Bot</button>
@@ -448,12 +538,32 @@
                         step="1000">
                 </div>
                 <div class="form-group">
-                    <label>Navigation Profile</label>
-                    <select id="settingNavigationProfile" name="navigationProfile">
-                        <option value="Shortest">Shortest (Efficient)</option>
-                        <option value="Safest">Safest (Avoids Danger)</option>
-                        <option value="Easiest">Easiest (Breaks Blocks)</option>
+                    <label>Dashboard Font</label>
+                    <select id="settingDashboardFont" name="dashboardFont">
+                        <option value="'Comfortaa', cursive" selected>Comfortaa (Default)</option>
+                        <option value="'Inter', sans-serif">Inter</option>
+                        <option value="'JetBrains Mono', monospace">JetBrains Mono</option>
+                        <option value="'Roboto', sans-serif">Roboto</option>
+                        <option value="'Syne', sans-serif">Syne</option>
+                        <option value="'Montserrat', sans-serif">Montserrat</option>
                     </select>
+                </div>
+                <div class="form-group">
+                    <label>AutoAuth Register Command</label>
+                    <input type="text" id="settingAutoAuthRegister" name="autoAuthRegister"
+                        placeholder="/register {password}">
+                    <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Use
+                        <code>{password}</code> to represent the bot's password. (Default:
+                        <code>/register {password}</code>)
+                    </p>
+                </div>
+                <div class="form-group">
+                    <label>AutoAuth Login Command</label>
+                    <input type="text" id="settingAutoAuthLogin" name="autoAuthLogin" placeholder="/login {password}">
+                    <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Use
+                        <code>{password}</code> to represent the bot's password. (Default:
+                        <code>/login {password}</code>)
+                    </p>
                 </div>
                 <div class="form-group">
                     <label>Global Proxy List (One per line)</label>
@@ -573,16 +683,35 @@
                     <label>Password (Optional) (Encrypted)</label>
                     <input type="password" name="password" placeholder="For AutoAuth">
                 </div>
-                <div class="form-group checkbox-group">
-                    <label><input type="checkbox" name="registerConfirm"> Register with Confirm (/reg pass pass)</label>
-                </div>
+
                 <div class="form-group">
                     <label>Version</label>
-                    <input type="text" name="version">
+                    <input type="text" name="version" placeholder="Auto (if empty)">
                 </div>
                 <div class="form-group">
-                    <label>Discord Webhook URL (Optional)</label>
-                    <input type="text" name="webhookUrl">
+                    <label>Discord Integration</label>
+                    <select id="discordIntegrationMode" name="discordIntegrationMode"
+                        onchange="toggleDiscordFields(this.value)">
+                        <option value="none">None</option>
+                        <option value="webhook">Webhook</option>
+                        <option value="bot">Discord Bot</option>
+                    </select>
+                </div>
+                <div class="discord-webhook-group" id="discordWebhookFields" style="display: none;">
+                    <div class="form-group">
+                        <label>Discord Webhook URL</label>
+                        <input type="text" name="webhookUrl">
+                    </div>
+                </div>
+                <div class="discord-bot-group" id="discordBotFields" style="display: none;">
+                    <div class="form-group">
+                        <label>Discord Bot Token</label>
+                        <input type="password" name="discordBotToken">
+                    </div>
+                    <div class="form-group">
+                        <label>Discord Channel ID</label>
+                        <input type="text" name="discordChannelId">
+                    </div>
                 </div>
 
                 <div class="form-group checkbox-group">
@@ -591,9 +720,121 @@
                 <div class="form-group checkbox-group">
                     <label><input type="checkbox" name="autoReconnect" checked> Auto Reconnect</label>
                 </div>
+
                 <div class="modal-actions">
                     <button type="button" id="cancelEditBot" class="btn-secondary">Cancel</button>
                     <button type="submit" class="btn-primary">Update Bot</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bulk Bot Generation Modal -->
+    <div class="modal" id="bulkGenerateModal">
+        <div class="modal-content">
+            <h2>Bulk Generate Bots</h2>
+            <form id="bulkGenerateForm">
+                <div class="form-group">
+                    <label>Name Format (use %d for number)</label>
+                    <input type="text" name="nameFormat" placeholder="bot_%d" value="bot_%d" required>
+                </div>
+                <div class="form-group">
+                    <label>Number of Bots</label>
+                    <input type="number" name="count" value="5" min="1" max="100" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Connection Type</label>
+                    <select name="connectionType" onchange="toggleBulkServerFields(this.value)">
+                        <option value="server">Direct Server</option>
+                        <option value="realms">Minecraft Realms</option>
+                    </select>
+                </div>
+
+                <div id="bulkServerFields">
+                    <div style="display: flex; gap: 10px;">
+                        <div class="form-group" style="flex: 1;">
+                            <label>Server IP</label>
+                            <input type="text" name="host" placeholder="localhost">
+                        </div>
+                        <div class="form-group" style="width: 100px;">
+                            <label>Port</label>
+                            <input type="number" name="port" value="25565" placeholder="25565">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="bulkRealmsFields" style="display: none;">
+                    <div class="form-group">
+                        <label>Realm ID / Name / Invite</label>
+                        <input type="text" name="realmIdentifier" placeholder="Realm ID or Invite Link">
+                    </div>
+                    <div class="form-group">
+                        <label>Realm Type</label>
+                        <select name="realmType">
+                            <option value="id">Realm ID</option>
+                            <option value="name">Realm Name</option>
+                            <option value="invite">Invite Link</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Auth Configuration -->
+
+                <div class="form-group">
+                    <label>Auth Type</label>
+                    <select name="auth">
+                        <option value="offline">Offline (Cracked)</option>
+                        <option value="microsoft">Microsoft (Online)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Password (Optional)</label>
+                    <input type="password" name="password" placeholder="For AutoAuth">
+                </div>
+                <div class="form-group">
+                    <label>Version</label>
+                    <input type="text" name="version" placeholder="Auto (if empty)">
+                </div>
+
+                <div class="card"
+                    style="margin-bottom: 15px; padding: 15px; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); border-radius: 8px;">
+                    <label
+                        style="font-weight: 600; color: var(--text-main); display: block; margin-bottom: 10px;">Initial
+                        Plugins</label>
+                    <div id="bulkPluginsList" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                        <!-- Checkboxes will be injected here -->
+                    </div>
+                </div>
+
+                <div class="form-group checkbox-group">
+                    <label><input type="checkbox" name="firstPerson"> First Person View</label>
+                </div>
+                <div class="form-group checkbox-group">
+                    <label><input type="checkbox" name="autoReconnect" checked> Auto Reconnect</label>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" id="cancelBulkGenerate" class="btn-secondary">Cancel</button>
+                    <button type="submit" class="btn-primary">Generate Bots</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Plugin Settings Modal -->
+    <div class="modal" id="pluginSettingsModal">
+        <div class="modal-content" style="max-width: 400px;">
+            <h2><span id="pluginSettingsTitle">Plugin Settings</span></h2>
+            <form id="pluginSettingsForm">
+                <input type="hidden" id="pluginSettingsName" name="pluginName">
+                <div id="pluginSettingsContainer"
+                    style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px;">
+                    <!-- Dynamic fields go here -->
+                </div>
+                <div class="modal-actions">
+                    <button type="button" id="closePluginSettingsBtn" class="btn-secondary">Cancel</button>
+                    <button type="submit" class="btn-primary">Save Settings</button>
                 </div>
             </form>
         </div>

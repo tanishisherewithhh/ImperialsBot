@@ -116,13 +116,8 @@ class BotManager extends EventEmitter {
             throw new Error(`Bot ${config.username} not found`);
         }
 
-
         await ConfigLoader.addBotConfig(config);
-
         bot.config = config;
-
-
-
     }
 
     updateAllNavigationProfiles(profileName) {
@@ -131,6 +126,12 @@ class BotManager extends EventEmitter {
             if (nav) {
                 nav.setProfile(profileName);
             }
+        }
+    }
+
+    shutdown() {
+        for (const bot of this.bots.values()) {
+            bot.stop();
         }
     }
 }

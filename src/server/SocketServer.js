@@ -1,6 +1,13 @@
 import { Server } from 'socket.io';
 import { botManager } from '../core/BotManager.js';
 import { ConfigLoader } from '../config/ConfigLoader.js';
+import fs from 'fs/promises';
+import path from 'path';
+import { fileURLToPath, pathToFileURL } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const PLUGINS_DIR = path.join(__dirname, '../plugins');
 
 export class SocketServer {
     constructor(httpServer) {
@@ -35,7 +42,6 @@ export class SocketServer {
         });
 
         botManager.on('botSpawn', (username) => {
-
         });
 
         botManager.on('botViewer', (data) => {
@@ -81,9 +87,15 @@ export class SocketServer {
                 }
             });
 
+            socket.on('shutdownServer', () => {
+                botManager.shutdown();
+                setTimeout(() => {
+                    process.exit(0);
+                }, 1000);
+            });
+
             socket.on('createBot', async (config) => {
                 try {
-                    // Create bot but don't auto-start (manual join requirement)
                     await botManager.createBot(config, true, false);
                     socket.emit('notification', { type: 'success', message: `Bot ${config.username} created` });
                     this.io.emit('botList', botManager.getAllBots());
@@ -102,11 +114,77 @@ export class SocketServer {
                 }
             });
 
+            socket.on('bulkCreateBots', async (configs) => {
+                let created = 0;
+                let errors = 0;
+                for (const config of configs) {
+                    try {
+                        await botManager.createBot(config, true, false);
+                        created++;
+                    } catch (err) {
+                        console.error(`Bulk creation error for ${config.username}:`, err);
+                        errors++;
+                    }
+                }
+                socket.emit('notification', {
+                    type: errors > 0 ? 'warning' : 'success',
+                    message: `Bulk creation finished: ${created} created, ${errors} failed.`
+                });
+                this.io.emit('botList', botManager.getAllBots());
+            });
+
+            socket.on('bulkDelete', async (usernames) => {
+                if (!Array.isArray(usernames)) return;
+                let deletedCount = 0;
+                for (const username of usernames) {
+                    try {
+                        await botManager.removeBot(username);
+                        deletedCount++;
+                    } catch (err) {
+                        console.error(`Failed to bulk delete ${username}:`, err);
+                    }
+                }
+                socket.emit('notification', {
+                    type: 'success',
+                    message: `Successfully deleted ${deletedCount} bots.`
+                });
+                this.io.emit('botList', botManager.getAllBots());
+            });
+
+            socket.on('getAvailablePlugins', async () => {
+                try {
+                    const files = await fs.readdir(PLUGINS_DIR);
+                    const plugins = [];
+                    for (const file of files) {
+                        if (!file.endsWith('.js')) continue;
+                        try {
+                            const filePath = path.join(PLUGINS_DIR, file);
+                            const fileUrl = pathToFileURL(filePath).href + '?t=' + Date.now();
+                            const module = await import(fileUrl);
+                            const PluginClass = module.default || module.Plugin;
+                            if (!PluginClass) {
+                                console.warn(`Plugin ${file} has no export (neither default nor Plugin)`);
+                                continue;
+                            }
+                            const p = new PluginClass();
+                            plugins.push({
+                                name: p.name || file.replace('.js', ''),
+                                description: p.description || ''
+                            });
+                        } catch (e) {
+                            console.error(`Failed to parse plugin ${file} for list:`, e);
+                        }
+                    }
+                    socket.emit('availablePlugins', plugins);
+                } catch (err) {
+                    console.error('Failed to get available plugins:', err);
+                }
+            });
+
             socket.on('requestBotData', (data) => {
                 const { username } = data;
                 const bot = botManager.getBot(username);
                 if (!bot) return;
-
 
                 socket.emit('chatHistory', { username: bot.username, history: bot.chatHistory || [] });
                 this.broadcastToggles(username);
@@ -118,7 +196,6 @@ export class SocketServer {
                 if (bot.config.spammer) {
                     socket.emit('spammerConfig', { username, config: bot.config.spammer });
                 }
-
 
                 if (bot.bot && bot.bot.entity) {
                     socket.emit('botData', {
@@ -147,7 +224,6 @@ export class SocketServer {
                     }));
                     socket.emit('botInventory', { username, items: inventory });
 
-                    // Always emit status so UI knows it's online, even if port isn't ready yet
                     socket.emit('botStatus', { username, status: bot.status, inventoryPort: bot.inventoryPort });
 
                     if (bot.viewerPort) {
@@ -185,6 +261,16 @@ export class SocketServer {
                             this.broadcastToggles(username);
                         }
                         break;
+                    case 'updateKillauraConfig':
+                        const combatForConfig = bot.featureManager.getFeature('combat');
+                        if (combatForConfig) {
+                            combatForConfig.updateConfig(payload.config);
+                            this.io.emit('killauraConfig', {
+                                username: bot.username,
+                                config: combatForConfig.getConfig()
+                            });
+                        }
+                        break;
                     case 'toggleSpammer':
                         const spammer = bot.featureManager.getFeature('spammer');
                         if (spammer) {
@@ -194,7 +280,6 @@ export class SocketServer {
                             } else {
                                 spammer.stop();
                             }
-
 
                             if (payload.config) {
                                 if (!bot.config.spammer) bot.config.spammer = {};
@@ -236,6 +321,12 @@ export class SocketServer {
                             this.io.emit('pluginList', { username: bot.username, plugins: bot.pluginManager.getAllPlugins() });
                         }
                         break;
+                    case 'updatePluginConfig':
+                        if (bot.pluginManager) {
+                            bot.pluginManager.updatePluginConfig(payload.pluginName, payload.config);
+                            this.io.emit('pluginList', { username: bot.username, plugins: bot.pluginManager.getAllPlugins() });
+                        }
+                        break;
                     case 'stopNavigation':
                         const navFeature = bot.featureManager.getFeature('navigation');
                         if (navFeature) {
@@ -252,12 +343,10 @@ export class SocketServer {
                         if (payload.type === 'left') {
                             bot.bot.swingArm('right');
 
-
                             const block = bot.bot.blockAtCursor(4);
                             if (block) {
                                 bot.bot.dig(block, true);
                             } else {
-
                                 const entity = bot.bot.nearestEntity(e => (e.type === 'player' || e.type === 'mob') && bot.bot.entity.position.distanceTo(e.position) < 4);
                                 if (entity) {
                                     bot.bot.attack(entity);
@@ -288,8 +377,6 @@ export class SocketServer {
                 }
             });
 
-
-
             socket.on('control', (data) => {
                 const { username, control, state } = data;
                 const botClient = botManager.getBot(username);
@@ -297,7 +384,6 @@ export class SocketServer {
                     try {
                         botClient.bot.setControlState(control, state);
                     } catch (error) {
-
                     }
                 }
             });
@@ -338,18 +424,8 @@ export class SocketServer {
 
         botManager.on('botCreated', (username) => {
             this.io.emit('botStatus', { username, status: 'Created' });
-
             const bot = botManager.getBot(username);
             if (!bot) return;
-
-
-
-
-            botManager.on('pluginsUpdated', () => {
-                if (bot.pluginManager) {
-                    this.io.emit('pluginList', { username: bot.username, plugins: bot.pluginManager.getAllPlugins() });
-                }
-            });
 
             bot.on('pluginError', (data) => {
                 this.io.emit('notification', {

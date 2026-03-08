@@ -16,7 +16,7 @@ export class PluginWrapper {
         if (this.hasError) return;
 
         // Lifecycle methods are always callable
-        const isLifecycle = ['init', 'enable', 'disable', 'onConfigUpdate'].includes(method);
+        const isLifecycle = ['init', 'beforeJoin', 'enable', 'disable', 'onConfigUpdate'].includes(method);
 
         if (!isLifecycle && !this.enabled) return;
 
@@ -83,5 +83,12 @@ export class PluginWrapper {
     updateConfig(newConfig) {
         this.config = { ...this.config, ...newConfig };
         this.safeCall('onConfigUpdate', this.config);
+    }
+
+    toJSON() {
+        return {
+            enabled: this.enabled,
+            config: this.config
+        };
     }
 }

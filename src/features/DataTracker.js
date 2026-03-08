@@ -34,7 +34,8 @@ export class DataTracker extends BaseFeature {
             health: this.botClient.bot.health,
             food: this.botClient.bot.food,
             yaw: this.botClient.bot.entity.yaw,
-            pitch: this.botClient.bot.entity.pitch
+            pitch: this.botClient.bot.entity.pitch,
+            dimension: this.botClient.bot.game ? this.botClient.bot.game.dimension : 'overworld'
         };
 
         this.botClient.emit('dataUpdate', data);

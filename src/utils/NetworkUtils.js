@@ -19,4 +19,43 @@ export class NetworkUtils {
             });
         });
     }
+
+    static pingServer(host, port, timeout = 5000, retries = 1) {
+        return new Promise(async (resolve) => {
+            let mc;
+            try {
+                mc = await import('minecraft-protocol');
+            } catch (e) {
+                return resolve({ success: false, error: 'Failed to load minecraft-protocol' });
+            }
+
+            let attempt = 0;
+
+            const tryPing = () => {
+                attempt++;
+                const timer = setTimeout(() => {
+                    if (attempt < retries) {
+                        tryPing();
+                    } else {
+                        resolve({ success: false, error: 'Ping timed out' });
+                    }
+                }, timeout);
+
+                mc.ping({ host, port }, (err, results) => {
+                    clearTimeout(timer);
+                    if (err) {
+                        if (attempt < retries) {
+                            tryPing();
+                        } else {
+                            resolve({ success: false, error: err.message });
+                        }
+                    } else {
+                        resolve({ success: true, results });
+                    }
+                });
+            };
+
+            tryPing();
+        });
+    }
 }

@@ -3,11 +3,27 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const { plugin: pvp } = require('mineflayer-pvp');
 
+const HOSTILE_MOBS = new Set([
+    'zombie', 'skeleton', 'creeper', 'spider', 'cave_spider', 'enderman',
+    'witch', 'slime', 'phantom', 'drowned', 'husk', 'stray', 'blaze',
+    'ghast', 'magma_cube', 'wither_skeleton', 'piglin_brute', 'vindicator',
+    'evoker', 'ravager', 'pillager', 'vex', 'hoglin', 'zoglin', 'warden',
+    'guardian', 'elder_guardian', 'shulker', 'silverfish', 'endermite',
+    'breeze', 'bogged'
+]);
+
 export class Combat extends BaseFeature {
     constructor(botClient) {
         super(botClient);
         this.killauraEnabled = false;
-        this.killauraRange = 6;
+        this.killauraConfig = {
+            attackRange: 4,
+            followRange: 6,
+            viewDistance: 16,
+            attackPlayers: true,
+            attackHostileMobs: true,
+            attackPassiveMobs: false
+        };
     }
 
     init() {
@@ -20,13 +36,44 @@ export class Combat extends BaseFeature {
         });
     }
 
-    killauraLoop() {
+    applyPvpConfig() {
+        const bot = this.botClient.bot;
+        if (!bot || !bot.pvp) return;
+        bot.pvp.attackRange = this.killauraConfig.attackRange;
+        bot.pvp.followRange = this.killauraConfig.followRange;
+        bot.pvp.viewDistance = this.killauraConfig.viewDistance;
+    }
 
+    updateConfig(config) {
+        this.killauraConfig = { ...this.killauraConfig, ...config };
+        if (typeof this.killauraConfig.attackRange === 'string') this.killauraConfig.attackRange = parseFloat(this.killauraConfig.attackRange) || 4;
+        if (typeof this.killauraConfig.followRange === 'string') this.killauraConfig.followRange = parseFloat(this.killauraConfig.followRange) || 6;
+        if (typeof this.killauraConfig.viewDistance === 'string') this.killauraConfig.viewDistance = parseFloat(this.killauraConfig.viewDistance) || 16;
+        this.applyPvpConfig();
+        this.botClient.log(`Killaura config updated`, 'info');
+    }
+
+    getConfig() {
+        return { ...this.killauraConfig };
+    }
+
+    matchesFilter(entity) {
+        if (!entity || entity === this.botClient.bot.entity) return false;
+        if (entity.type === 'player' && this.killauraConfig.attackPlayers) return true;
+        if (entity.type === 'mob') {
+            const name = entity.name || '';
+            if (HOSTILE_MOBS.has(name) && this.killauraConfig.attackHostileMobs) return true;
+            if (!HOSTILE_MOBS.has(name) && this.killauraConfig.attackPassiveMobs) return true;
+        }
+        return false;
+    }
+
+    killauraLoop() {
         if (!this.botClient.bot || !this.botClient.bot.entity) return;
 
-        const filter = e => e.type === 'mob' || e.type === 'player';
         const entity = this.botClient.bot.nearestEntity(e =>
-            filter(e) && e.position.distanceTo(this.botClient.bot.entity.position) < this.killauraRange
+            this.matchesFilter(e) &&
+            e.position.distanceTo(this.botClient.bot.entity.position) < this.killauraConfig.attackRange
         );
 
         if (entity) {
@@ -37,10 +84,13 @@ export class Combat extends BaseFeature {
     toggleKillaura(enabled) {
         this.killauraEnabled = enabled;
         if (enabled) {
+            this.applyPvpConfig();
             this.botClient.log('Killaura enabled', 'success');
         } else {
             this.botClient.log('Killaura disabled', 'warning');
-            this.botClient.bot.pvp.stop();
+            if (this.botClient.bot && this.botClient.bot.pvp) {
+                this.botClient.bot.pvp.stop();
+            }
         }
     }
 
@@ -65,13 +115,13 @@ export class Combat extends BaseFeature {
 
         const lava = bot.findBlock({
             matching: block => block.name === 'lava',
-            maxDistance: 32
+            maxDistance: 64
         });
         if (lava) {
             const pathfinder = this.botClient.featureManager.getFeature('navigation');
             if (pathfinder) {
                 this.botClient.log('Walking to lava...', 'info');
-                pathfinder.moveTo(lava.position);
+                pathfinder.moveTo(lava.position.x, lava.position.y, lava.position.z);
                 return;
             }
         }

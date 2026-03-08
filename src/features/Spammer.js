@@ -72,7 +72,7 @@ export class Spammer extends BaseFeature {
             return;
         }
 
-        if (!this.botClient.bot._client || !this.botClient.bot._client.socket) {
+        if (!this.botClient.bot._client || !this.botClient.bot._client.connected) {
             this.botClient.log('Spammer stopped: Bot disconnected', 'warning');
             this.stop();
             return;
@@ -93,8 +93,6 @@ export class Spammer extends BaseFeature {
 
         try {
             this.botClient.bot.chat(msg);
-
-            this.botClient.emitChat(this.botClient.username, msg, 'chat');
         } catch (err) {
             this.botClient.log(`Spammer error: ${err.message}`, 'error');
             this.stop();
