@@ -41,7 +41,7 @@ You can choose between two modes:
 **Checkboxes**:
 - **Auto-Reconnect**: Automatically logs back in after being kicked.
 - **First Person View**: Shows the world from the bot's eyes in the viewer.
-- **Headless Mode**: Disables non-essential UI updates for this specific bot to save resources. These bots show an "H" badge in the sidebar.
+- **Show Password**: Click the eye icon in any password field to reveal the text.
 
 **Bulk Generation**:
 Use the **Bulk Generate** tool to quickly add many bots. It can automatically increment numbers in usernames (e.g., Bot1, Bot2).

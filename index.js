@@ -86,15 +86,27 @@ const start = async () => {
     console.log('\x1b[36mImperialsBot CLI Ready. Type "help" for commands.\x1b[0m');
     rl.prompt();
 
-    rl.on('line', (line) => {
-        const cmd = line.trim().toLowerCase();
+    rl.on('line', async (line) => {
+        const parts = line.trim().split(/\s+/);
+        const cmd = parts[0]?.toLowerCase();
+        const args = parts.slice(1);
+
         if (cmd === 'help') {
             console.log('\nAvailable Commands:');
-            console.log('  status    - Show status of all bots');
-            console.log('  headless  - Toggle Global Headless mode (Dashboard Shutdown)');
-            console.log('  gui       - Bring back the Dashboard');
-            console.log('  exit      - Safe shutdown and exit');
-            console.log('');
+            console.log('  status             - Show status of all bots');
+            console.log('  list               - Detailed bot list');
+            console.log('  chat <bot> <msg>   - Send message from bot');
+            console.log('  chatall <msg>      - Send message from all bots');
+            console.log('  stop <bot>         - Disconnect a bot');
+            console.log('  start <bot>        - Start a disconnected bot');
+            console.log('  reconnect <bot>    - Reconnect a bot');
+            console.log('  spammer <bot>      - Toggle spammer for bot');
+            console.log('  autoauth <bot>     - Toggle auto-auth for bot');
+            console.log('  antiafk <bot>      - Toggle antiafk for bot');
+            console.log('  headless           - Enable Global Headless');
+            console.log('  gui                - Disable Global Headless');
+            console.log('  clear              - Clear terminal');
+            console.log('  exit               - Shutdown and exit\n');
         } else if (cmd === 'status') {
             const bots = botManager.getAllBots();
             console.log(`\nBots Status (${bots.length}):`);
@@ -103,18 +115,91 @@ const start = async () => {
                 console.log(`  ${b.username}: ${color}${b.status}\x1b[0m`);
             });
             console.log('');
+        } else if (cmd === 'list') {
+            const bots = botManager.getAllBots();
+            console.log('\n' + ''.padEnd(60, '-'));
+            console.log(`${'Username'.padEnd(20)} | ${'Status'.padEnd(15)} | ${'Server'.padEnd(20)}`);
+            console.log(''.padEnd(60, '-'));
+            bots.forEach(b => {
+                console.log(`${b.username.padEnd(20)} | ${b.status.padEnd(15)} | ${`${b.host}:${b.port}`.padEnd(20)}`);
+            });
+            console.log(''.padEnd(60, '-') + '\n');
+        } else if (cmd === 'chat' && args.length >= 2) {
+            const bot = botManager.getBot(args[0]);
+            if (bot && bot.bot) {
+                bot.bot.chat(args.slice(1).join(' '));
+                console.log(`[${args[0]}] Sent: ${args.slice(1).join(' ')}`);
+            } else {
+                console.log(`Bot "${args[0]}" not found or not connected.`);
+            }
+        } else if (cmd === 'chatall' && args.length >= 1) {
+            const msg = args.join(' ');
+            const bots = Array.from(botManager.bots.values());
+            bots.forEach(b => {
+                if (b.bot) b.bot.chat(msg);
+            });
+            console.log(`Sent to ${bots.length} bots: ${msg}`);
+        } else if (cmd === 'stop' && args[0]) {
+            botManager.stopBot(args[0]);
+            console.log(`Stopping ${args[0]}...`);
+        } else if (cmd === 'start' && args[0]) {
+            const bot = botManager.getBot(args[0]);
+            if (bot) {
+                bot.init();
+                console.log(`Starting ${args[0]}...`);
+            } else {
+                console.log(`Bot "${args[0]}" not found.`);
+            }
+        } else if (cmd === 'reconnect' && args[0]) {
+            const bot = botManager.getBot(args[0]);
+            if (bot) {
+                bot.rejoin();
+            } else {
+                console.log(`Bot "${args[0]}" not found.`);
+            }
+        } else if (cmd === 'spammer' && args[0]) {
+            const bot = botManager.getBot(args[0]);
+            if (bot) {
+                const spammer = bot.featureManager.getFeature('spammer');
+                if (spammer) {
+                    spammer.toggle();
+                    console.log(`Spammer for ${args[0]} is now ${spammer.enabled ? 'ENABLED' : 'DISABLED'}`);
+                }
+            } else {
+                console.log(`Bot "${args[0]}" not found.`);
+            }
+        } else if (cmd === 'autoauth' && args[0]) {
+            const bot = botManager.getBot(args[0]);
+            if (bot) {
+                const auth = bot.featureManager.getFeature('autoauth');
+                if (auth) {
+                    auth.enabled = !auth.enabled;
+                    bot.savePluginStates();
+                    console.log(`AutoAuth for ${args[0]} is now ${auth.enabled ? 'ENABLED' : 'DISABLED'}`);
+                }
+            }
+        } else if (cmd === 'antiafk' && args[0]) {
+            const bot = botManager.getBot(args[0]);
+            if (bot) {
+                const afk = bot.featureManager.getFeature('antiafk');
+                if (afk) {
+                    afk.enabled = !afk.enabled;
+                    bot.savePluginStates();
+                    console.log(`AntiAFK for ${args[0]} is now ${afk.enabled ? 'ENABLED' : 'DISABLED'}`);
+                }
+            }
         } else if (cmd === 'headless') {
             botManager.setGlobalHeadless(true);
-            console.log('\n\x1b[33mGLOBAL HEADLESS MODE: ACTIVE\x1b[0m');
-            console.log('Dashboard data streams paused. UI is now hidden/frozen.\n');
-        } else if (cmd === 'gui' || cmd === 'dashboard') {
+            console.log('\n\x1b[33mGLOBAL HEADLESS MODE: ACTIVE\x1b[0m\n');
+        } else if (cmd === 'gui') {
             botManager.setGlobalHeadless(false);
-            console.log('\n\x1b[32mGLOBAL HEADLESS MODE: INACTIVE\x1b[0m');
-            console.log('Dashboard data streams restored.\n');
+            console.log('\n\x1b[32mGLOBAL HEADLESS MODE: INACTIVE\x1b[0m\n');
+        } else if (cmd === 'clear') {
+            console.clear();
         } else if (cmd === 'exit') {
-            console.log('Closing bots and exiting...');
+            console.log('Shutting down...');
             botManager.shutdown();
-            setTimeout(() => process.exit(0), 1500);
+            setTimeout(() => process.exit(0), 1000);
         }
         rl.prompt();
     });

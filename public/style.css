@@ -837,6 +837,51 @@ input[type=range] {
     color: white;
 }
 
+/* Password Input Toggle */
+.password-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.password-input-wrapper input {
+    width: 100%;
+    padding-right: 40px !important;
+    /* Make room for the toggle button */
+}
+
+.toggle-password-btn {
+    position: absolute;
+    right: 5px;
+    background: none;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    transition: all 0.2s;
+}
+
+.toggle-password-btn:hover {
+    color: var(--text-main);
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+.toggle-password-btn svg {
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.toggle-password-btn:hover svg {
+    opacity: 1;
+}
+
+
 .checkbox-group label {
     display: flex;
     font-size: 0.9rem;
@@ -1613,87 +1658,6 @@ body.low-perf .bot-item::after {
     width: 100%;
 }
 
-/* ═══════ Holographic Desktop Mode ═══════ */
-
-body.mode-holographic .sidebar {
-    display: none !important;
-}
-
-body.mode-holographic .top-bar {
-    display: none !important;
-}
-
-body.mode-holographic .main-content {
-    margin: 0;
-    padding: 20px;
-}
-
-body.mode-holographic .dashboard-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-    align-items: flex-start;
-}
-
-body.mode-holographic .dashboard-grid>.column {
-    flex: unset;
-    width: auto;
-    min-width: 350px;
-    max-width: 750px;
-    /* Increased from 600px by 25% */
-}
-
-body.mode-holographic .card {
-    background: rgba(15, 23, 42, 0.65) !important;
-    backdrop-filter: blur(20px) saturate(1.5);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 16px !important;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-body.mode-holographic .card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 40px rgba(59, 130, 246, 0.15), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-}
-
-body.mode-holographic .tabs-header {
-    background: rgba(15, 23, 42, 0.5);
-    backdrop-filter: blur(16px);
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-/* Floating exit button for holographic mode */
-.holo-exit-btn {
-    position: fixed;
-    top: 15px;
-    right: 15px;
-    z-index: 9999;
-    background: rgba(15, 23, 42, 0.7);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: var(--text-muted);
-    padding: 8px 16px;
-    border-radius: 20px;
-    cursor: pointer;
-    font-size: 0.8rem;
-    font-family: var(--dashboard-font);
-    transition: all 0.2s;
-    display: none;
-}
-
-body.mode-holographic .holo-exit-btn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.holo-exit-btn:hover {
-    background: rgba(239, 68, 68, 0.15);
-    border-color: rgba(239, 68, 68, 0.3);
-    color: #ef4444;
-}
 
 /* Global Headless Overlay */
 .headless-overlay {

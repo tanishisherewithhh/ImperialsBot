@@ -78,6 +78,8 @@ export class Combat extends BaseFeature {
 
         if (entity) {
             this.botClient.bot.pvp.attack(entity);
+        } else if (this.botClient.bot.pvp && this.botClient.bot.pvp.target) {
+            this.botClient.bot.pvp.stop();
         }
     }
 

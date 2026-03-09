@@ -425,7 +425,7 @@
                                 </div>
                             </div>
                             <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">
-                                Captures raw Minecraft packets for the selected bot. High traffic — use filters to
+                                Captures raw Minecraft packets for the selected bot. High traffic -> use filters to
                                 narrow results.
                             </p>
                             <div id="packetStream"
@@ -599,7 +599,29 @@
                                 </div>
                                 <div class="form-group" style="flex: 1;">
                                     <label for="addBotProxyPass">Proxy Password</label>
-                                    <input type="password" id="addBotProxyPass" name="proxyPass" placeholder="Optional">
+                                    <div class="password-input-wrapper">
+                                        <input type="password" id="addBotProxyPass" name="proxyPass"
+                                            placeholder="Optional">
+                                        <button type="button" class="toggle-password-btn" title="Show/Hide Password">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                                stroke-linecap="round" stroke-linejoin="round" class="eye-icon">
+                                                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                                                <circle cx="12" cy="12" r="3" />
+                                            </svg>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                                stroke-linecap="round" stroke-linejoin="round" class="eye-off-icon"
+                                                style="display:none;">
+                                                <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+                                                <path
+                                                    d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+                                                <path
+                                                    d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+                                                <line x1="2" y1="2" x2="22" y2="22" />
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -619,7 +641,26 @@
                 </div>
                 <div class="form-group">
                     <label>Password (Optional) </label>
-                    <input type="password" name="password" placeholder="For AutoAuth">
+                    <div class="password-input-wrapper">
+                        <input type="password" name="password" placeholder="For AutoAuth">
+                        <button type="button" class="toggle-password-btn" title="Show/Hide Password">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" class="eye-icon">
+                                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                                <circle cx="12" cy="12" r="3" />
+                            </svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" class="eye-off-icon" style="display:none;">
+                                <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+                                <path
+                                    d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+                                <path d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+                                <line x1="2" y1="2" x2="22" y2="22" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -644,7 +685,26 @@
                 <div class="discord-bot-group" id="addDiscordBotFields" style="display: none;">
                     <div class="form-group">
                         <label>Discord Bot Token</label>
-                        <input type="password" name="discordBotToken" placeholder="MTE5...">
+                        <div class="password-input-wrapper">
+                            <input type="password" name="discordBotToken" placeholder="MTE5...">
+                            <button type="button" class="toggle-password-btn" title="Show/Hide Password">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" class="eye-icon">
+                                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                                    <circle cx="12" cy="12" r="3" />
+                                </svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" class="eye-off-icon" style="display:none;">
+                                    <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+                                    <path
+                                        d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+                                    <path d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+                                    <line x1="2" y1="2" x2="22" y2="22" />
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label>Discord Channel ID (Required for Bot Token)</label>
@@ -658,10 +718,7 @@
                 <div class="form-group checkbox-group">
                     <label><input type="checkbox" name="autoReconnect" checked> Auto Reconnect</label>
                 </div>
-                <div class="form-group checkbox-group">
-                    <label><input type="checkbox" name="headless"> Headless Mode <span
-                            style="font-size:0.75rem; color:var(--text-muted)">(No UI updates)</span></label>
-                </div>
+
 
                 <div class="modal-actions">
                     <button type="button" id="cancelAddBot" class="btn-secondary">Cancel</button>
@@ -725,10 +782,6 @@
                     <label style="flex: 1;"><input type="checkbox" id="settingLowPerformance" name="lowPerformanceMode">
                         Low Performance
                         Mode (Disables animations/blur)</label>
-                    <button type="button" id="holoBtn" title="Holographic Mode" class="btn compact"
-                        style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 5px 10px; font-size: 0.75rem; border-radius: 6px;">
-                        Holographic Mode
-                    </button>
                 </div>
                 <div class="modal-actions">
                     <button type="button" id="closeSettingsBtn" class="btn-secondary">Close</button>
@@ -796,8 +849,29 @@
                                 </div>
                                 <div class="form-group" style="flex: 1;">
                                     <label for="editBotProxyPass">Proxy Password</label>
-                                    <input type="password" id="editBotProxyPass" name="proxyPass"
-                                        placeholder="Optional">
+                                    <div class="password-input-wrapper">
+                                        <input type="password" id="editBotProxyPass" name="proxyPass"
+                                            placeholder="Optional">
+                                        <button type="button" class="toggle-password-btn" title="Show/Hide Password">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                                stroke-linecap="round" stroke-linejoin="round" class="eye-icon">
+                                                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                                                <circle cx="12" cy="12" r="3" />
+                                            </svg>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                                stroke-linecap="round" stroke-linejoin="round" class="eye-off-icon"
+                                                style="display:none;">
+                                                <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+                                                <path
+                                                    d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+                                                <path
+                                                    d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+                                                <line x1="2" y1="2" x2="22" y2="22" />
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -831,7 +905,26 @@
                 </div>
                 <div class="form-group">
                     <label>Password (Optional) </label>
-                    <input type="password" name="password" placeholder="For AutoAuth">
+                    <div class="password-input-wrapper">
+                        <input type="password" name="password" placeholder="For AutoAuth">
+                        <button type="button" class="toggle-password-btn" title="Show/Hide Password">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" class="eye-icon">
+                                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                                <circle cx="12" cy="12" r="3" />
+                            </svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" class="eye-off-icon" style="display:none;">
+                                <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+                                <path
+                                    d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+                                <path d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+                                <line x1="2" y1="2" x2="22" y2="22" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -856,7 +949,26 @@
                 <div class="discord-bot-group" id="discordBotFields" style="display: none;">
                     <div class="form-group">
                         <label>Discord Bot Token</label>
-                        <input type="password" name="discordBotToken">
+                        <div class="password-input-wrapper">
+                            <input type="password" name="discordBotToken">
+                            <button type="button" class="toggle-password-btn" title="Show/Hide Password">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" class="eye-icon">
+                                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                                    <circle cx="12" cy="12" r="3" />
+                                </svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" class="eye-off-icon" style="display:none;">
+                                    <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+                                    <path
+                                        d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+                                    <path d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+                                    <line x1="2" y1="2" x2="22" y2="22" />
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label>Discord Channel ID</label>
@@ -870,10 +982,7 @@
                 <div class="form-group checkbox-group">
                     <label><input type="checkbox" name="autoReconnect" checked> Auto Reconnect</label>
                 </div>
-                <div class="form-group checkbox-group">
-                    <label><input type="checkbox" name="headless"> Headless Mode <span
-                            style="font-size:0.75rem; color:var(--text-muted)">(No UI updates)</span></label>
-                </div>
+
 
                 <div class="modal-actions">
                     <button type="button" id="cancelEditBot" class="btn-secondary">Cancel</button>
@@ -944,7 +1053,26 @@
                 </div>
                 <div class="form-group">
                     <label>Password (Optional)</label>
-                    <input type="password" name="password" placeholder="For AutoAuth">
+                    <div class="password-input-wrapper">
+                        <input type="password" name="password" placeholder="For AutoAuth">
+                        <button type="button" class="toggle-password-btn" title="Show/Hide Password">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" class="eye-icon">
+                                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                                <circle cx="12" cy="12" r="3" />
+                            </svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" class="eye-off-icon" style="display:none;">
+                                <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+                                <path
+                                    d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+                                <path d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+                                <line x1="2" y1="2" x2="22" y2="22" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>Version</label>
@@ -967,10 +1095,7 @@
                 <div class="form-group checkbox-group">
                     <label><input type="checkbox" name="autoReconnect" checked> Auto Reconnect</label>
                 </div>
-                <div class="form-group checkbox-group">
-                    <label><input type="checkbox" name="headless"> Headless Mode <span
-                            style="font-size:0.75rem; color:var(--text-muted)">(No UI updates)</span></label>
-                </div>
+
 
                 <div class="modal-actions">
                     <button type="button" id="cancelBulkGenerate" class="btn-secondary">Cancel</button>
@@ -998,7 +1123,7 @@
         </div>
     </div>
 
-    <button class="holo-exit-btn" id="holoExitBtn">✕ Exit Holographic</button>
+
 
     <div id="headlessOverlay" class="headless-overlay">
         <div class="headless-content">
