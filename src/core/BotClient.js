@@ -26,7 +26,6 @@ export class BotClient extends EventEmitter {
         this.manuallyStopped = false;
         this.recentMessages = new Set();
         this.inventoryPort = null;
-        this.isHeadless = config.headless || false;
         this.packetDebugEnabled = false;
         this._packetListener = null;
 
@@ -58,14 +57,12 @@ export class BotClient extends EventEmitter {
         this.recentMessages.add(plainText);
         setTimeout(() => this.recentMessages.delete(plainText), 1000);
 
-        if (!this.isHeadless) {
-            this.emit('chat', {
-                message: displayMessage,
-                type,
-                raw: plainText,
-                sender: username || '[Server]'
-            });
-        }
+        this.emit('chat', {
+            message: displayMessage,
+            type,
+            raw: plainText,
+            sender: username || '[Server]'
+        });
 
         this.addToHistory(username || '[Server]', displayMessage, type);
     }
@@ -121,7 +118,6 @@ export class BotClient extends EventEmitter {
         this.config = { ...this.config, ...newConfig };
 
         // Soft updates (apply without restart)
-        this.isHeadless = !!this.config.headless;
 
         if (needsRejoin && this.status !== 'Offline') {
             this.log('Configuration change detected requiring rejoin...', 'warning');
@@ -347,8 +343,8 @@ export class BotClient extends EventEmitter {
             this.log(`${this.username} spawned`, 'success');
             this.lastSpawnTime = Date.now();
 
-            // Start Web Inventory ONLY on spawn and IF NOT headless
-            if (!this.isHeadless) {
+            // Start Web Inventory ONLY on spawn
+            if (true) {
                 const startPort = this.inventoryPort || (4000 + Math.floor(Math.random() * 1000));
                 NetworkUtils.findFreePort(startPort).then(port => {
                     this.inventoryPort = port;
@@ -375,7 +371,7 @@ export class BotClient extends EventEmitter {
             } else {
                 this.pluginManager.onBotSpawn();
             }
-            if (instance.inventory && !this.isHeadless) {
+            if (instance.inventory) {
                 instance.inventory.removeAllListeners('updateSlot');
                 let invUpdateTimeout = null;
                 instance.inventory.on('updateSlot', () => {
@@ -399,7 +395,7 @@ export class BotClient extends EventEmitter {
             if (this.bot !== instance || this.reconnectTimer) return;
             this.pluginManager.onTick();
 
-            if (instance.entity && !this.isHeadless) {
+            if (instance.entity) {
                 const now = Date.now();
                 if (now - (this.lastDataEmit || 0) > 250) {
                     this.lastDataEmit = now;

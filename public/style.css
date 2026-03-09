@@ -837,6 +837,51 @@ input[type=range] {
     color: white;
 }
 
+/* Password Input Toggle */
+.password-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.password-input-wrapper input {
+    width: 100%;
+    padding-right: 40px !important;
+    /* Make room for the toggle button */
+}
+
+.toggle-password-btn {
+    position: absolute;
+    right: 5px;
+    background: none;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    transition: all 0.2s;
+}
+
+.toggle-password-btn:hover {
+    color: var(--text-main);
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+.toggle-password-btn svg {
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.toggle-password-btn:hover svg {
+    opacity: 1;
+}
+
+
 .checkbox-group label {
     display: flex;
     font-size: 0.9rem;

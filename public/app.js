@@ -244,13 +244,7 @@ socket.on('botList', (data) => {
         name.className = 'bot-name';
         name.style.cssText = 'flex: 1; margin: 0 8px; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; display: flex; align-items: center; gap: 6px;';
         name.innerText = bot.username;
-        if (bot.config && bot.config.headless) {
-            const badge = document.createElement('span');
-            badge.title = 'Headless Mode';
-            badge.style.cssText = 'font-size: 0.65rem; background: rgba(251,191,36,0.2); color: #fbbf24; padding: 1px 5px; border-radius: 4px; font-weight: 600; letter-spacing: 0.5px;';
-            badge.innerText = 'H';
-            name.appendChild(badge);
-        }
+        item.appendChild(name);
         item.appendChild(name);
 
         const dot = document.createElement('div');
@@ -1448,7 +1442,6 @@ if (bulkGenerateForm) {
             password: rawData.password || '',
             autoReconnect: formData.get('autoReconnect') === 'on',
             firstPerson: formData.get('firstPerson') === 'on',
-            headless: formData.get('headless') === 'on',
             plugins: {}
         };
 
@@ -1516,8 +1509,6 @@ addBotForm.onsubmit = (e) => {
     data.firstPerson = formData.get('firstPerson') === 'on';
     data.autoReconnect = formData.get('autoReconnect') === 'on';
     data.registerConfirm = formData.get('registerConfirm') === 'on';
-    data.headless = formData.get('headless') === 'on';
-
     if (data.discordIntegrationMode === 'none') {
         data.webhookUrl = '';
         data.discordBotToken = '';
@@ -1585,8 +1576,6 @@ function openEditModal(bot) {
     if (form.firstPerson) form.firstPerson.checked = !!bot.config.firstPerson;
     if (form.autoReconnect) form.autoReconnect.checked = !!bot.config.autoReconnect;
     if (form.registerConfirm) form.registerConfirm.checked = !!bot.config.registerConfirm;
-    if (form.headless) form.headless.checked = !!bot.config.headless;
-
     editBotModal.classList.add('active');
 }
 
@@ -1621,8 +1610,6 @@ editBotForm.onsubmit = (e) => {
     data.firstPerson = formData.get('firstPerson') === 'on';
     data.autoReconnect = formData.get('autoReconnect') === 'on';
     data.registerConfirm = formData.get('registerConfirm') === 'on';
-    data.headless = formData.get('headless') === 'on';
-
     socket.emit('editBot', data);
     editBotModal.classList.remove('active');
 };
@@ -2622,3 +2609,26 @@ socket.on('botRemoved', (username) => {
     selectedBots.delete(username);
     updateSelectedCount();
 });
+
+// Password Visibility Toggle
+document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.toggle-password-btn');
+    if (!btn) return;
+
+    e.preventDefault();
+    const wrapper = btn.closest('.password-input-wrapper');
+    const input = wrapper.querySelector('input');
+    const eyeIcon = btn.querySelector('.eye-icon');
+    const eyeOffIcon = btn.querySelector('.eye-off-icon');
+
+    if (input.type === 'password') {
+        input.type = 'text';
+        eyeIcon.style.display = 'none';
+        eyeOffIcon.style.display = 'block';
+    } else {
+        input.type = 'password';
+        eyeIcon.style.display = 'block';
+        eyeOffIcon.style.display = 'none';
+    }
+});
+
