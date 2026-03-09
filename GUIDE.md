@@ -25,63 +25,75 @@ If you have used a custom port then go to `http://localhost:YOUR_PORT`
 
 To add a bot, click the **Add Bot** button and fill in the fields:
 - **Username**: The name the bot will use in-game.
-- **Host**: The server IP (e.g., `play.example.com`).
-- **Port**: The server port (usually `25565`).
-- **Version**: The Minecraft version of the server. Leave empty for auto-detection, or specify (e.g., `1.20.1`).
+- **Host / Port**: The server IP and port (usually 25565).
+- **Version**: The Minecraft version. Leave empty for auto-detection.
 - **Auth**: 
     - `Offline`: For cracked servers (no password needed).
-    - `Microsoft`: For premium accounts and **Minecraft Realms**.
-- **Password**: 
-    - For **Microsoft** accounts, this is your account password.
-    - For **Cracked** servers with **Auto-Auth** enabled, this password is used to automatically type `/login <password>` or `/register <password> <password>` when you join.
+    - `Microsoft`: For premium accounts and Minecraft Realms.
+- **Password**: Used for Microsoft accounts or Auto-Auth on cracked servers.
+- **Proxy**: Supports SOCKS4 and SOCKS5 proxies to hide your IP.
 
-**Minecraft Realms Support**:
-To connect to a Realm:
-1. Set **Connection Type** to "Minecraft Realms".
-2. Ensure **Auth Type** is set to "Microsoft".
-3. Choose the **Realm Type** (ID, Name, or Invite Link).
-4. Enter the corresponding identifier in the input field.
-> [!NOTE]
-> Realms support is strictly for premium accounts. Offline/Cracked auth will not work for Realms.
-
-**Webhook URL**: A Discord webhook URL to receive bot alerts (logins, kicks, etc.).
-> Provide a different webhook URL to different bots to avoid instant ratelimiting and messy outputs.
+**Discord Integration**:
+You can choose between two modes:
+1. **Webhook**: Provide a Discord Webhook URL for simple alerts.
+2. **Discord Bot**: Provide a Bot Token and Channel ID for better notification handling.
 
 **Checkboxes**:
-- **Auto-Reconnect**: If ticked, the bot will automatically try to log back in if it gets disconnected or kicked (waiting a few seconds between attempts).
-- **First Person View**: If ticked, the real-time viewer will show the world from the bot's eyes. If unticked, it uses a third-person camera.
+- **Auto-Reconnect**: Automatically logs back in after being kicked.
+- **First Person View**: Shows the world from the bot's eyes in the viewer.
+- **Headless Mode**: Disables non-essential UI updates for this specific bot to save resources. These bots show an "H" badge in the sidebar.
 
-**Updating**: To change a bot's settings, click the edit (📝) icon on the bot in the sidebar. You can change the IP or version without deleting the bot.
+**Bulk Generation**:
+Use the **Bulk Generate** tool to quickly add many bots. It can automatically increment numbers in usernames (e.g., Bot1, Bot2).
+
+**Updating**:
+To change settings, click the **Edit** icon on the bot in the sidebar. You can update IPs or features without deleting the bot. Click a bot in the sidebar to switch the dashboard control to that specific instance.
 
 ---
 
 ### Dashboard Features
 
-Once a bot is selected, you can monitor its state in the top bar:
-- **Health & Hunger**: Real-time bars showing the bot's survival status.
-- **Position**: X, Y, Z coordinates and rotation (Yaw/Pitch).
-- **Inventory**: View everything the bot is holding in the "Inventory" tab.
-- **Online Players**: A list of all players on the server is visible in the **right sidebar**.
-- **Visual Feed**: Watch your bot's world using Prismarine Viewer in the top right. You can even interact with it using your mouse to zoom in/out and look around the world.
-- **Navigation**: You can make the bot automatically travel to a given position using mineflayer-pathfinder and movement.
+Once a bot is selected from the sidebar, you can monitor its state:
+- **Health & Hunger**: Visual bars showing the bot's survival status.
+- **Position**: Shows coordinates for both the **Overworld** and **Nether** simultaneously.
+- **Inventory**: A visual tab showing everything the bot is currently holding.
+- **Online Players**: A list of all players on the server, found in the right sidebar.
+- **Visual Feed**: A real-time 3D view of the bot's surroundings.
+- **Analytics**: Tracks server TPS, bot ping, and real-time network traffic (RX/TX bandwidth).
+- **Watchlist**: Add player names to be notified immediately when they join or leave the server.
 
 ---
 
 ### Feature Controls
 
 **Spammer**
-The spammer allows the bot to send messages repeatedly.
-- **Message List**: Add multiple messages; the bot will cycle through them or pick at random.
-- **Delay**: How long (in milliseconds) the bot waits between messages.
-- **Random Strings**: Append random characters to each message to bypass some anti-spam filters.
-- **Importing Text**: You can paste a list of messages into the input fields to quickly set up a spam rotation.
+Allows the bot to send messages repeatedly with custom delays and random strings to bypass filters.
 
 **Chat & Exporting**
-- **Sending Chat**: Type in the bottom bar to send messages as the bot.
-- **Exporting Logs**: There is a export button above the chatbox to directly export chat of a bot as a txt file
+- **Sending Chat**: Use the bottom bar to send messages.
+- **Exporting Logs**: Use the export button above the chatbox to save the current bot's chat history to a text file.
 
-**Themes**
-Use the theme selector in the sidebar to change the dashboard’s look. These are saved locally so they persist when you refresh.
+**Bulk Actions**
+Control all selected bots at once:
+- **Move All**: Send every bot to the same coordinates.
+- **Chain Chat**: Splits your message word-by-word across your bots for coordinated talking.
+- **Reconnect All**: Instantly restarts all active bots.
+
+---
+
+### Performance & Modes
+
+**Global Headless Mode**
+For high-density botting, you can turn off the dashboard entirely:
+1. Go to your **Terminal/CMD**.
+2. Type `headless`. 
+The dashboard UI will stop receiving updates to save maximum CPU and RAM. Type `gui` in the terminal to restore it.
+
+**Holographic Mode**
+Hides the sidebars for a cleaner, floating-panel look. This can be toggled in the Global Settings.
+
+**Low Performance Mode**
+Reduces the update frequency of stats and graphs to save resources on slower computers.
 
 ---
 
