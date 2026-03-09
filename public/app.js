@@ -8,6 +8,7 @@ let activeKeys = new Set();
 let spammerEnabled = false;
 let lowPerformanceEnabled = false;
 let chatVisible = true;
+let watchlist = [];
 
 const chatToggleBtn = document.getElementById('chatToggleBtn');
 if (chatToggleBtn) {
@@ -74,6 +75,7 @@ const spammerLen = document.getElementById('spammerLen');
 
 const suicideBtn = document.getElementById('suicideBtn');
 const rejoinBtn = document.getElementById('rejoinBtn');
+const viewModeBtn = document.getElementById('viewModeBtn');
 
 
 const addBotModal = document.getElementById('addBotModal');
@@ -177,7 +179,6 @@ window.toggleDiscordFields = (val, prefix = '') => {
     const otherPrefix = prefix === 'add' ? '' : 'add';
     const otherWebhookGroup = document.getElementById(otherPrefix ? `${otherPrefix}DiscordWebhookFields` : 'discordWebhookFields');
     const otherBotGroup = document.getElementById(otherPrefix ? `${otherPrefix}DiscordBotFields` : 'discordBotFields');
-    // We don't necessarily want to sync them, but the function should be robust.
 };
 
 socket.on('disconnect', () => {
@@ -241,8 +242,15 @@ socket.on('botList', (data) => {
 
         const name = document.createElement('div');
         name.className = 'bot-name';
-        name.style.cssText = 'flex: 1; margin: 0 8px; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;';
+        name.style.cssText = 'flex: 1; margin: 0 8px; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; display: flex; align-items: center; gap: 6px;';
         name.innerText = bot.username;
+        if (bot.config && bot.config.headless) {
+            const badge = document.createElement('span');
+            badge.title = 'Headless Mode';
+            badge.style.cssText = 'font-size: 0.65rem; background: rgba(251,191,36,0.2); color: #fbbf24; padding: 1px 5px; border-radius: 4px; font-weight: 600; letter-spacing: 0.5px;';
+            badge.innerText = 'H';
+            name.appendChild(badge);
+        }
         item.appendChild(name);
 
         const dot = document.createElement('div');
@@ -543,38 +551,50 @@ socket.on('botStatus', (payload) => {
 
 let lastBotDataUpdate = 0;
 socket.on('botData', (payload) => {
-
     if (currentBot !== payload.username) return;
     const now = Date.now();
-    if (now - lastBotDataUpdate < 250) return;
+
+    // Throttle: 250ms normally, 1000ms in Low Performance Mode
+    const throttle = lowPerformanceEnabled ? 1000 : 250;
+    if (now - lastBotDataUpdate < throttle) return;
+
     lastBotDataUpdate = now;
     const data = payload.data;
 
     if (data.health !== undefined) {
         const healthStat = document.getElementById('healthStat');
-        if (healthStat) healthStat.innerText = Math.round(data.health);
+        const healthBarFill = document.getElementById('healthBarFill');
+        const roundedHealth = Math.round(data.health);
+        if (healthStat) healthStat.innerText = roundedHealth;
+        if (healthBarFill) healthBarFill.style.width = `${Math.min(100, Math.max(0, (data.health / 20) * 100))}%`;
     }
     if (data.food !== undefined) {
         const foodStat = document.getElementById('foodStat');
-        if (foodStat) foodStat.innerText = Math.round(data.food);
+        const foodBarFill = document.getElementById('foodBarFill');
+        const roundedFood = Math.round(data.food);
+        if (foodStat) foodStat.innerText = roundedFood;
+        if (foodBarFill) foodBarFill.style.width = `${Math.min(100, Math.max(0, (data.food / 20) * 100))}%`;
     }
     if (data.position) {
-        const posStat = document.getElementById('posStat');
-        const dimPosStat = document.getElementById('dimPosStat');
+        const owPosStat = document.getElementById('owPosStat');
+        const netherPosStat = document.getElementById('netherPosStat');
         const x = parseFloat(data.position.x);
         const y = parseFloat(data.position.y);
         const z = parseFloat(data.position.z);
-        if (posStat) posStat.innerText = `${x.toFixed(0)}, ${y.toFixed(0)}, ${z.toFixed(0)}`;
-        if (dimPosStat && data.dimension) {
-            const dim = data.dimension;
-            if (dim === 'the_nether' || dim === 'minecraft:the_nether') {
-                dimPosStat.innerText = `OW: ${(x * 8).toFixed(0)}, ${y.toFixed(0)}, ${(z * 8).toFixed(0)}`;
-            } else if (dim === 'overworld' || dim === 'minecraft:overworld') {
-                dimPosStat.innerText = `Nether: ${(x / 8).toFixed(0)}, ${y.toFixed(0)}, ${(z / 8).toFixed(0)}`;
-            } else {
-                dimPosStat.innerText = '';
-            }
+        const dim = data.dimension || 'overworld';
+
+        let owX, owY, owZ, nX, nY, nZ;
+
+        if (dim.includes('nether')) {
+            nX = x; nY = y; nZ = z;
+            owX = x * 8; owY = y; owZ = z * 8;
+        } else {
+            owX = x; owY = y; owZ = z;
+            nX = x / 8; nY = y; nZ = z / 8;
         }
+
+        if (owPosStat) owPosStat.innerText = `${owX.toFixed(0)}, ${owY.toFixed(0)}, ${owZ.toFixed(0)}`;
+        if (netherPosStat) netherPosStat.innerText = `${nX.toFixed(0)}, ${nY.toFixed(0)}, ${nZ.toFixed(0)}`;
     }
     if (data.yaw !== undefined && document.activeElement !== yawSlider) {
         const yawDeg = Math.round(data.yaw * 180 / Math.PI);
@@ -879,6 +899,9 @@ function selectBot(username) {
     currentBot = username;
     lastSpammerConfigStr = '';
 
+    // Emit selection to server to join specific room
+    socket.emit('selectBot', username);
+
     // Clear dashboard data for a clean switch
     analyticsData = {};
     if (typeof renderPlugins === 'function') renderPlugins([]);
@@ -888,12 +911,18 @@ function selectBot(username) {
 
     const healthStat = document.getElementById('healthStat');
     if (healthStat) healthStat.innerText = '0';
+    const healthBarFill = document.getElementById('healthBarFill');
+    if (healthBarFill) healthBarFill.style.width = '0%';
 
     const foodStat = document.getElementById('foodStat');
     if (foodStat) foodStat.innerText = '0';
+    const foodBarFill = document.getElementById('foodBarFill');
+    if (foodBarFill) foodBarFill.style.width = '0%';
 
-    const posStat = document.getElementById('posStat');
-    if (posStat) posStat.innerText = '0, 0, 0';
+    const owPosStat = document.getElementById('owPosStat');
+    if (owPosStat) owPosStat.innerText = '0, 0, 0';
+    const netherPosStat = document.getElementById('netherPosStat');
+    if (netherPosStat) netherPosStat.innerText = '0, 0, 0';
 
     document.querySelectorAll('.bot-item').forEach(el => {
         if (el.innerText.includes(username)) el.classList.add('active');
@@ -1094,8 +1123,233 @@ tabBtns.forEach(btn => {
         if (currentTab === 'analyticsPane') {
             updateAnalyticsGraphs();
         }
+        if (currentTab === 'watchlistPane') {
+            renderWatchlist();
+        }
     };
 });
+
+// Watchlist Logic
+const watchlistInput = document.getElementById('watchlistInput');
+const addWatchlistBtn = document.getElementById('addWatchlistBtn');
+const watchlistContainer = document.getElementById('watchlistContainer');
+const watchlistCount = document.getElementById('watchlistCount');
+
+if (addWatchlistBtn) {
+    addWatchlistBtn.onclick = () => addWatchlistPlayer();
+}
+
+if (watchlistInput) {
+    watchlistInput.onkeydown = (e) => {
+        if (e.key === 'Enter') addWatchlistPlayer();
+    };
+}
+
+function addWatchlistPlayer() {
+    const name = watchlistInput.value.trim().toLowerCase();
+    if (!name) return;
+    if (watchlist.includes(name)) {
+        showNotification('Player already in watchlist', 'warning');
+        return;
+    }
+    watchlist.push(name);
+    watchlistInput.value = '';
+    saveWatchlist();
+    renderWatchlist();
+}
+
+function removeWatchlistPlayer(name) {
+    watchlist = watchlist.filter(n => n !== name);
+    saveWatchlist();
+    renderWatchlist();
+}
+
+function saveWatchlist() {
+    socket.emit('updateWatchlist', watchlist);
+    // Also save to global settings
+    const settings = { watchlist: watchlist };
+    socket.emit('saveSettings', settings);
+}
+
+function renderWatchlist() {
+    if (!watchlistContainer) return;
+    watchlistContainer.innerHTML = '';
+    watchlistCount.innerText = `${watchlist.length} Players`;
+
+    if (watchlist.length === 0) {
+        watchlistContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 0.9rem; width: 100%; text-align: center; padding: 20px;">No players in watchlist</div>';
+        return;
+    }
+
+    watchlist.forEach(name => {
+        const tag = document.createElement('div');
+        tag.className = 'watchlist-tag';
+        tag.style.cssText = 'background: rgba(59, 130, 246, 0.1); border: 1px solid var(--primary); color: var(--text-primary); padding: 5px 12px; border-radius: 20px; display: flex; align-items: center; gap: 8px; font-size: 0.9rem; animate: fadeIn 0.2s;';
+
+        tag.innerHTML = `
+            <span>${name}</span>
+            <span class="remove-btn" style="cursor: pointer; opacity: 0.6; hover: opacity: 1; font-weight: bold;">&times;</span>
+        `;
+
+        tag.querySelector('.remove-btn').onclick = () => removeWatchlistPlayer(name);
+        watchlistContainer.appendChild(tag);
+    });
+}
+
+socket.on('watchlistUpdate', (list) => {
+    watchlist = list;
+    renderWatchlist();
+});
+
+socket.on('watchlistAlert', (data) => {
+    showNotification(data.message, data.type === 'join' ? 'success' : 'warning');
+});
+
+// Packet Debugger Logic
+let packetDebugActive = false;
+const togglePacketDebugBtn = document.getElementById('togglePacketDebugBtn');
+const clearPacketsBtn = document.getElementById('clearPacketsBtn');
+const packetStream = document.getElementById('packetStream');
+const packetAutoscroll = document.getElementById('packetAutoscroll');
+const packetFilter = document.getElementById('packetFilter');
+
+if (togglePacketDebugBtn) {
+    togglePacketDebugBtn.onclick = () => {
+        if (!currentBot) return showNotification('Select a bot first', 'warning');
+        packetDebugActive = !packetDebugActive;
+        togglePacketDebugBtn.innerText = packetDebugActive ? 'Stop Capture' : 'Start Capture';
+        togglePacketDebugBtn.style.backgroundColor = packetDebugActive ? 'var(--danger)' : '';
+        socket.emit('botAction', {
+            username: currentBot,
+            action: 'togglePacketDebug',
+            payload: { enabled: packetDebugActive }
+        });
+        const header = document.getElementById('packetHeader');
+        if (header) header.style.display = packetDebugActive ? 'flex' : 'none';
+
+        if (packetDebugActive) {
+            const placeholder = document.getElementById('packetPlaceholder');
+            if (placeholder) {
+                placeholder.style.display = 'block';
+                placeholder.innerText = 'Listening for packets...';
+            }
+            // Force scroll to bottom when starting capture if autoscroll is on
+            if (packetAutoscroll && packetAutoscroll.checked && packetStream) {
+                setTimeout(() => {
+                    packetStream.scrollTop = packetStream.scrollHeight;
+                }, 50);
+            }
+        }
+    };
+}
+
+if (packetAutoscroll) {
+    packetAutoscroll.onchange = () => {
+        if (packetAutoscroll.checked && packetStream) {
+            packetStream.scrollTop = packetStream.scrollHeight;
+        }
+    };
+}
+
+if (clearPacketsBtn) {
+    clearPacketsBtn.onclick = () => {
+        if (!packetStream) return;
+        Array.from(packetStream.children).forEach(c => {
+            if (c.id !== 'packetHeader' && c.id !== 'packetPlaceholder') {
+                c.remove();
+            }
+        });
+    };
+}
+
+socket.on('packetDebug', (data) => {
+    if (!packetStream || data.username !== currentBot) return;
+
+    const filterVal = packetFilter ? packetFilter.value.toLowerCase() : '';
+    if (filterVal && !data.name.toLowerCase().includes(filterVal)) return;
+
+    const placeholder = document.getElementById('packetPlaceholder');
+    if (placeholder) placeholder.style.display = 'none';
+
+    const header = document.getElementById('packetHeader');
+    if (header) header.style.display = 'flex';
+
+    const row = document.createElement('div');
+    row.style.cssText = 'padding: 3px 6px; border-bottom: 1px solid rgba(255,255,255,0.03); display: flex; gap: 10px; align-items: baseline;';
+
+    const time = new Date(data.timestamp).toLocaleTimeString();
+    const sizeKB = (data.size / 1024).toFixed(1);
+
+    // Color code by packet type for visual scanning
+    let nameColor = '#60a5fa'; // blue default
+    if (data.name.includes('position') || data.name.includes('move')) nameColor = '#34d399';
+    else if (data.name.includes('chat') || data.name.includes('message')) nameColor = '#fbbf24';
+    else if (data.name.includes('entity')) nameColor = '#a78bfa';
+    else if (data.name.includes('block')) nameColor = '#f87171';
+
+    const summaryStr = data.summary ? Object.entries(data.summary).map(([k, v]) => `${k}=${v}`).join(' ') : '';
+
+    row.innerHTML = `
+        <span style="color: var(--text-muted); min-width: 60px;">${time}</span>
+        <span style="color: #94a3b8; min-width: 30px;">${data.direction}</span>
+        <span style="color: ${nameColor}; font-weight: 600; min-width: 130px; word-break: break-all;">${data.name}</span>
+        <span style="color: var(--text-muted); min-width: 45px;">${sizeKB}KB</span>
+        <span style="color: #64748b; flex: 1; word-break: break-all; white-space: pre-wrap;">${summaryStr}</span>
+    `;
+
+    // Click to show full summary in a notification
+    row.style.cursor = 'pointer';
+    row.onclick = () => {
+        const detail = JSON.stringify(data.summary, null, 2);
+        showNotification(`${data.name}: ${detail.substring(0, 200)}`, 'info');
+    };
+
+    packetStream.appendChild(row);
+
+    // Cap at 500 lines (or 100 in Low Performance Mode)
+    const maxPackets = lowPerformanceEnabled ? 100 : 500;
+    while (packetStream.children.length > maxPackets) {
+        packetStream.removeChild(packetStream.firstChild);
+    }
+
+    // Auto-scroll
+    const autoscrollEnabled = packetAutoscroll ? packetAutoscroll.checked : true;
+    if (autoscrollEnabled) {
+        // More robust check for "at bottom"
+        // (scrollHeight - scrollTop) is the distance from top to bottom of view, should be clientHeight
+        const scrollBottom = packetStream.scrollTop + packetStream.clientHeight;
+        const isAtBottom = (packetStream.scrollHeight - scrollBottom) < 300; // Increased threshold for high-volume packets
+
+        if (isAtBottom) {
+            requestAnimationFrame(() => {
+                packetStream.scrollTop = packetStream.scrollHeight;
+            });
+        }
+    }
+});
+
+// Holographic Desktop Mode
+const holoBtn = document.getElementById('holoBtn');
+const holoExitBtn = document.getElementById('holoExitBtn');
+
+function toggleHolographicMode(enabled) {
+    if (enabled) {
+        document.body.classList.add('mode-holographic');
+    } else {
+        document.body.classList.remove('mode-holographic');
+    }
+}
+
+if (holoBtn) {
+    holoBtn.onclick = () => {
+        toggleHolographicMode(true);
+        if (settingsModal) settingsModal.classList.remove('active');
+    };
+}
+
+if (holoExitBtn) {
+    holoExitBtn.onclick = () => toggleHolographicMode(false);
+}
 
 
 
@@ -1194,6 +1448,7 @@ if (bulkGenerateForm) {
             password: rawData.password || '',
             autoReconnect: formData.get('autoReconnect') === 'on',
             firstPerson: formData.get('firstPerson') === 'on',
+            headless: formData.get('headless') === 'on',
             plugins: {}
         };
 
@@ -1261,6 +1516,7 @@ addBotForm.onsubmit = (e) => {
     data.firstPerson = formData.get('firstPerson') === 'on';
     data.autoReconnect = formData.get('autoReconnect') === 'on';
     data.registerConfirm = formData.get('registerConfirm') === 'on';
+    data.headless = formData.get('headless') === 'on';
 
     if (data.discordIntegrationMode === 'none') {
         data.webhookUrl = '';
@@ -1329,6 +1585,7 @@ function openEditModal(bot) {
     if (form.firstPerson) form.firstPerson.checked = !!bot.config.firstPerson;
     if (form.autoReconnect) form.autoReconnect.checked = !!bot.config.autoReconnect;
     if (form.registerConfirm) form.registerConfirm.checked = !!bot.config.registerConfirm;
+    if (form.headless) form.headless.checked = !!bot.config.headless;
 
     editBotModal.classList.add('active');
 }
@@ -1364,6 +1621,7 @@ editBotForm.onsubmit = (e) => {
     data.firstPerson = formData.get('firstPerson') === 'on';
     data.autoReconnect = formData.get('autoReconnect') === 'on';
     data.registerConfirm = formData.get('registerConfirm') === 'on';
+    data.headless = formData.get('headless') === 'on';
 
     socket.emit('editBot', data);
     editBotModal.classList.remove('active');
@@ -1673,7 +1931,6 @@ controls.forEach(control => {
 
 const btnLeftClick = document.getElementById('btnLeftClick');
 const btnRightClick = document.getElementById('btnRightClick');
-const viewModeBtn = document.getElementById('viewModeBtn');
 
 if (btnLeftClick) {
     btnLeftClick.onmousedown = () => {
@@ -1848,6 +2105,17 @@ socket.on('settings', (settings) => {
     }
 });
 
+socket.on('globalHeadlessChanged', (enabled) => {
+    const overlay = document.getElementById('headlessOverlay');
+    if (overlay) {
+        if (enabled) {
+            overlay.classList.add('active');
+        } else {
+            overlay.classList.remove('active');
+        }
+    }
+});
+
 themeSelect.onchange = (e) => {
     const newTheme = e.target.value;
 
@@ -1982,24 +2250,30 @@ let analyticsData = {};
 let analyticsCharts = {};
 const metricsConfig = {
     ping: { label: 'Ping', unit: 'ms', color: '#22c55e' },
-    tps: { label: 'TPS', unit: '', color: '#f97316', max: 20 }
+    tps: { label: 'TPS', unit: '', color: '#f97316', max: 20 },
+    network: { label: 'Network', unit: 'KB/s', color: '#60a5fa', isObjectData: true }
 };
 
 socket.on('analyticsUpdate', (data) => {
     if (currentBot !== data.username) return;
-    if (!document.getElementById('analyticsPane').classList.contains('active')) return;
 
-    const chartsGrid = document.getElementById('analyticsChartsGrid');
     const timestamp = data.stat.timestamp;
     const metrics = Object.keys(data.stat).filter(k => k !== 'timestamp');
 
     metrics.forEach(key => {
         const val = data.stat[key];
-        const config = metricsConfig[key] || { label: key, unit: '', color: '#fff' };
-
         if (!analyticsData[key]) analyticsData[key] = [];
         analyticsData[key].push({ t: timestamp, v: val });
         if (analyticsData[key].length > 100) analyticsData[key].shift();
+    });
+
+    if (!document.getElementById('analyticsPane').classList.contains('active')) return;
+
+    const chartsGrid = document.getElementById('analyticsChartsGrid');
+
+    metrics.forEach(key => {
+        const val = data.stat[key];
+        const config = metricsConfig[key] || { label: key, unit: '', color: '#fff' };
 
         let card = document.getElementById(`metric-card-${key}`);
         if (!card) {
@@ -2019,55 +2293,55 @@ socket.on('analyticsUpdate', (data) => {
             chartsGrid.appendChild(card);
 
             const ctx = document.getElementById(`chart-${key}`).getContext('2d');
-            analyticsCharts[key] = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: [],
-                    datasets: [{
-                        data: [],
-                        borderColor: config.color,
-                        borderWidth: 2,
-                        fill: true,
-                        backgroundColor: config.color + '22',
-                        tension: 0.4,
-                        pointRadius: 0,
-                        pointHoverRadius: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    layout: { padding: { top: 10, bottom: 5, left: 5, right: 15 } },
-                    plugins: { legend: { display: false }, tooltip: { enabled: true, intersect: false, mode: 'index' } },
-                    scales: {
-                        x: { display: false },
-                        y: {
-                            beginAtZero: true,
-                            max: config.max,
-                            grace: '10%',
-                            ticks: {
-                                color: 'rgba(255,255,255,0.4)',
-                                font: { size: 9 },
-                                maxTicksLimit: 5,
-                                callback: (val) => val + (config.unit ? config.unit : '')
-                            },
-                            grid: { color: 'rgba(255,255,255,0.05)', drawTicks: false }
-                        }
+
+            let chartConfig;
+            if (config.isObjectData) {
+                chartConfig = {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [
+                            { label: 'RX', data: [], borderColor: '#34d399', borderWidth: 2, fill: false, tension: 0.4, pointRadius: 0, pointHoverRadius: 4 },
+                            { label: 'TX', data: [], borderColor: '#fbbf24', borderWidth: 2, fill: false, tension: 0.4, pointRadius: 0, pointHoverRadius: 4 }
+                        ]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        layout: { padding: { top: 10, bottom: 5, left: 5, right: 15 } },
+                        plugins: { legend: { display: false }, tooltip: { enabled: true, mode: 'index', intersect: false } },
+                        scales: { x: { display: false }, y: { beginAtZero: true, max: config.max, grace: '10%', ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 9 }, callback: (val) => val + (config.unit ? config.unit : '') }, grid: { color: 'rgba(255,255,255,0.05)', drawTicks: false } } }
                     }
-                }
-            });
+                };
+            } else {
+                chartConfig = {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            data: [], borderColor: config.color, borderWidth: 2, fill: true, backgroundColor: config.color + '22', tension: 0.4, pointRadius: 0, pointHoverRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        layout: { padding: { top: 10, bottom: 5, left: 5, right: 15 } },
+                        plugins: { legend: { display: false }, tooltip: { enabled: true, mode: 'index', intersect: false } },
+                        scales: { x: { display: false }, y: { beginAtZero: true, max: config.max, grace: '10%', ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 9 }, callback: (val) => val + (config.unit ? config.unit : '') }, grid: { color: 'rgba(255,255,255,0.05)', drawTicks: false } } }
+                    }
+                };
+            }
+            analyticsCharts[key] = new Chart(ctx, chartConfig);
         }
 
-        card.querySelector('.stat-value').innerText = `${typeof val === 'number' ? val.toFixed(key === 'tps' ? 1 : 0) : val}${config.unit}`;
+        if (config.isObjectData && val) {
+            card.querySelector('.stat-value').innerText = `↓ ${val.rx} ↑ ${val.tx} ${config.unit}`;
+        } else {
+            card.querySelector('.stat-value').innerText = `${typeof val === 'number' ? val.toFixed(key === 'tps' ? 1 : 0) : val}${config.unit}`;
+        }
     });
 
-    if (lowPerformanceEnabled) {
-        if (!window._lastGraphUpdate || Date.now() - window._lastGraphUpdate > 2000) {
-            updateAnalyticsGraphs();
-            window._lastGraphUpdate = Date.now();
-        }
-    } else {
+    if (!window._lastGraphUpdate || Date.now() - window._lastGraphUpdate > 1000) {
         updateAnalyticsGraphs();
+        window._lastGraphUpdate = Date.now();
     }
 });
 
@@ -2075,8 +2349,18 @@ function updateAnalyticsGraphs() {
     Object.keys(analyticsCharts).forEach(key => {
         const chart = analyticsCharts[key];
         const data = analyticsData[key] || [];
+        const config = metricsConfig[key];
+        if (!config || !data.length) return;
+
         chart.data.labels = data.map(d => new Date(d.t).toLocaleTimeString());
-        chart.data.datasets[0].data = data.map(d => d.v);
+
+        if (config.isObjectData) {
+            chart.data.datasets[0].data = data.map(d => d.v.rx);
+            chart.data.datasets[1].data = data.map(d => d.v.tx);
+        } else {
+            chart.data.datasets[0].data = data.map(d => d.v);
+        }
+
         chart.update('none');
     });
 }
@@ -2217,6 +2501,10 @@ socket.on('settings', (settings) => {
         const fontSelect = document.getElementById('settingDashboardFont');
         if (fontSelect) fontSelect.value = settings.dashboardFont;
     }
+    if (settings && settings.watchlist) {
+        watchlist = settings.watchlist;
+        renderWatchlist();
+    }
 });
 
 
@@ -2302,6 +2590,22 @@ if (bulkChatBtn) {
         socket.emit('bulkAction', { usernames: Array.from(selectedBots), action: 'chat', payload: { message: msg } });
         document.getElementById('bulkChatInput').value = '';
         showNotification(`Bulk chat sent to ${selectedBots.size} bots`, 'info');
+    };
+}
+
+const bulkSequentialChatBtn = document.getElementById('bulkSequentialChatBtn');
+if (bulkSequentialChatBtn) {
+    bulkSequentialChatBtn.onclick = () => {
+        if (selectedBots.size === 0) return showNotification('No bots selected', 'error');
+        const msg = document.getElementById('bulkSequentialChatInput').value.trim();
+        if (!msg) return showNotification('Message cannot be empty', 'warning');
+
+        socket.emit('bulkSequentialChat', {
+            usernames: Array.from(selectedBots),
+            message: msg
+        });
+        document.getElementById('bulkSequentialChatInput').value = '';
+        showNotification(`Sequential chat chain started with ${selectedBots.size} bots`, 'info');
     };
 }
 

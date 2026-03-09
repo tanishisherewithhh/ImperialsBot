@@ -19,6 +19,16 @@ export class AnalyticsManager extends BaseFeature {
         this.registerMetric('tps', () => {
             return this.currentTps;
         });
+
+        this.bytesReceived = 0;
+        this.bytesSent = 0;
+        this.registerMetric('network', () => {
+            const rx = this.bytesReceived / 1024 / 2; // KB/s (since polling is 2s)
+            const tx = this.bytesSent / 1024 / 2;
+            this.bytesReceived = 0;
+            this.bytesSent = 0;
+            return { rx: Math.round(rx * 10) / 10, tx: Math.round(tx * 10) / 10 };
+        });
     }
 
     registerMetric(name, fetchFunction) {
@@ -36,8 +46,29 @@ export class AnalyticsManager extends BaseFeature {
             this.startTracking();
         });
 
+        this.botClient.bot.on('inject_allowed', () => {
+            if (this.botClient.bot && this.botClient.bot._client) {
+                this.botClient.bot._client.on('packet', (data, meta, buffer, fullBuffer) => {
+                    if (fullBuffer) this.bytesReceived += fullBuffer.length;
+                    else if (buffer) this.bytesReceived += buffer.length;
+                });
+
+                const originalWrite = this.botClient.bot._client.write.bind(this.botClient.bot._client);
+                this.botClient.bot._client.write = (name, params) => {
+                    try {
+                        let size = 1 + name.length;
+                        if (params) {
+                            size += JSON.stringify(params).length;
+                        }
+                        this.bytesSent += size;
+                    } catch (e) { }
+                    return originalWrite(name, params);
+                };
+            }
+        });
+
         this.botClient.bot.on('time', () => {
-            if (!this.botClient.bot.time) return;
+            if (!this.botClient.bot || !this.botClient.bot.time) return;
             const now = Date.now();
             const currentAge = this.botClient.bot.time.age;
 

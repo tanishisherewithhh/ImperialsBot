@@ -18,42 +18,55 @@ export class SocketServer {
 
     bindGlobalEvents() {
         botManager.on('botLog', (data) => {
-            this.io.emit('logs', data);
+            this.io.to(`bot:${data.username}`).emit('logs', data);
         });
 
         botManager.on('botData', (data) => {
-            this.io.emit('botData', data);
+            if (!botManager.isGlobalHeadless) {
+                this.io.to(`bot:${data.username}`).emit('botData', data);
+            }
         });
 
         botManager.on('botInventory', (data) => {
-            this.io.emit('botInventory', data);
+            this.io.to(`bot:${data.username}`).emit('botInventory', data);
         });
 
         botManager.on('botPlayers', (data) => {
-            this.io.emit('botPlayers', data);
+            if (!botManager.isGlobalHeadless) {
+                this.io.to(`bot:${data.username}`).emit('botPlayers', data);
+            }
         });
 
         botManager.on('botChat', (data) => {
-            this.io.emit('botChat', data);
+            if (!botManager.isGlobalHeadless) {
+                this.io.to(`bot:${data.username}`).emit('botChat', data);
+            }
         });
 
         botManager.on('botStatus', (data) => {
+            // Status is global for the sidebar/bot list
             this.io.emit('botStatus', data);
         });
 
         botManager.on('botSpawn', (username) => {
+            // Global update for bot list
+            this.io.emit('botList', botManager.getAllBots());
         });
 
         botManager.on('botViewer', (data) => {
-            this.io.emit('botViewer', data);
+            if (!botManager.isGlobalHeadless) {
+                this.io.to(`bot:${data.username}`).emit('botViewer', data);
+            }
         });
 
         botManager.on('analyticsUpdate', (data) => {
-            this.io.emit('analyticsUpdate', data);
+            if (!botManager.isGlobalHeadless) {
+                this.io.to(`bot:${data.username}`).emit('analyticsUpdate', data);
+            }
         });
 
         botManager.on('pluginsUpdated', (data) => {
-            this.io.emit('pluginList', data);
+            this.io.to(`bot:${data.username}`).emit('pluginList', data);
         });
 
         botManager.on('botRemoved', (username) => {
@@ -64,6 +77,20 @@ export class SocketServer {
         botManager.on('botEnd', (username) => {
             this.io.emit('botList', botManager.getAllBots());
         });
+
+        botManager.on('watchlistAlert', (data) => {
+            this.io.to(`bot:${data.username}`).emit('watchlistAlert', data);
+        });
+
+        botManager.on('packetDebug', (data) => {
+            if (!botManager.isGlobalHeadless) {
+                this.io.to(`bot:${data.username}`).emit('packetDebug', data);
+            }
+        });
+
+        botManager.on('globalHeadlessChanged', (isHeadless) => {
+            this.io.emit('globalHeadlessChanged', isHeadless);
+        });
     }
 
     bindEvents() {
@@ -71,7 +98,12 @@ export class SocketServer {
             console.log('Client connected');
             const settings = await ConfigLoader.loadSettings() || {};
             socket.emit('settings', settings);
+            socket.emit('globalHeadlessChanged', botManager.isGlobalHeadless);
             socket.emit('botList', botManager.getAllBots());
+
+            socket.on('setGlobalHeadless', (enabled) => {
+                botManager.setGlobalHeadless(enabled);
+            });
 
             socket.on('saveSettings', async (newSettings) => {
                 try {
@@ -87,9 +119,31 @@ export class SocketServer {
                 }
             });
 
+            socket.on('selectBot', (username) => {
+                // Leave all bot rooms first
+                for (const room of socket.rooms) {
+                    if (room.startsWith('bot:')) {
+                        socket.leave(room);
+                    }
+                }
+                // Join new bot room if username provided
+                if (username) {
+                    socket.join(`bot:${username}`);
+                    console.log(`Client ${socket.id} joined room bot:${username}`);
+                }
+            });
+
             socket.on('shutdownServer', () => {
-                botManager.shutdown();
+                console.log('Safe Shutdown initiated...');
+                try {
+                    botManager.shutdown();
+                } catch (err) {
+                    console.error('Error during shutdown:', err);
+                }
+
+                // Allow a moment for bots to disconnect before exiting
                 setTimeout(() => {
+                    console.log('Server process exiting.');
                     process.exit(0);
                 }, 1000);
             });
@@ -149,6 +203,35 @@ export class SocketServer {
                     message: `Successfully deleted ${deletedCount} bots.`
                 });
                 this.io.emit('botList', botManager.getAllBots());
+            });
+
+            socket.on('updateWatchlist', (list) => {
+                botManager.updateAllWatchlists(list);
+                this.io.emit('watchlistUpdate', list);
+            });
+
+            socket.on('bulkSequentialChat', async (data) => {
+                const { usernames, message } = data;
+                if (!usernames || !Array.isArray(usernames) || !message) return;
+
+                const words = message.split(' ').filter(w => w.length > 0);
+                if (words.length === 0) return;
+
+                for (let i = 0; i < words.length; i++) {
+                    const botIndex = i % usernames.length;
+                    const botUsername = usernames[botIndex];
+                    const bot = botManager.getBot(botUsername);
+                    const word = words[i];
+
+                    if (bot) {
+                        bot.chat(word);
+                    }
+
+                    // Stagger: wait 800ms between messages to bypass some spam filters and look coordinated
+                    if (i < words.length - 1) {
+                        await new Promise(resolve => setTimeout(resolve, 800));
+                    }
+                }
             });
 
             socket.on('getAvailablePlugins', async () => {
@@ -373,6 +456,13 @@ export class SocketServer {
                         break;
                     case 'delete':
                         botManager.removeBot(username);
+                        break;
+                    case 'togglePacketDebug':
+                        if (payload.enabled) {
+                            bot.enablePacketDebug();
+                        } else {
+                            bot.disablePacketDebug();
+                        }
                         break;
                 }
             });

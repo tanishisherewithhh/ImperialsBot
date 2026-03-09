@@ -26,6 +26,9 @@ export class BotClient extends EventEmitter {
         this.manuallyStopped = false;
         this.recentMessages = new Set();
         this.inventoryPort = null;
+        this.isHeadless = config.headless || false;
+        this.packetDebugEnabled = false;
+        this._packetListener = null;
 
         this.pluginManager.on('pluginsUpdated', (data) => {
             this.emit('pluginsUpdated', data);
@@ -55,12 +58,14 @@ export class BotClient extends EventEmitter {
         this.recentMessages.add(plainText);
         setTimeout(() => this.recentMessages.delete(plainText), 1000);
 
-        this.emit('chat', {
-            message: displayMessage,
-            type,
-            raw: plainText,
-            sender: username || '[Server]'
-        });
+        if (!this.isHeadless) {
+            this.emit('chat', {
+                message: displayMessage,
+                type,
+                raw: plainText,
+                sender: username || '[Server]'
+            });
+        }
 
         this.addToHistory(username || '[Server]', displayMessage, type);
     }
@@ -93,6 +98,39 @@ export class BotClient extends EventEmitter {
     updateStatus(status) {
         this.status = status;
         this.emit('status', { status, version: this.config.version, inventoryPort: this.inventoryPort });
+    }
+
+    async updateConfig(newConfig) {
+        const criticalFields = [
+            'host', 'port', 'version', 'auth', 'password',
+            'proxyType', 'proxyHost', 'proxyPort', 'proxyUser', 'proxyPass',
+            'realms'
+        ];
+
+        let needsRejoin = false;
+        for (const field of criticalFields) {
+            const oldVal = JSON.stringify(this.config[field]);
+            const newVal = JSON.stringify(newConfig[field]);
+            if (oldVal !== newVal) {
+                needsRejoin = true;
+                break;
+            }
+        }
+
+        // Apply new config
+        this.config = { ...this.config, ...newConfig };
+
+        // Soft updates (apply without restart)
+        this.isHeadless = !!this.config.headless;
+
+        if (needsRejoin && this.status !== 'Offline') {
+            this.log('Configuration change detected requiring rejoin...', 'warning');
+            this.rejoin();
+        } else {
+            this.log('Configuration updated', 'info');
+            // Emit status update to refresh dashboard info (like version)
+            this.updateStatus(this.status);
+        }
     }
 
     log(message, type = 'info', broadcast = true) {
@@ -260,24 +298,25 @@ export class BotClient extends EventEmitter {
 
         try {
             this.bot = mineflayer.createBot(botOptions);
+
+            // INDEPENDENT ERROR BINDING (Immediate)
+            // This ensures connection errors are caught before bindEvents
+            this.bot.on('error', (err) => {
+                let msg = err.message;
+                if (err.name === 'AggregateError' && err.errors && err.errors.length > 0) {
+                    msg = err.errors[0].message || msg;
+                }
+                this.emit('error', err);
+                this.updateStatus(`Error: ${msg}`);
+                this.log(`${this.username} connection error: ${msg}`, 'error');
+            });
+
             this.pluginManager.onBotCreated();
         } catch (err) {
             this.log(`Fatal Initialization Error: ${err.message}`, 'error');
             this.updateStatus(`Fatal Error: ${err.message}`);
             return;
         }
-
-        const startInvPort = 4000 + Math.floor(Math.random() * 1000);
-        NetworkUtils.findFreePort(startInvPort).then(port => {
-            this.inventoryPort = port;
-            try {
-                inventoryViewer(this.bot, { port: this.inventoryPort, startOnLoad: true });
-                this.log(`Web Inventory started on safe port ${this.inventoryPort}`, 'info');
-                this.updateStatus(this.status);
-            } catch (err) {
-                this.log(`Failed to start Web Inventory: ${err.message}`, 'error');
-            }
-        });
 
         this.bindEvents();
         try {
@@ -298,12 +337,30 @@ export class BotClient extends EventEmitter {
     }
 
     bindEvents() {
-        this.bot.on('spawn', () => {
+        const instance = this.bot;
+        instance.on('spawn', () => {
+            if (this.bot !== instance) return; // Ignore if this is an old instance
+
             this.reconnectAttempts = 0;
             this.updateStatus('Online');
             this.emit('spawn');
             this.log(`${this.username} spawned`, 'success');
             this.lastSpawnTime = Date.now();
+
+            // Start Web Inventory ONLY on spawn and IF NOT headless
+            if (!this.isHeadless) {
+                const startPort = this.inventoryPort || (4000 + Math.floor(Math.random() * 1000));
+                NetworkUtils.findFreePort(startPort).then(port => {
+                    this.inventoryPort = port;
+                    try {
+                        inventoryViewer(instance, { port: this.inventoryPort, startOnLoad: true });
+                        this.log(`Web Inventory started on port ${this.inventoryPort}`, 'info');
+                        this.updateStatus(this.status); // Push status to update port in UI
+                    } catch (err) {
+                        this.log(`Web Inventory error: ${err.message}`, 'error');
+                    }
+                });
+            }
 
             const autoAuth = this.featureManager.getFeature('autoauth');
             const needsAuth = autoAuth && autoAuth.enabled;
@@ -311,19 +368,22 @@ export class BotClient extends EventEmitter {
             if (needsAuth) {
                 this.log('Waiting for AutoAuth to complete before starting plugins...', 'info');
                 this.once('authCompleted', () => {
+                    if (this.bot !== instance) return;
                     this.log('AutoAuth complete! Starting plugins.', 'success');
                     this.pluginManager.onBotSpawn();
                 });
             } else {
                 this.pluginManager.onBotSpawn();
             }
-            if (this.bot.inventory) {
-                this.bot.inventory.removeAllListeners('updateSlot');
+            if (instance.inventory && !this.isHeadless) {
+                instance.inventory.removeAllListeners('updateSlot');
                 let invUpdateTimeout = null;
-                this.bot.inventory.on('updateSlot', () => {
+                instance.inventory.on('updateSlot', () => {
+                    if (this.bot !== instance) return;
                     if (invUpdateTimeout) clearTimeout(invUpdateTimeout);
                     invUpdateTimeout = setTimeout(() => {
-                        const inventory = this.bot.inventory.items().map(item => ({
+                        if (this.bot !== instance) return;
+                        const inventory = instance.inventory.items().map(item => ({
                             slot: item.slot,
                             name: item.name,
                             displayName: item.displayName,
@@ -335,28 +395,28 @@ export class BotClient extends EventEmitter {
             }
         });
 
-        this.bot.on('physicsTick', () => {
-            if (this.reconnectTimer) return;
+        instance.on('physicsTick', () => {
+            if (this.bot !== instance || this.reconnectTimer) return;
             this.pluginManager.onTick();
 
-            if (this.bot.entity) {
+            if (instance.entity && !this.isHeadless) {
                 const now = Date.now();
                 if (now - (this.lastDataEmit || 0) > 250) {
                     this.lastDataEmit = now;
                     this.emit('dataUpdate', {
-                        position: this.bot.entity.position,
-                        health: this.bot.health,
-                        food: this.bot.food,
-                        yaw: this.bot.entity.yaw,
-                        pitch: this.bot.entity.pitch,
-                        dimension: this.bot.game ? this.bot.game.dimension : 'overworld'
+                        position: instance.entity.position,
+                        health: instance.health,
+                        food: instance.food,
+                        yaw: instance.entity.yaw,
+                        pitch: instance.entity.pitch,
+                        dimension: instance.game ? instance.game.dimension : 'overworld'
                     });
                 }
             }
         });
 
-        this.bot.on('end', async () => {
-            if (this.manuallyStopped || this.reconnectTimer) return;
+        instance.on('end', async () => {
+            if (this.bot !== instance || this.manuallyStopped || this.reconnectTimer) return;
 
             const isAuto = this.config.autoReconnect === true || this.config.autoReconnect === 'true';
             if (isAuto || this.isTransferring) {
@@ -392,13 +452,15 @@ export class BotClient extends EventEmitter {
             }
         });
 
-        this.bot.on('respawn', () => {
+        instance.on('respawn', () => {
+            if (this.bot !== instance) return;
             this.log('Dimension/World change detected.', 'info');
             this.lastSpawnTime = Date.now();
             this.emitChat('[Server]', '\x1b[1;36mDIMENSION CHANGE\x1b[0m', 'chat');
         });
 
-        this.bot.on('kicked', (reason) => {
+        instance.on('kicked', (reason) => {
+            if (this.bot !== instance) return;
             const reasonStr = this.parseReason(reason);
             this.log(`Kicked: ${reasonStr}`, 'error');
             this.updateStatus('Kicked');
@@ -408,7 +470,8 @@ export class BotClient extends EventEmitter {
             }
         });
 
-        this.bot.on('error', (err) => {
+        instance.on('error', (err) => {
+            if (this.bot !== instance) return;
             if (err.code === 'ECONNRESET' && this.lastSpawnTime && (Date.now() - this.lastSpawnTime) < 10000) {
                 this.log('Connection reset during server transfer, reconnecting...', 'info');
                 this.isTransferring = true;
@@ -427,10 +490,11 @@ export class BotClient extends EventEmitter {
 
         let playerUpdateTimeout = null;
         const emitPlayerList = () => {
+            if (this.bot !== instance || this.isHeadless) return;
             if (playerUpdateTimeout) clearTimeout(playerUpdateTimeout);
             playerUpdateTimeout = setTimeout(() => {
-                if (!this.bot || !this.bot.players) return;
-                const players = Object.values(this.bot.players).map(p => ({
+                if (this.bot !== instance || !instance.players) return;
+                const players = Object.values(instance.players).map(p => ({
                     username: p.username,
                     uuid: p.uuid,
                     ping: p.ping
@@ -439,10 +503,11 @@ export class BotClient extends EventEmitter {
             }, 500);
         };
 
-        this.bot.on('playerJoined', emitPlayerList);
-        this.bot.on('playerLeft', emitPlayerList);
-        this.bot.on('spawn', emitPlayerList);
-        this.bot.on('message', (jsonMsg, position) => {
+        instance.on('playerJoined', emitPlayerList);
+        instance.on('playerLeft', emitPlayerList);
+        instance.on('spawn', emitPlayerList);
+        instance.on('message', (jsonMsg, position) => {
+            if (this.bot !== instance) return;
             if (position === 'game_info') return;
 
             const getBestAnsi = (comp) => {
@@ -464,22 +529,24 @@ export class BotClient extends EventEmitter {
         });
 
         const handleRichEvent = (username, message, type, jsonMsg) => {
+            if (this.bot !== instance) return;
             const fullAnsi = jsonMsg.unsigned?.toAnsi?.() || jsonMsg.toAnsi();
             this.emitChat('[Server]', fullAnsi, type, fullAnsi);
         };
 
-        this.bot.on('chat', (username, message, translate, jsonMsg) => {
+        instance.on('chat', (username, message, translate, jsonMsg) => {
             handleRichEvent(username, message, 'chat', jsonMsg);
         });
 
-        this.bot.on('whisper', (username, message, translate, jsonMsg) => {
+        instance.on('whisper', (username, message, translate, jsonMsg) => {
             handleRichEvent(`[WHISPER] ${username}`, message, 'whisper', jsonMsg);
         });
 
-        this.bot.on('death', () => {
+        instance.on('death', () => {
+            if (this.bot !== instance) return;
             let posStr = 'unknown location';
-            if (this.bot.entity) {
-                const pos = this.bot.entity.position;
+            if (instance.entity) {
+                const pos = instance.entity.position;
                 posStr = `${Math.floor(pos.x)}, ${Math.floor(pos.y)}, ${Math.floor(pos.z)}`;
             }
             this.updateStatus(`Died at ${posStr}`);
@@ -491,13 +558,15 @@ export class BotClient extends EventEmitter {
             }
         });
 
-        this.bot.on('playerJoined', (player) => {
+        instance.on('playerJoined', (player) => {
+            if (this.bot !== instance) return;
             if (player.username !== this.username) {
                 this.log(`[+] ${player.username} joined the game`, 'success');
             }
         });
 
-        this.bot.on('playerLeft', (player) => {
+        instance.on('playerLeft', (player) => {
+            if (this.bot !== instance) return;
             if (player.username !== this.username) {
                 this.log(`[-] ${player.username} left the game`, 'error');
             }
@@ -517,10 +586,76 @@ export class BotClient extends EventEmitter {
             clearTimeout(this.reconnectTimer);
             this.reconnectTimer = null;
         }
+        this.disablePacketDebug();
         if (this.bot) {
-            this.bot.quit();
+            try {
+                if (typeof this.bot.quit === 'function') {
+                    this.bot.quit();
+                } else if (typeof this.bot.end === 'function') {
+                    this.bot.end();
+                }
+            } catch (err) {
+                this.log(`Error while quitting bot: ${err.message}`, 'error');
+            }
+            this.bot = null;
         }
         this.log(`${this.username} manually stopped.`, 'warning');
         this.updateStatus('Disconnected');
+    }
+
+    enablePacketDebug() {
+        if (this.packetDebugEnabled || !this.bot || !this.bot._client) return;
+        this.packetDebugEnabled = true;
+        let packetCount = 0;
+        const MAX_PER_SECOND = 50;
+        let resetInterval = setInterval(() => { packetCount = 0; }, 1000);
+        this._packetResetInterval = resetInterval;
+
+        this._packetListener = (data, meta) => {
+            if (packetCount >= MAX_PER_SECOND) return;
+            packetCount++;
+
+            const summary = {};
+            if (data && typeof data === 'object') {
+                for (const key of Object.keys(data).slice(0, 8)) {
+                    const val = data[key];
+                    if (val === null || val === undefined) {
+                        summary[key] = null;
+                    } else if (typeof val === 'object' && val.x !== undefined) {
+                        summary[key] = `{x:${val.x?.toFixed?.(1) ?? val.x}, y:${val.y?.toFixed?.(1) ?? val.y}, z:${val.z?.toFixed?.(1) ?? val.z}}`;
+                    } else if (typeof val === 'object') {
+                        const subs = Object.keys(val).slice(0, 3).map(k => `${k}:${val[k] !== null && typeof val[k] === 'object' ? '[Obj]' : RegExp('function').test(val[k]) ? 'fn()' : val[k]}`).join(',');
+                        summary[key] = `{${subs}}`;
+                    } else if (typeof val === 'string' && val.length > 50) {
+                        summary[key] = val.substring(0, 50) + '...';
+                    } else {
+                        summary[key] = val;
+                    }
+                }
+            }
+
+            this.emit('packetDebug', {
+                direction: 'S→C',
+                name: meta.name,
+                state: meta.state,
+                size: JSON.stringify(data).length,
+                summary,
+                timestamp: Date.now()
+            });
+        };
+        this.bot._client.on('packet', this._packetListener);
+        this.log('Packet Debugger enabled', 'success');
+    }
+
+    disablePacketDebug() {
+        this.packetDebugEnabled = false;
+        if (this._packetResetInterval) {
+            clearInterval(this._packetResetInterval);
+            this._packetResetInterval = null;
+        }
+        if (this.bot && this.bot._client && this._packetListener) {
+            this.bot._client.removeListener('packet', this._packetListener);
+            this._packetListener = null;
+        }
     }
 }

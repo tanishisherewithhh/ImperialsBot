@@ -6,6 +6,13 @@ class BotManager extends EventEmitter {
     constructor() {
         super();
         this.bots = new Map();
+        this.globalWatchlist = [];
+        this.isGlobalHeadless = false;
+    }
+
+    setGlobalHeadless(enabled) {
+        this.isGlobalHeadless = !!enabled;
+        this.emit('globalHeadlessChanged', this.isGlobalHeadless);
     }
 
     async createBot(config, save = true, autoStart = true) {
@@ -62,6 +69,19 @@ class BotManager extends EventEmitter {
             this.emit('pluginsUpdated', { username: config.username, plugins: bot.pluginManager.getAllPlugins() });
         });
 
+        bot.on('watchlistAlert', (data) => {
+            this.emit('watchlistAlert', { username: config.username, ...data });
+        });
+
+        bot.on('packetDebug', (data) => {
+            this.emit('packetDebug', { username: config.username, ...data });
+        });
+
+        const watchlist = bot.featureManager.getFeature('watchlist');
+        if (watchlist) {
+            watchlist.updateWatchlist(this.globalWatchlist);
+        }
+
         if (autoStart) {
             bot.init();
         }
@@ -117,7 +137,7 @@ class BotManager extends EventEmitter {
         }
 
         await ConfigLoader.addBotConfig(config);
-        bot.config = config;
+        await bot.updateConfig(config);
     }
 
     updateAllNavigationProfiles(profileName) {
@@ -125,6 +145,16 @@ class BotManager extends EventEmitter {
             const nav = bot.featureManager.getFeature('navigation');
             if (nav) {
                 nav.setProfile(profileName);
+            }
+        }
+    }
+
+    updateAllWatchlists(list) {
+        this.globalWatchlist = list;
+        for (const bot of this.bots.values()) {
+            const watchlist = bot.featureManager.getFeature('watchlist');
+            if (watchlist) {
+                watchlist.updateWatchlist(list);
             }
         }
     }

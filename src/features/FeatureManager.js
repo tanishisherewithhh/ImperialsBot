@@ -10,6 +10,7 @@ import { Spammer } from './Spammer.js';
 import { Discord } from './Discord.js';
 import { Security } from './Security.js';
 import { AnalyticsManager } from './AnalyticsManager.js';
+import { Watchlist } from './Watchlist.js';
 
 export class FeatureManager {
     constructor(botClient) {
@@ -47,6 +48,7 @@ export class FeatureManager {
         this.registerFeature('discord', Discord);
         this.registerFeature('security', Security);
         this.registerFeature('analytics', AnalyticsManager);
+        this.registerFeature('watchlist', Watchlist);
     }
 
     getFeature(name) {

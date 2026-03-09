@@ -98,10 +98,53 @@
                 </div>
 
                 <div class="stats-panel" id="statsPanel">
-                    <div class="stat-item">Pos: <span id="posStat">0, 0, 0</span></div>
-                    <div class="stat-item" id="dimPosStat" style="opacity: 0.7; font-size: 0.85em;"></div>
-                    <div class="stat-item">Health: <span id="healthStat">20</span></div>
-                    <div class="stat-item">Food: <span id="foodStat">20</span></div>
+                    <div class="stat-column">
+                        <div class="stat-group">
+                            <span class="stat-label">OVERWORLD</span>
+                            <span id="owPosStat" class="stat-value">0, 0, 0</span>
+                        </div>
+                        <div class="stat-group">
+                            <span class="stat-label">NETHER</span>
+                            <span id="netherPosStat" class="stat-value">0, 0, 0</span>
+                        </div>
+                    </div>
+                    <div class="stat-column">
+                        <div class="stat-bar-group">
+                            <div class="stat-bar-header">
+                                <div class="stat-icon-label">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                                        fill="none" stroke="#ff4b2b" stroke-width="2.5" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <path
+                                            d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l8.78-8.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z">
+                                        </path>
+                                    </svg>
+                                    <span>HEALTH</span>
+                                </div>
+                                <span id="healthStat" class="stat-numeric">20</span>
+                            </div>
+                            <div class="stat-bar-container">
+                                <div id="healthBarFill" class="stat-bar-fill health" style="width: 100%;"></div>
+                            </div>
+                        </div>
+                        <div class="stat-bar-group">
+                            <div class="stat-bar-header">
+                                <div class="stat-icon-label">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                                        fill="none" stroke="#f09819" stroke-width="2.5" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <path d="M18 8a6 6 0 0 1-7.74 5.74L7 17l-3-1 1-3 3.26-3.26A6 6 0 1 1 18 8z">
+                                        </path>
+                                    </svg>
+                                    <span>FOOD</span>
+                                </div>
+                                <span id="foodStat" class="stat-numeric">20</span>
+                            </div>
+                            <div class="stat-bar-container">
+                                <div id="foodBarFill" class="stat-bar-fill food" style="width: 100%;"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </header>
 
@@ -166,6 +209,8 @@
                         <button class="tab-btn active" data-tab="controlsPane">Controls</button>
                         <button class="tab-btn" data-tab="analyticsPane">Analytics</button>
                         <button class="tab-btn" data-tab="bulkPane">Bulk</button>
+                        <button class="tab-btn" data-tab="watchlistPane">Watchlist</button>
+                        <button class="tab-btn" data-tab="devPane">Dev</button>
                     </div>
 
                     <div id="controlsPane" class="tab-pane active">
@@ -337,6 +382,76 @@
                         </div>
                     </div>
 
+                    <div id="watchlistPane" class="tab-pane">
+                        <div class="card watchlist-card">
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <h3 style="margin: 0;">Player Watchlist</h3>
+                                <span class="badge" id="watchlistCount">0 Players</span>
+                            </div>
+                            <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 20px;">
+                                Get notified when these players join or leave the server. Notifications are sent to the
+                                dashboard and Discord.
+                            </p>
+
+                            <div class="watchlist-input-group" style="display: flex; gap: 10px; margin-bottom: 20px;">
+                                <input type="text" id="watchlistInput" placeholder="Enter player name..."
+                                    style="flex: 1; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); color: var(--text-primary); padding: 10px; border-radius: 8px; font-family: inherit;">
+                                <button id="addWatchlistBtn" class="btn action-btn"
+                                    style="min-width: 80px;">Add</button>
+                            </div>
+
+                            <div id="watchlistContainer" class="watchlist-container"
+                                style="display: flex; flex-wrap: wrap; gap: 8px;">
+                                <div
+                                    style="color: var(--text-muted); font-size: 0.9rem; width: 100%; text-align: center; padding: 20px;">
+                                    No players in watchlist</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="devPane" class="tab-pane">
+                        <div class="card" style="flex: 1; display: flex; flex-direction: column;">
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <h3 style="margin: 0;">Packet Debugger</h3>
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <input type="text" id="packetFilter" placeholder="Filter packets..."
+                                        style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); color: var(--text-primary); padding: 6px 10px; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; width: 180px;">
+                                    <button id="clearPacketsBtn" class="btn action-btn"
+                                        style="padding: 5px 12px; font-size: 0.8rem;">Clear</button>
+                                    <button id="togglePacketDebugBtn" class="btn toggle-btn"
+                                        style="padding: 5px 12px; font-size: 0.8rem;">Start Capture</button>
+                                </div>
+                            </div>
+                            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">
+                                Captures raw Minecraft packets for the selected bot. High traffic — use filters to
+                                narrow results.
+                            </p>
+                            <div id="packetStream"
+                                style="flex: 1; overflow-y: auto; background: rgba(0,0,0,0.3); border-radius: 8px; padding: 10px; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; max-height: 500px; min-height: 300px; position: relative;">
+                                <div id="packetHeader"
+                                    style="display: none; padding: 5px 6px; border-bottom: 2px solid rgba(255,255,255,0.1); gap: 10px; align-items: baseline; font-weight: bold; color: var(--text-muted); position: sticky; top: -10px; background: rgba(15,23,42,0.9); z-index: 10; backdrop-filter: blur(4px);">
+                                    <span style="min-width: 60px;">Time</span>
+                                    <span style="min-width: 30px;">Dir</span>
+                                    <span style="min-width: 130px;">Packet Name</span>
+                                    <span style="min-width: 45px;">Size</span>
+                                    <span style="flex: 1;">Data Summary</span>
+                                </div>
+                                <div id="packetPlaceholder"
+                                    style="color: var(--text-muted); text-align: center; padding: 40px;">Click "Start
+                                    Capture" to begin intercepting packets</div>
+                            </div>
+                            <div style="margin-top: 10px; display: flex; align-items: center; gap: 8px;">
+                                <label class="checkbox-label"
+                                    style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.8rem; color: var(--text-muted);">
+                                    <input type="checkbox" id="packetAutoscroll" checked>
+                                    <span>Autoscroll</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
                     <div id="bulkPane" class="tab-pane">
                         <div class="card bulk-card">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -354,22 +469,47 @@
                                     All</button>
                             </div>
 
-                            <div class="card" style="margin-bottom: 20px; background: rgba(0,0,0,0.2);">
-                                <h3>Navigation Controller</h3>
-                                <div class="nav-container" style="flex-wrap: wrap; margin-top: 10px;">
-                                    <input type="number" id="bulkNavX" class="nav-input" placeholder="X" step="1">
-                                    <input type="number" id="bulkNavY" class="nav-input" placeholder="Y" step="1">
-                                    <input type="number" id="bulkNavZ" class="nav-input" placeholder="Z" step="1">
-                                    <button class="nav-btn go" id="bulkNavBtn" style="width: 100%;">Go All</button>
+                            <div class="card" style="margin-bottom: 20px; background: rgba(0,0,0,0.2); padding: 12px;">
+                                <div
+                                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                    <h3 style="margin: 0; font-size: 0.9rem;">Navigation Controller</h3>
+                                </div>
+                                <div class="nav-container" style="display: flex; gap: 8px; align-items: center;">
+                                    <input type="number" id="bulkNavX" class="nav-input" placeholder="X"
+                                        style="flex: 1; min-width: 0;">
+                                    <input type="number" id="bulkNavY" class="nav-input" placeholder="Y"
+                                        style="flex: 1; min-width: 0;">
+                                    <input type="number" id="bulkNavZ" class="nav-input" placeholder="Z"
+                                        style="flex: 1; min-width: 0;">
+                                    <button class="nav-btn go" id="bulkNavBtn"
+                                        style="padding: 8px 12px; font-size: 0.75rem; white-space: nowrap;">GO
+                                        ALL</button>
                                 </div>
                             </div>
 
-                            <div class="card" style="margin-bottom: 20px; background: rgba(0,0,0,0.2);">
-                                <h3>Bulk Chat</h3>
-                                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            <div class="card" style="margin-bottom: 20px; background: rgba(0,0,0,0.2); padding: 12px;">
+                                <div
+                                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <h3 style="margin: 0; font-size: 0.9rem;">Sequential Chat</h3>
+                                    <button class="nav-btn go" id="bulkSequentialChatBtn"
+                                        style="padding: 0px 12px; font-size: 0.75rem;">Send</button>
+                                </div>
+                                <p
+                                    style="font-size: 0.7rem; color: var(--text-muted); margin-bottom: 8px; line-height: 1.2;">
+                                    Selected bots will coordinate to send parts of this message one by one.
+                                </p>
+                                <textarea id="bulkSequentialChatInput" class="nav-input"
+                                    placeholder="Type a long message to be split among bots..."
+                                    style="width: 100%; height: 45px; resize: none; padding: 8px; font-size: 0.8rem;"></textarea>
+                            </div>
+
+                            <div class="card" style="margin-bottom: 20px; background: rgba(0,0,0,0.2); padding: 12px;">
+                                <h3 style="margin: 0 0 10px 0; font-size: 0.9rem;">Bulk Chat</h3>
+                                <div style="display: flex; gap: 8px;">
                                     <input type="text" id="bulkChatInput" class="nav-input"
-                                        placeholder="Message to all bots..." style="flex: 1;">
-                                    <button class="nav-btn go" id="bulkChatBtn">Send</button>
+                                        placeholder="Message to all bots..." style="flex: 1; font-size: 0.8rem;">
+                                    <button class="nav-btn go" id="bulkChatBtn"
+                                        style="padding: 6px 12px; font-size: 0.75rem;">Send</button>
                                 </div>
                             </div>
 
@@ -518,6 +658,10 @@
                 <div class="form-group checkbox-group">
                     <label><input type="checkbox" name="autoReconnect" checked> Auto Reconnect</label>
                 </div>
+                <div class="form-group checkbox-group">
+                    <label><input type="checkbox" name="headless"> Headless Mode <span
+                            style="font-size:0.75rem; color:var(--text-muted)">(No UI updates)</span></label>
+                </div>
 
                 <div class="modal-actions">
                     <button type="button" id="cancelAddBot" class="btn-secondary">Cancel</button>
@@ -576,9 +720,15 @@
                         <span>Assign Random Proxy from List on Bot Creation/Rejoin</span>
                     </label>
                 </div>
-                <div class="form-group checkbox-group">
-                    <label><input type="checkbox" id="settingLowPerformance" name="lowPerformanceMode"> Low Performance
+                <div class="form-group checkbox-group"
+                    style="display: flex; justify-content: space-between; align-items: center;">
+                    <label style="flex: 1;"><input type="checkbox" id="settingLowPerformance" name="lowPerformanceMode">
+                        Low Performance
                         Mode (Disables animations/blur)</label>
+                    <button type="button" id="holoBtn" title="Holographic Mode" class="btn compact"
+                        style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 5px 10px; font-size: 0.75rem; border-radius: 6px;">
+                        Holographic Mode
+                    </button>
                 </div>
                 <div class="modal-actions">
                     <button type="button" id="closeSettingsBtn" class="btn-secondary">Close</button>
@@ -720,6 +870,10 @@
                 <div class="form-group checkbox-group">
                     <label><input type="checkbox" name="autoReconnect" checked> Auto Reconnect</label>
                 </div>
+                <div class="form-group checkbox-group">
+                    <label><input type="checkbox" name="headless"> Headless Mode <span
+                            style="font-size:0.75rem; color:var(--text-muted)">(No UI updates)</span></label>
+                </div>
 
                 <div class="modal-actions">
                     <button type="button" id="cancelEditBot" class="btn-secondary">Cancel</button>
@@ -813,6 +967,10 @@
                 <div class="form-group checkbox-group">
                     <label><input type="checkbox" name="autoReconnect" checked> Auto Reconnect</label>
                 </div>
+                <div class="form-group checkbox-group">
+                    <label><input type="checkbox" name="headless"> Headless Mode <span
+                            style="font-size:0.75rem; color:var(--text-muted)">(No UI updates)</span></label>
+                </div>
 
                 <div class="modal-actions">
                     <button type="button" id="cancelBulkGenerate" class="btn-secondary">Cancel</button>
@@ -840,6 +998,28 @@
         </div>
     </div>
 
+    <button class="holo-exit-btn" id="holoExitBtn">✕ Exit Holographic</button>
+
+    <div id="headlessOverlay" class="headless-overlay">
+        <div class="headless-content">
+            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none"
+                stroke="#ff9f43" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path
+                    d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19">
+                </path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+            </svg>
+            <h1>Global Headless Mode Active</h1>
+            <p>The dashboard is currently <strong>shutdown</strong> to save system resources.</p>
+            <p>Your bots are running in the background.</p>
+            <div class="cli-notice">
+                <span>Check your <strong>Terminal (Console)</strong> to monitor status.</span>
+                <code>Type "gui" in CMD to restore the dashboard.</code>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
     <script src="app.js"></script>
 </body>
 
