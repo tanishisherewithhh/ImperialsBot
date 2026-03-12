@@ -89,9 +89,6 @@ For high-density botting, you can turn off the dashboard entirely:
 2. Type `headless`. 
 The dashboard UI will stop receiving updates to save maximum CPU and RAM. Type `gui` in the terminal to restore it.
 
-**Holographic Mode**
-Hides the sidebars for a cleaner, floating-panel look. This can be toggled in the Global Settings.
-
 **Low Performance Mode**
 Reduces the update frequency of stats and graphs to save resources on slower computers.
 
