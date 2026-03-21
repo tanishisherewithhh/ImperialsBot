@@ -495,9 +495,10 @@ body {
 
 .control-group {
     display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
+    gap: 8px;
+    margin-bottom: 12px;
     flex-wrap: wrap;
+    align-items: center;
 }
 
 .movement-controls {
@@ -689,13 +690,35 @@ input[type=range] {
     color: white;
 }
 
+.success-btn {
+    background: var(--success);
+    color: white;
+}
+
 .warning-btn {
     background: #f97316;
     color: white;
 }
 
+.btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
 .btn:hover {
     opacity: 0.9;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.btn:active {
+    transform: translateY(0);
+    opacity: 1;
 }
 
 .btn.active {

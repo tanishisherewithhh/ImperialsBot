@@ -26,3 +26,4 @@ settings.json
 tmp/
 public/temp/
 src/plugins/ServerSwitch.js
+logs/

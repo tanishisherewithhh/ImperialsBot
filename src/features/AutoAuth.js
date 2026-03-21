@@ -32,6 +32,10 @@ export class AutoAuth extends BaseFeature {
     }
 
     async handleAuth() {
+        const now = Date.now();
+        if (this.lastAuth && now - this.lastAuth < 5000) return;
+        this.lastAuth = now;
+
         if (!this.enabled) return;
         if (!this.botClient.bot || !this.botClient.bot._client) return;
 
@@ -42,7 +46,7 @@ export class AutoAuth extends BaseFeature {
 
         try {
             const settings = await ConfigLoader.loadSettings() || {};
-            let registerCmdStr = settings.autoAuthRegister || '/register {password}';
+            let registerCmdStr = settings.autoAuthRegister || '/register {password} {password}';
             let loginCmdStr = settings.autoAuthLogin || '/login {password}';
 
             const registerCmd = registerCmdStr.replace(/{password}/g, password);

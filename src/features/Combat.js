@@ -1,5 +1,6 @@
 import { BaseFeature } from './BaseFeature.js';
 import { createRequire } from 'module';
+import { botManager } from '../core/BotManager.js';
 const require = createRequire(import.meta.url);
 const { plugin: pvp } = require('mineflayer-pvp');
 
@@ -59,7 +60,11 @@ export class Combat extends BaseFeature {
 
     matchesFilter(entity) {
         if (!entity || entity === this.botClient.bot.entity) return false;
-        if (entity.type === 'player' && this.killauraConfig.attackPlayers) return true;
+        if (entity.type === 'player') {
+            const name = entity.username || '';
+            if (botManager.getBot(name) || botManager.globalFriends.includes(name)) return false;
+            if (this.killauraConfig.attackPlayers) return true;
+        }
         if (entity.type === 'mob') {
             const name = entity.name || '';
             if (HOSTILE_MOBS.has(name) && this.killauraConfig.attackHostileMobs) return true;

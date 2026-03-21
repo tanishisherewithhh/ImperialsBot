@@ -211,6 +211,7 @@
                         <button class="tab-btn" data-tab="bulkPane">Bulk</button>
                         <button class="tab-btn" data-tab="watchlistPane">Watchlist</button>
                         <button class="tab-btn" data-tab="devPane">Dev</button>
+                        <button class="tab-btn" data-tab="swarmPane">Swarm</button>
                     </div>
 
                     <div id="controlsPane" class="tab-pane active">
@@ -228,8 +229,9 @@
                             <div class="control-group">
                                 <button class="btn action-btn" id="rejoinBtn">Join</button>
                                 <button class="btn danger-btn" id="suicideBtn">Suicide</button>
+                                <button class="btn success-btn" id="respawnBtn">Respawn</button>
                                 <button class="btn warning-btn" data-action="stop">Disconnect</button>
-                                <button class="btn danger-btn" data-action="delete">Delete Bot</button>
+                                <button class="btn danger-btn" data-action="delete">Delete</button>
                             </div>
 
                             <div class="control-group">
@@ -369,11 +371,21 @@
 
                     <div id="analyticsPane" class="tab-pane">
                         <div class="card analytics-card" style="flex: 1;">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <h3>Live Analytics</h3>
-                                <button id="exportAnalyticsBtn" class="btn action-btn small"
-                                    style="translate: 100% 0%; margin-left: 140px; margin-right: 120px; margin-bottom: 16px; padding: 3px 6px; font-size: 0.8rem;">Export
-                                    CSV</button>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                <h3 style="margin: 0;">Live Analytics</h3>
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <select id="analyticsTimeRange" style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); color: var(--text-primary); padding: 5px; border-radius: 4px; font-size: 0.8rem;">
+                                        <option value="60">Last 1 Minute</option>
+                                        <option value="300" selected>Last 5 Minutes</option>
+                                        <option value="1800">Last 30 Minutes</option>
+                                        <option value="3600">Last 1 Hour</option>
+                                        <option value="21600">Last 6 Hours</option>
+                                        <option value="86400">Last 24 Hours</option>
+                                    </select>
+                                    <button id="exportAnalyticsBtn" class="btn action-btn small"
+                                        style="padding: 3px 6px; font-size: 0.8rem;">Export
+                                        CSV</button>
+                                </div>
                             </div>
                             <div id="analyticsChartsGrid"
                                 style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; align-content: start; flex: 1; overflow-y: auto; padding-right: 5px;">
@@ -448,6 +460,28 @@
                                     <input type="checkbox" id="packetAutoscroll" checked>
                                     <span>Autoscroll</span>
                                 </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="swarmPane" class="tab-pane">
+                        <div class="card swarm-card">
+                            <h3 style="margin-bottom: 15px; border-bottom: 1px solid var(--glass-border); padding-bottom: 10px;">Swarm Coordination</h3>
+                            <div style="display: flex; flex-direction: column; gap: 15px;">
+                                <div>
+                                    <label style="display: block; margin-bottom: 5px; color: var(--text-muted); font-size: 0.9rem;">Swarm Role</label>
+                                    <select id="swarmRoleSelect" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); color: white; border-radius: 4px;">
+                                        <option value="none" selected>Independent (None)</option>
+                                        <option value="leader">Leader</option>
+                                        <option value="follower">Follower</option>
+                                    </select>
+                                </div>
+                                
+                                <div id="leaderInputGroup" style="display: none;">
+                                    <label style="display: block; margin-bottom: 5px; color: var(--text-muted); font-size: 0.9rem;">Leader Username</label>
+                                    <input type="text" id="swarmLeaderInput" placeholder="Enter leader's exactly username..." style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); color: white; border-radius: 4px;">
+                                </div>
+
+                                <button id="applySwarmRoleBtn" class="btn action-btn">Apply Swarm Role</button>
                             </div>
                         </div>
                     </div>
@@ -750,12 +784,17 @@
                     </select>
                 </div>
                 <div class="form-group">
+                    <label>Global Friends List</label>
+                    <textarea id="settingGlobalFriends" name="globalFriends" rows="3" placeholder="friend1, friend2, friend3..." style="width: 100%; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); color: var(--text-main); padding: 8px; border-radius: 6px; font-size: 0.85rem; resize: vertical;"></textarea>
+                    <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Comma-separated list of usernames to ignore in combat and security alerts. Managed bots are implicitly friends.</p>
+                </div>
+                <div class="form-group">
                     <label>AutoAuth Register Command</label>
                     <input type="text" id="settingAutoAuthRegister" name="autoAuthRegister"
-                        placeholder="/register {password}">
+                        placeholder="/register {password} {password}">
                     <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Use
                         <code>{password}</code> to represent the bot's password. (Default:
-                        <code>/register {password}</code>)
+                        <code>/register {password} {password}</code>)
                     </p>
                 </div>
                 <div class="form-group">
@@ -778,10 +817,15 @@
                     </label>
                 </div>
                 <div class="form-group checkbox-group"
-                    style="display: flex; justify-content: space-between; align-items: center;">
-                    <label style="flex: 1;"><input type="checkbox" id="settingLowPerformance" name="lowPerformanceMode">
-                        Low Performance
-                        Mode (Disables animations/blur)</label>
+                    style="display: flex; flex-direction: column; gap: 10px;">
+                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 5px;">
+                        <input type="checkbox" id="settingGlobalAnalytics" name="globalAnalytics" checked>
+                        <span>Enable Analytics (Tracking TPS/RAM/CPU/Position)</span>
+                    </label>
+                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 5px;">
+                        <input type="checkbox" id="settingLowPerformance" name="lowPerformanceMode">
+                        <span>Low Performance Mode (Disables animations/blur)</span>
+                    </label>
                 </div>
                 <div class="modal-actions">
                     <button type="button" id="closeSettingsBtn" class="btn-secondary">Close</button>

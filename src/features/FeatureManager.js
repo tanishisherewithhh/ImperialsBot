@@ -11,6 +11,7 @@ import { Discord } from './Discord.js';
 import { Security } from './Security.js';
 import { AnalyticsManager } from './AnalyticsManager.js';
 import { Watchlist } from './Watchlist.js';
+import { Swarm } from './Swarm.js';
 
 export class FeatureManager {
     constructor(botClient) {
@@ -49,6 +50,7 @@ export class FeatureManager {
         this.registerFeature('security', Security);
         this.registerFeature('analytics', AnalyticsManager);
         this.registerFeature('watchlist', Watchlist);
+        this.registerFeature('swarm', Swarm);
     }
 
     getFeature(name) {

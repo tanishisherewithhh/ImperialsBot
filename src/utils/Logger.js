@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import zlib from 'zlib';
 
 export class Logger {
     static logFile = path.resolve(process.cwd(), 'log.txt');
@@ -33,13 +34,68 @@ export class Logger {
     }
 
 
-    static initGlobalLogging() {
-        // Truncate the log file on every startup
+    static rotateLog(filePath) {
+        if (!fs.existsSync(filePath)) return;
         try {
-            fs.writeFileSync(this.logFile, '', 'utf8');
+            const stats = fs.statSync(filePath);
+            if (stats.size > 0) { // Rotate if there's any content
+                const timestamp = new Date().toISOString().replace(/:/g, '-').replace(/\..+/, '');
+                const parsed = path.parse(filePath);
+                const logsDir = path.join(parsed.dir, 'logs');
+                if (!fs.existsSync(logsDir)) {
+                    fs.mkdirSync(logsDir, { recursive: true });
+                }
+                const archivePath = path.join(logsDir, `${parsed.name}_${timestamp}.gz`);
+
+                const gzip = zlib.createGzip();
+                const source = fs.createReadStream(filePath);
+                const destination = fs.createWriteStream(archivePath);
+
+                source.pipe(gzip).pipe(destination).on('finish', () => {
+                    fs.writeFileSync(filePath, '', 'utf8');
+                    if (this.originalConsole && this.originalConsole.log) {
+                        this.originalConsole.log(`Rotated log: ${archivePath}`);
+                    }
+                }).on('error', (err) => {
+                    if (this.originalConsole && this.originalConsole.error) {
+                        this.originalConsole.error(`Failed to compress log ${filePath}:`, err.message);
+                    }
+                });
+            }
         } catch (err) {
-            this.originalConsole.error('Failed to truncate log.txt:', err.message);
+            if (this.originalConsole && this.originalConsole.error) {
+                this.originalConsole.error(`Failed to rotate log ${filePath}:`, err.message);
+            }
         }
+    }
+
+    static cleanupLogs() {
+        try {
+            const logsDir = path.join(process.cwd(), 'logs');
+            if (!fs.existsSync(logsDir)) return;
+            const files = fs.readdirSync(logsDir);
+            const now = Date.now();
+            const MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
+            for (const file of files) {
+                const filePath = path.join(logsDir, file);
+                const stats = fs.statSync(filePath);
+                if (now - stats.mtimeMs > MAX_AGE) {
+                    fs.unlinkSync(filePath);
+                    if (this.originalConsole && this.originalConsole.log) {
+                        this.originalConsole.log(`Cleaned up old log: ${file}`);
+                    }
+                }
+            }
+        } catch (err) {
+            if (this.originalConsole && this.originalConsole.error) {
+                this.originalConsole.error(`Failed to clean up logs:`, err.message);
+            }
+        }
+    }
+
+    static initGlobalLogging() {
+        this.cleanupLogs();
+        this.rotateLog(this.logFile);
 
         console.log = (...args) => {
             this.originalConsole.log(...args);

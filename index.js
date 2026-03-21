@@ -3,6 +3,7 @@ import { SocketServer } from './src/server/SocketServer.js';
 import { botManager } from './src/core/BotManager.js';
 import { ConfigLoader } from './src/config/ConfigLoader.js';
 import { Logger } from './src/utils/Logger.js';
+import { AuditLogger } from './src/utils/AuditLogger.js';
 import readline from 'readline';
 
 const start = async () => {
@@ -19,12 +20,9 @@ const start = async () => {
         }
 
         Logger.originalConsole.error('UNCAUGHT EXCEPTION:', err);
-        Logger.log(`UNCAUGHT EXCEPTION: ${err.stack || err.message}`, 'CRITICAL');
-        // We don't exit here to keep other bots running, but this is a serious error
-    });
+        Logger.log(`UNCAUGHT EXCEPTION: ${err.stack || err.message}`, 'CRITICAL');    });
 
     process.on('unhandledRejection', (reason, promise) => {
-        // AggregateError (ETIMEDOUT) is often handled at the bot level but can still bubble up
         const isTimeout = reason && (reason.code === 'ETIMEDOUT' || reason.name === 'AggregateError');
 
         if (isTimeout) {
@@ -86,8 +84,18 @@ const start = async () => {
     console.log('\x1b[36mImperialsBot CLI Ready. Type "help" for commands.\x1b[0m');
     rl.prompt();
 
+    AuditLogger.init();
+
     rl.on('line', async (line) => {
-        const parts = line.trim().split(/\s+/);
+        const trimmed = line.trim();
+        if (!trimmed) {
+            rl.prompt();
+            return;
+        }
+
+        AuditLogger.log('CLI', 'admin', `Command executed: ${trimmed}`);
+
+        const parts = trimmed.split(/\s+/);
         const cmd = parts[0]?.toLowerCase();
         const args = parts.slice(1);
 

@@ -1,6 +1,5 @@
 const socket = io();
 
-
 let currentBot = null;
 let currentTab = 'controls';
 let bots = new Map();
@@ -9,6 +8,8 @@ let spammerEnabled = false;
 let lowPerformanceEnabled = false;
 let chatVisible = true;
 let watchlist = [];
+const step = 3;
+
 
 const chatToggleBtn = document.getElementById('chatToggleBtn');
 if (chatToggleBtn) {
@@ -27,7 +28,6 @@ if (chatToggleBtn) {
     };
 }
 
-
 const keyMap = {
     'w': 'forward',
     's': 'back',
@@ -38,12 +38,10 @@ const keyMap = {
     'control': 'sprint'
 };
 
-
 function isTyping() {
     const el = document.activeElement;
     return el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT';
 }
-
 
 const botList = document.getElementById('botList');
 const connectionStatus = document.getElementById('connectionStatus');
@@ -74,6 +72,7 @@ const spammerAppend = document.getElementById('spammerAppend');
 const spammerLen = document.getElementById('spammerLen');
 
 const suicideBtn = document.getElementById('suicideBtn');
+const respawnBtn = document.getElementById('respawnBtn');
 const rejoinBtn = document.getElementById('rejoinBtn');
 const viewModeBtn = document.getElementById('viewModeBtn');
 
@@ -158,10 +157,6 @@ function showNotification(message, type = 'info') {
         setTimeout(() => notif.remove(), 300);
     }, 3000);
 }
-
-
-
-
 
 socket.on('connect', () => {
     connectionStatus.style.background = '#22c55e';
@@ -322,10 +317,7 @@ socket.on('logs', (payload) => {
     const div = document.createElement('div');
     div.className = `chat-message ${type}`;
 
-
-
     const time = new Date().toLocaleTimeString();
-
 
     const timeSpan = document.createElement('span');
     timeSpan.style.opacity = '0.5';
@@ -884,11 +876,6 @@ socket.on('notification', (data) => {
     showNotification(data.message, data.type);
 });
 
-
-
-
-
-
 function selectBot(username) {
     currentBot = username;
     lastSpammerConfigStr = '';
@@ -933,9 +920,9 @@ function selectBot(username) {
     if (botNameHeader) botNameHeader.innerText = username;
 
     socket.emit('requestBotData', { username });
+    socket.emit('requestAnalyticsHistory', { username });
     updateInventoryFrame();
 
-    // Reset viewer to placeholder until the new bot's viewer data arrives
     viewerContainer.innerHTML = '<div class="placeholder">Viewer Offline</div>';
 }
 
@@ -998,7 +985,6 @@ socket.on('botViewer', (data) => {
 });
 
 socket.on('chatHistory', (payload) => {
-
     const username = payload.username;
     const history = payload.history;
 
@@ -1024,12 +1010,11 @@ socket.on('botChat', (payload) => {
     const compareText = payload.raw || payload.message;
     const sender = payload.sender || '[Server]';
 
-    // Deduplication logic: Merge identical consecutive messages
     if (lastMsg && lastMsg.dataset.rawMessage === compareText && lastMsg.dataset.sender === sender) {
         let count = parseInt(lastMsg.dataset.repeatCount) || 1;
         count++;
         lastMsg.dataset.repeatCount = count;
-        lastMsg.dataset.timestamp = now; // Update timestamp to latest
+        lastMsg.dataset.timestamp = now;
 
         let repeatSpan = lastMsg.querySelector('.repeat-count');
         if (!repeatSpan) {
@@ -1098,11 +1083,6 @@ function renderChatMessage(msg) {
     chatBox.appendChild(div);
 }
 
-
-
-
-
-
 tabBtns.forEach(btn => {
     btn.onclick = () => {
         tabBtns.forEach(b => b.classList.remove('active'));
@@ -1123,7 +1103,6 @@ tabBtns.forEach(btn => {
     };
 });
 
-// Watchlist Logic
 const watchlistInput = document.getElementById('watchlistInput');
 const addWatchlistBtn = document.getElementById('addWatchlistBtn');
 const watchlistContainer = document.getElementById('watchlistContainer');
@@ -1160,7 +1139,6 @@ function removeWatchlistPlayer(name) {
 
 function saveWatchlist() {
     socket.emit('updateWatchlist', watchlist);
-    // Also save to global settings
     const settings = { watchlist: watchlist };
     socket.emit('saveSettings', settings);
 }
@@ -1199,7 +1177,6 @@ socket.on('watchlistAlert', (data) => {
     showNotification(data.message, data.type === 'join' ? 'success' : 'warning');
 });
 
-// Packet Debugger Logic
 let packetDebugActive = false;
 const togglePacketDebugBtn = document.getElementById('togglePacketDebugBtn');
 const clearPacketsBtn = document.getElementById('clearPacketsBtn');
@@ -1227,7 +1204,6 @@ if (togglePacketDebugBtn) {
                 placeholder.style.display = 'block';
                 placeholder.innerText = 'Listening for packets...';
             }
-            // Force scroll to bottom when starting capture if autoscroll is on
             if (packetAutoscroll && packetAutoscroll.checked && packetStream) {
                 setTimeout(() => {
                     packetStream.scrollTop = packetStream.scrollHeight;
@@ -1275,7 +1251,7 @@ socket.on('packetDebug', (data) => {
     const sizeKB = (data.size / 1024).toFixed(1);
 
     // Color code by packet type for visual scanning
-    let nameColor = '#60a5fa'; // blue default
+    let nameColor = '#60a5fa';
     if (data.name.includes('position') || data.name.includes('move')) nameColor = '#34d399';
     else if (data.name.includes('chat') || data.name.includes('message')) nameColor = '#fbbf24';
     else if (data.name.includes('entity')) nameColor = '#a78bfa';
@@ -1306,7 +1282,6 @@ socket.on('packetDebug', (data) => {
         packetStream.removeChild(packetStream.firstChild);
     }
 
-    // Auto-scroll
     const autoscrollEnabled = packetAutoscroll ? packetAutoscroll.checked : true;
     if (autoscrollEnabled) {
         const scrollBottom = packetStream.scrollTop + packetStream.clientHeight;
@@ -1319,11 +1294,6 @@ socket.on('packetDebug', (data) => {
         }
     }
 });
-
-
-
-
-
 
 addBotBtn.onclick = () => {
     addBotModal.classList.add('active');
@@ -1414,11 +1384,14 @@ if (bulkGenerateForm) {
         const baseConfig = {
             host: rawData.host,
             port: parseInt(rawData.port) || 25565,
-            version: rawData.version || '1.21.4',
+            version: rawData.version || '1.21.11',
             auth: rawData.auth || 'offline',
             password: rawData.password || '',
             autoReconnect: formData.get('autoReconnect') === 'on',
             firstPerson: formData.get('firstPerson') === 'on',
+            reconnectDelay: formData.get('reconnectDelay'),
+            globalAnalytics: formData.get('globalAnalytics') === 'on',
+            dashboardFont: formData.get('dashboardFont'),
             plugins: {}
         };
 
@@ -1430,7 +1403,6 @@ if (bulkGenerateForm) {
             baseConfig.port = 0;
         }
 
-        // Collect enabled plugins
         const enabledPlugins = [];
         for (const key in rawData) {
             if (key.startsWith('plugin_')) {
@@ -1595,8 +1567,6 @@ cancelEditBot.onclick = () => {
     editBotModal.classList.remove('active');
 };
 
-
-
 let chatHistory = [];
 let historyIndex = -1;
 
@@ -1655,10 +1625,6 @@ if (botSearchInput) {
     });
 }
 
-
-
-
-
 function addSpammerInput(value = '') {
     const div = document.createElement('div');
     div.className = 'spammer-input-group';
@@ -1710,7 +1676,6 @@ if (importSpamBtn && importSpamFile) {
         reader.readAsText(file);
     };
 }
-
 
 const autoReconnectBtn = document.getElementById('autoReconnectBtn');
 const autoAuthBtn = document.getElementById('autoAuthBtn');
@@ -1829,11 +1794,6 @@ spammerBtn.onclick = () => {
     });
 };
 
-
-
-
-
-
 suicideBtn.onclick = () => {
     if (!currentBot) {
         showNotification('Please select a bot first');
@@ -1843,6 +1803,14 @@ suicideBtn.onclick = () => {
         socket.emit('botAction', { username: currentBot, action: 'suicide', payload: {} });
     }
 };
+
+if (respawnBtn) {
+    respawnBtn.onclick = () => {
+        if (!currentBot) return showNotification('No bot selected', 'error');
+        socket.emit('botAction', { username: currentBot, action: 'respawn', payload: {} });
+        showNotification(`Respawn command sent to ${currentBot}`, 'info');
+    };
+}
 
 rejoinBtn.onclick = () => {
     if (!currentBot) {
@@ -2002,6 +1970,28 @@ document.addEventListener('keydown', (e) => {
         activeKeys.add(key);
         highlightButton(control, true);
         sendControl(control, true);
+    } else if (key.startsWith('arrow')) {
+        e.preventDefault(); // Stop page scrolling
+        if (!currentBot) return;
+        let y = parseFloat(yawSlider.value);
+        let p = parseFloat(pitchSlider.value);
+
+        if (key === 'arrowleft') y += step;
+        if (key === 'arrowright') y -= step;
+        if (key === 'arrowup') p += step;
+        if (key === 'arrowdown') p -= step;
+
+        // Wrap yaw -180 to 180
+        if (y > 180) y -= 360;
+        if (y < -180) y += 360;
+        // Clamp pitch -90 to 90
+        p = Math.max(-90, Math.min(90, p));
+
+        yawSlider.value = y;
+        pitchSlider.value = p;
+        yawVal.textContent = y;
+        pitchVal.textContent = p;
+        sendLook();
     }
 });
 
@@ -2036,7 +2026,6 @@ exportChatBtn.onclick = () => {
         showNotification('No chat to export', 'error');
         return;
     }
-
 
     let content = '';
 
@@ -2096,11 +2085,6 @@ themeSelect.onchange = (e) => {
     });
 };
 
-
-
-
-
-
 let lastHoverable = null;
 
 document.body.style.setProperty('--mouse-active', '0');
@@ -2150,7 +2134,6 @@ if (spammerLen && spammerLenLabel) {
         spammerLenLabel.textContent = `Anti-Spam Length: ${spammerLen.value}`;
     });
 }
-
 
 const navToggleBtn = document.getElementById('navToggleBtn');
 const navX = document.getElementById('navX');
@@ -2207,16 +2190,26 @@ socket.on('botStatus', (data) => {
     }
 });
 
-
-
-
 let analyticsData = {};
 let analyticsCharts = {};
 const metricsConfig = {
     ping: { label: 'Ping', unit: 'ms', color: '#22c55e' },
     tps: { label: 'TPS', unit: '', color: '#f97316', max: 20 },
-    network: { label: 'Network', unit: 'KB/s', color: '#60a5fa', isObjectData: true }
+    position: { label: 'Spatial Heatmap', color: '#3b82f6', isHeatmap: true },
+    network: { label: 'Network', unit: 'KB/s', color: '#60a5fa', isObjectData: true },
+    cpu: { label: 'CPU Usage', unit: '%', color: '#a855f7', max: 100 },
+    ram: { label: 'RAM Usage', unit: 'MB', color: '#ec4899' },
+    events: { label: 'In-Game Events', unit: '', color: '#eab308', isEventsData: true }
 };
+
+socket.on('analyticsHistory', (data) => {
+    if (currentBot !== data.username) return;
+    analyticsData = data.history;
+    if (document.getElementById('analyticsPane').classList.contains('active')) {
+        renderAnalyticsCards();
+        updateAnalyticsGraphs();
+    }
+});
 
 socket.on('analyticsUpdate', (data) => {
     if (currentBot !== data.username) return;
@@ -2228,37 +2221,54 @@ socket.on('analyticsUpdate', (data) => {
         const val = data.stat[key];
         if (!analyticsData[key]) analyticsData[key] = [];
         analyticsData[key].push({ t: timestamp, v: val });
-        if (analyticsData[key].length > 100) analyticsData[key].shift();
+        // Keep 24 hours of data capped at 43200 points
+        if (analyticsData[key].length > 43200) analyticsData[key].shift();
     });
 
     if (!document.getElementById('analyticsPane').classList.contains('active')) return;
 
+    if (!window._lastGraphUpdate || Date.now() - window._lastGraphUpdate > 1000) {
+        updateAnalyticsGraphs();
+        window._lastGraphUpdate = Date.now();
+    }
+});
+
+function renderAnalyticsCards() {
     const chartsGrid = document.getElementById('analyticsChartsGrid');
+    const metrics = Object.keys(metricsConfig);
 
     metrics.forEach(key => {
-        const val = data.stat[key];
-        const config = metricsConfig[key] || { label: key, unit: '', color: '#fff' };
+        const config = metricsConfig[key];
 
         let card = document.getElementById(`metric-card-${key}`);
         if (!card) {
             card = document.createElement('div');
             card.id = `metric-card-${key}`;
             card.className = 'metric-card';
-            card.style.cssText = 'background: rgba(0,0,0,0.2); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px; height: 200px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05);';
+            card.style.cssText = 'background: rgba(0,0,0,0.2); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px; height: 260px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05);';
             card.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: baseline;">
                     <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 500;">${config.label}</div>
-                    <div class="stat-value" style="font-size: 1.1rem; font-weight: bold; color: ${config.color};">--</div>
+                    <div class="stat-value" id="stat-val-${key}" style="font-size: 1.1rem; font-weight: bold; color: ${config.color};">${config.isHeatmap ? '' : '--'}</div>
                 </div>
                 <div style="flex: 1; position: relative; min-height: 0;">
-                    <canvas id="chart-${key}"></canvas>
+                    ${config.isHeatmap ?
+                        `<canvas id="heatmapCanvas" style="width: 100%; height: 100%; display: block;"></canvas>
+                         <div id="heatmapOverlayText" style="position: absolute; bottom: 8px; right: 8px; font-size: 0.75rem; color: var(--text-muted); background: rgba(0,0,0,0.5); padding: 2px 6px; border-radius: 4px;">Waiting for position data</div>` :
+                        `<canvas id="chart-${key}"></canvas>`}
                 </div>
             `;
             chartsGrid.appendChild(card);
 
-            const ctx = document.getElementById(`chart-${key}`).getContext('2d');
+            // Use a dummy entry for heatmap to ensure loop coverage but skip Chart.js init
+            if (config.isHeatmap) {
+                analyticsCharts[key] = null;
+                return;
+            }
 
+            const ctx = document.getElementById(`chart-${key}`).getContext('2d');
             let chartConfig;
+
             if (config.isObjectData) {
                 chartConfig = {
                     type: 'line',
@@ -2269,64 +2279,174 @@ socket.on('analyticsUpdate', (data) => {
                             { label: 'TX', data: [], borderColor: '#fbbf24', borderWidth: 2, fill: false, tension: 0.4, pointRadius: 0, pointHoverRadius: 4 }
                         ]
                     },
-                    options: {
-                        responsive: true, maintainAspectRatio: false,
-                        layout: { padding: { top: 10, bottom: 5, left: 5, right: 15 } },
-                        plugins: { legend: { display: false }, tooltip: { enabled: true, mode: 'index', intersect: false } },
-                        scales: { x: { display: false }, y: { beginAtZero: true, max: config.max, grace: '10%', ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 9 }, callback: (val) => val + (config.unit ? config.unit : '') }, grid: { color: 'rgba(255,255,255,0.05)', drawTicks: false } } }
-                    }
+                    options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 10, bottom: 5, left: 5, right: 15 } }, plugins: { legend: { display: false }, tooltip: { enabled: true, mode: 'index', intersect: false } }, scales: { x: { display: false }, y: { beginAtZero: true, max: config.max, grace: '10%', ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 9 }, callback: (val) => val + (config.unit ? config.unit : '') }, grid: { color: 'rgba(255,255,255,0.05)', drawTicks: false } } } }
+                };
+            } else if (config.isEventsData) {
+                chartConfig = {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [
+                            { label: 'Kills', data: [], borderColor: '#ef4444', borderWidth: 2, fill: false, tension: 0.4, pointRadius: 0, pointHoverRadius: 4 },
+                            { label: 'Deaths', data: [], borderColor: '#64748b', borderWidth: 2, fill: false, tension: 0.4, pointRadius: 0, pointHoverRadius: 4 },
+                            { label: 'Collected', data: [], borderColor: '#3b82f6', borderWidth: 2, fill: false, tension: 0.4, pointRadius: 0, pointHoverRadius: 4 }
+                        ]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 10, bottom: 5, left: 5, right: 15 } }, plugins: { legend: { display: false }, tooltip: { enabled: true, mode: 'index', intersect: false } }, scales: { x: { display: false }, y: { beginAtZero: true, grace: '10%', ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 9 }, callback: (val) => val + (config.unit ? config.unit : '') }, grid: { color: 'rgba(255,255,255,0.05)', drawTicks: false } } } }
                 };
             } else {
                 chartConfig = {
                     type: 'line',
                     data: {
                         labels: [],
-                        datasets: [{
-                            data: [], borderColor: config.color, borderWidth: 2, fill: true, backgroundColor: config.color + '22', tension: 0.4, pointRadius: 0, pointHoverRadius: 4
-                        }]
+                        datasets: [{ data: [], borderColor: config.color, borderWidth: 2, fill: true, backgroundColor: config.color + '22', tension: 0.4, pointRadius: 0, pointHoverRadius: 4 }]
                     },
-                    options: {
-                        responsive: true, maintainAspectRatio: false,
-                        layout: { padding: { top: 10, bottom: 5, left: 5, right: 15 } },
-                        plugins: { legend: { display: false }, tooltip: { enabled: true, mode: 'index', intersect: false } },
-                        scales: { x: { display: false }, y: { beginAtZero: true, max: config.max, grace: '10%', ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 9 }, callback: (val) => val + (config.unit ? config.unit : '') }, grid: { color: 'rgba(255,255,255,0.05)', drawTicks: false } } }
-                    }
+                    options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 10, bottom: 5, left: 5, right: 15 } }, plugins: { legend: { display: false }, tooltip: { enabled: true, mode: 'index', intersect: false } }, scales: { x: { display: false }, y: { beginAtZero: true, max: config.max, grace: '10%', ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 9 }, callback: (val) => val + (config.unit ? config.unit : '') }, grid: { color: 'rgba(255,255,255,0.05)', drawTicks: false } } } }
                 };
             }
             analyticsCharts[key] = new Chart(ctx, chartConfig);
         }
 
-        if (config.isObjectData && val) {
-            card.querySelector('.stat-value').innerText = `↓ ${val.rx} ↑ ${val.tx} ${config.unit}`;
-        } else {
-            card.querySelector('.stat-value').innerText = `${typeof val === 'number' ? val.toFixed(key === 'tps' ? 1 : 0) : val}${config.unit}`;
+        const dataArray = analyticsData[key] || [];
+        if (dataArray.length > 0) {
+            const val = dataArray[dataArray.length - 1].v;
+            const statValEl = document.getElementById(`stat-val-${key}`);
+            if (config.isHeatmap) {
+                statValEl.innerText = '';
+            } else if (config.isObjectData && val) {
+                statValEl.innerText = `↓ ${val.rx} ↑ ${val.tx} ${config.unit}`;
+            } else if (config.isEventsData && val) {
+                statValEl.innerText = `${val.kills}K ${val.deaths}D ${val.itemsCollected}C`;
+            } else {
+                statValEl.innerText = `${typeof val === 'number' ? val.toFixed(key === 'tps' ? 1 : 0) : val}${config.unit}`;
+            }
         }
     });
+}
 
-    if (!window._lastGraphUpdate || Date.now() - window._lastGraphUpdate > 1000) {
-        updateAnalyticsGraphs();
-        window._lastGraphUpdate = Date.now();
-    }
-});
+const timeRangeSelect = document.getElementById('analyticsTimeRange');
+if (timeRangeSelect) {
+    timeRangeSelect.addEventListener('change', () => updateAnalyticsGraphs());
+}
+
 
 function updateAnalyticsGraphs() {
+    renderAnalyticsCards();
+
+    const timeRangeSelect = document.getElementById('analyticsTimeRange');
+    const rangeSeconds = timeRangeSelect ? parseInt(timeRangeSelect.value) : 300;
+    const minTime = Date.now() - (rangeSeconds * 1000);
+
     Object.keys(analyticsCharts).forEach(key => {
         const chart = analyticsCharts[key];
-        const data = analyticsData[key] || [];
+        let data = analyticsData[key] || [];
         const config = metricsConfig[key];
         if (!config || !data.length) return;
+
+        data = data.filter(d => d.t >= minTime);
+
+        // Downsample if dataset is too large (more than 150 points is crowded for a sparkline)
+        if (data.length > 150) {
+            const step = Math.ceil(data.length / 150);
+            data = data.filter((_, i) => i % step === 0);
+        }
+        if (key === 'position') {
+            drawHeatmap(data);
+            return;
+        }
 
         chart.data.labels = data.map(d => new Date(d.t).toLocaleTimeString());
 
         if (config.isObjectData) {
             chart.data.datasets[0].data = data.map(d => d.v.rx);
             chart.data.datasets[1].data = data.map(d => d.v.tx);
+        } else if (config.isEventsData) {
+            chart.data.datasets[0].data = data.map(d => d.v.kills);
+            chart.data.datasets[1].data = data.map(d => d.v.deaths);
+            chart.data.datasets[2].data = data.map(d => d.v.itemsCollected);
         } else {
             chart.data.datasets[0].data = data.map(d => d.v);
         }
 
         chart.update('none');
     });
+}
+
+function drawHeatmap(dataArray) {
+    const canvas = document.getElementById('heatmapCanvas');
+    if (!canvas || !dataArray || dataArray.length === 0) return;
+    const ctx = canvas.getContext('2d');
+
+    // Resize canvas for sharp rendering based on container
+    const container = canvas.parentElement;
+    canvas.width = container.clientWidth;
+    canvas.height = container.clientHeight;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+    dataArray.forEach(d => {
+        if (!d.v) return;
+        const x = d.v.x;
+        const z = d.v.z;
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (z < minZ) minZ = z;
+        if (z > maxZ) maxZ = z;
+    });
+
+    if (minX === Infinity) {
+        const overlay = document.getElementById('heatmapOverlayText');
+        if (overlay) overlay.innerText = 'Waiting for position data';
+        return;
+    }
+
+    const padding = 30;
+    const rangeX = Math.max(maxX - minX, 10);
+    const rangeZ = Math.max(maxZ - minZ, 10);
+
+    const scaleX = (canvas.width - padding * 2) / rangeX;
+    const scaleZ = (canvas.height - padding * 2) / rangeZ;
+    const scale = Math.min(scaleX, scaleZ);
+
+    const mapWidth = rangeX * scale;
+    const mapHeight = rangeZ * scale;
+    const offsetX = (canvas.width - mapWidth) / 2 - (minX * scale);
+    const offsetZ = (canvas.height - mapHeight) / 2 - (minZ * scale);
+
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#3b82f6';
+    ctx.beginPath();
+
+    let started = false;
+    dataArray.forEach((d) => {
+        if (!d.v) return;
+        const cx = offsetX + d.v.x * scale;
+        const cz = offsetZ + d.v.z * scale;
+
+        if (!started) {
+            ctx.moveTo(cx, cz);
+            started = true;
+        } else {
+            ctx.lineTo(cx, cz);
+        }
+    });
+    ctx.stroke();
+
+    dataArray.forEach((d) => {
+        if (!d.v) return;
+        const cx = offsetX + d.v.x * scale;
+        const cz = offsetZ + d.v.z * scale;
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.4)';
+        ctx.beginPath();
+        ctx.arc(cx, cz, 4, 0, Math.PI * 2);
+        ctx.fill();
+    });
+
+    const overlay = document.getElementById('heatmapOverlayText');
+    if (overlay) {
+        overlay.innerText = `Bounds X:[${minX.toFixed(0)}, ${maxX.toFixed(0)}] Z:[${minZ.toFixed(0)}, ${maxZ.toFixed(0)}]`;
+    }
 }
 
 const exportAnalyticsBtn = document.getElementById('exportAnalyticsBtn');
@@ -2379,12 +2499,13 @@ if (exportAnalyticsBtn) {
     };
 }
 
-
 const settingsModal = document.getElementById('settingsModal');
 const settingsBtn = document.getElementById('settingsBtn');
 const closeSettingsBtn = document.getElementById('closeSettingsBtn');
 const settingsForm = document.getElementById('settingsForm');
 const settingReconnectDelay = document.getElementById('settingReconnectDelay');
+const settingGlobalAnalytics = document.getElementById('settingGlobalAnalytics');
+const settingDashboardFont = document.getElementById('settingDashboardFont');
 
 if (settingsBtn) {
     settingsBtn.onclick = () => {
@@ -2407,6 +2528,7 @@ if (settingsForm) {
         const randomProxy = document.getElementById('settingRandomProxy') ? document.getElementById('settingRandomProxy').checked : false;
         const autoAuthRegister = document.getElementById('settingAutoAuthRegister') ? document.getElementById('settingAutoAuthRegister').value : '';
         const autoAuthLogin = document.getElementById('settingAutoAuthLogin') ? document.getElementById('settingAutoAuthLogin').value : '';
+        const globalAnalytics = document.getElementById('settingGlobalAnalytics') ? document.getElementById('settingGlobalAnalytics').checked : false;
 
         const updates = {};
 
@@ -2419,6 +2541,12 @@ if (settingsForm) {
         updates.randomProxy = randomProxy;
         if (autoAuthRegister !== '') updates.autoAuthRegister = autoAuthRegister;
         if (autoAuthLogin !== '') updates.autoAuthLogin = autoAuthLogin;
+        updates.globalAnalytics = globalAnalytics;
+
+        const globalFriendsInput = document.getElementById('settingGlobalFriends');
+        if (globalFriendsInput) {
+            updates.globalFriends = globalFriendsInput.value.split(',').map(s => s.trim()).filter(Boolean);
+        }
 
         if (Object.keys(updates).length > 0) {
             socket.emit('saveSettings', updates);
@@ -2428,10 +2556,12 @@ if (settingsForm) {
     };
 }
 
-
 socket.on('settings', (settings) => {
-    if (settings && settings.reconnectDelay) {
-        if (settingReconnectDelay) settingReconnectDelay.value = settings.reconnectDelay;
+    if (settingReconnectDelay) settingReconnectDelay.value = settings.reconnectDelay || 5000;
+    if (settingGlobalAnalytics) settingGlobalAnalytics.checked = settings.globalAnalytics !== false;
+    if (settingDashboardFont) {
+        document.documentElement.style.setProperty('--dashboard-font', settings.dashboardFont || "'Comfortaa', cursive");
+        settingDashboardFont.value = settings.dashboardFont || "'Comfortaa', cursive";
     }
     if (settings && settings.lowPerformanceMode !== undefined) {
         const lowPerfCheckbox = document.getElementById('settingLowPerformance');
@@ -2448,6 +2578,10 @@ socket.on('settings', (settings) => {
         const proxyListEl = document.getElementById('settingProxyList');
         if (proxyListEl) proxyListEl.value = settings.proxyList;
     }
+    if (settings && settings.globalFriends !== undefined) {
+        const friendsEl = document.getElementById('settingGlobalFriends');
+        if (friendsEl) friendsEl.value = settings.globalFriends.join(', ');
+    }
     if (settings && settings.autoAuthRegister !== undefined) {
         const autoAuthRegEl = document.getElementById('settingAutoAuthRegister');
         if (autoAuthRegEl) autoAuthRegEl.value = settings.autoAuthRegister;
@@ -2460,19 +2594,11 @@ socket.on('settings', (settings) => {
         const randomProxyEl = document.getElementById('settingRandomProxy');
         if (randomProxyEl) randomProxyEl.checked = settings.randomProxy;
     }
-    if (settings && settings.dashboardFont) {
-        document.documentElement.style.setProperty('--dashboard-font', settings.dashboardFont);
-        const fontSelect = document.getElementById('settingDashboardFont');
-        if (fontSelect) fontSelect.value = settings.dashboardFont;
-    }
     if (settings && settings.watchlist) {
         watchlist = settings.watchlist;
         renderWatchlist();
     }
 });
-
-
-
 
 const bulkSelectAll = document.getElementById('bulkSelectAll');
 const bulkDeselectAll = document.getElementById('bulkDeselectAll');
@@ -2606,6 +2732,44 @@ document.addEventListener('click', (e) => {
         input.type = 'password';
         eyeIcon.style.display = 'block';
         eyeOffIcon.style.display = 'none';
+    }
+});
+
+// Swarm UI Logic
+const swarmRoleSelect = document.getElementById('swarmRoleSelect');
+const swarmLeaderGroup = document.getElementById('swarmLeaderGroup');
+const swarmLeaderInput = document.getElementById('swarmLeaderInput');
+const applySwarmBtn = document.getElementById('applySwarmBtn');
+
+if (swarmRoleSelect) {
+    swarmRoleSelect.addEventListener('change', (e) => {
+        if (e.target.value === 'follower') {
+            swarmLeaderGroup.style.display = 'block';
+        } else {
+            swarmLeaderGroup.style.display = 'none';
+        }
+    });
+
+    applySwarmBtn.addEventListener('click', () => {
+        if (!currentBot) return showNotification('No bot selected', 'error');
+        const role = swarmRoleSelect.value;
+        const leaderName = swarmLeaderInput.value.trim();
+        if (role === 'follower' && !leaderName) return showNotification('Leader name required', 'error');
+
+        socket.emit('botAction', {
+            username: currentBot,
+            action: 'setSwarmRole',
+            payload: { role, leaderName }
+        });
+        showNotification(`Assigned role ${role.toUpperCase()} to ${currentBot}`, 'success');
+    });
+}
+
+socket.on('swarmUpdate', (data) => {
+    if (data.username === currentBot) {
+        if (swarmRoleSelect) swarmRoleSelect.value = data.role;
+        if (swarmLeaderInput) swarmLeaderInput.value = data.leaderName || '';
+        if (swarmLeaderGroup) swarmLeaderGroup.style.display = data.role === 'follower' ? 'block' : 'none';
     }
 });
 

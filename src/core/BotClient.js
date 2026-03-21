@@ -129,7 +129,14 @@ export class BotClient extends EventEmitter {
         }
     }
 
-    log(message, type = 'info', broadcast = true) {
+    toggleAnalytics(enabled) {
+        const analytics = this.featureManager.getFeature('analytics');
+        if (analytics) {
+            analytics.setEnabled(enabled);
+        }
+    }
+
+    log(message, type = 'info', emit = true) {
         let msgStr;
         try {
             msgStr = typeof message === 'object' ? JSON.stringify(message, null, 2) : message;
@@ -146,7 +153,7 @@ export class BotClient extends EventEmitter {
             this.chatHistory.shift();
         }
 
-        if (broadcast) {
+        if (emit) {
             this.emit('log', { message: msgStr, type });
         }
 

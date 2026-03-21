@@ -1,4 +1,5 @@
 import { BaseFeature } from './BaseFeature.js';
+import { botManager } from '../core/BotManager.js';
 
 export class Security extends BaseFeature {
     init() {
@@ -6,6 +7,10 @@ export class Security extends BaseFeature {
             if (entity.type === 'player' && entity.username !== this.botClient.username) {
                 const bot = this.botClient.bot;
                 const username = entity.username;
+
+                if (botManager.getBot(username) || botManager.globalFriends.includes(username)) {
+                    return; // Ignore friends
+                }
 
 
                 const isRealPlayer = bot.players[username] !== undefined;

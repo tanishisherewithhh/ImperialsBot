@@ -1,6 +1,7 @@
 import { Server } from 'socket.io';
 import { botManager } from '../core/BotManager.js';
 import { ConfigLoader } from '../config/ConfigLoader.js';
+import { AuditLogger } from '../utils/AuditLogger.js';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
@@ -14,6 +15,7 @@ export class SocketServer {
         this.io = new Server(httpServer);
         this.bindGlobalEvents();
         this.bindEvents();
+        AuditLogger.init();
     }
 
     bindGlobalEvents() {
@@ -106,6 +108,7 @@ export class SocketServer {
             });
 
             socket.on('saveSettings', async (newSettings) => {
+                AuditLogger.log('Dashboard', socket.id, 'Saved Global Settings');
                 try {
                     await ConfigLoader.saveSettings(newSettings);
                     const updatedSettings = await ConfigLoader.loadSettings();
@@ -113,6 +116,12 @@ export class SocketServer {
 
                     if (newSettings.navigationProfile) {
                         botManager.updateAllNavigationProfiles(newSettings.navigationProfile);
+                    }
+                    if (newSettings.globalFriends) {
+                        botManager.updateAllFriends(newSettings.globalFriends);
+                    }
+                    if (newSettings.hasOwnProperty('globalAnalytics')) {
+                        botManager.updateAllAnalytics(newSettings.globalAnalytics);
                     }
                 } catch (err) {
                     console.error('Failed to save settings:', err);
@@ -149,6 +158,7 @@ export class SocketServer {
             });
 
             socket.on('createBot', async (config) => {
+                AuditLogger.log('Dashboard', socket.id, `Created bot: ${config.username}`);
                 try {
                     await botManager.createBot(config, true, false);
                     socket.emit('notification', { type: 'success', message: `Bot ${config.username} created` });
@@ -188,6 +198,7 @@ export class SocketServer {
             });
 
             socket.on('bulkDelete', async (usernames) => {
+                AuditLogger.log('Dashboard', socket.id, `Bulk Delete on ${usernames?.length || 0} bots`);
                 if (!Array.isArray(usernames)) return;
                 let deletedCount = 0;
                 for (const username of usernames) {
@@ -263,6 +274,18 @@ export class SocketServer {
                     console.error('Failed to get available plugins:', err);
                 }
             });
+            socket.on('requestAnalyticsHistory', (payload) => {
+                const bot = botManager.getBot(payload.username);
+                if (bot) {
+                    const analyticsFeature = bot.featureManager.getFeature('analytics');
+                    if (analyticsFeature) {
+                        socket.emit('analyticsHistory', {
+                            username: bot.username,
+                            history: analyticsFeature.getStats()
+                        });
+                    }
+                }
+            });
 
             socket.on('requestBotData', (data) => {
                 const { username } = data;
@@ -320,6 +343,7 @@ export class SocketServer {
             });
 
             socket.on('botAction', async (data) => {
+                AuditLogger.log('Dashboard', socket.id, `Bot Action ${data.action} on bot ${data.username}`);
                 const { username, action, payload } = data;
                 const bot = botManager.getBot(username);
 
@@ -422,17 +446,29 @@ export class SocketServer {
                     case 'setLook':
                         bot.setLook(payload.yaw, payload.pitch);
                         break;
+                    case 'respawn':
+                        bot.bot.respawn();
+                        break;
                     case 'click':
                         if (payload.type === 'left') {
                             bot.bot.swingArm('right');
 
-                            const block = bot.bot.blockAtCursor(4);
-                            if (block) {
-                                bot.bot.dig(block, true);
+                            // Find nearest entity first
+                            const entity = bot.bot.nearestEntity(e =>
+                                (e.type === 'player' || e.type === 'mob') &&
+                                bot.bot.entity.position.distanceTo(e.position) < 4
+                            );
+
+                            if (entity) {
+                                bot.bot.attack(entity);
                             } else {
-                                const entity = bot.bot.nearestEntity(e => (e.type === 'player' || e.type === 'mob') && bot.bot.entity.position.distanceTo(e.position) < 4);
-                                if (entity) {
-                                    bot.bot.attack(entity);
+                                // Fallback to digging
+                                const block = bot.bot.blockAtCursor(5);
+                                if (block) {
+                                    if (bot.bot.targetDigBlock) bot.bot.stopDigging();
+                                    bot.bot.dig(block, false).catch(err => {
+                                        if (err.message !== 'Digging aborted') console.error('Digging error:', err);
+                                    });
                                 }
                             }
                         } else if (payload.type === 'right') {
@@ -443,6 +479,12 @@ export class SocketServer {
                         const viewerFeature = bot.featureManager.getFeature('viewer');
                         if (viewerFeature) {
                             viewerFeature.toggleView();
+                        }
+                        break;
+                    case 'setSwarmRole':
+                        const swarmFeature = bot.featureManager.getFeature('swarm');
+                        if (swarmFeature) {
+                            swarmFeature.setRole(payload.role, payload.leaderName);
                         }
                         break;
                     case 'suicide':
@@ -479,6 +521,7 @@ export class SocketServer {
             });
 
             socket.on('bulkAction', (data) => {
+                AuditLogger.log('Dashboard', socket.id, `Bulk Action ${data.action} on ${data.usernames?.length || 0} bots`);
                 const { usernames, action, payload } = data;
                 usernames.forEach(username => {
                     const bot = botManager.getBot(username);

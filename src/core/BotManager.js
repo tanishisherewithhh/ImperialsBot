@@ -7,7 +7,16 @@ class BotManager extends EventEmitter {
         super();
         this.bots = new Map();
         this.globalWatchlist = [];
+        this.globalFriends = [];
         this.isGlobalHeadless = false;
+        this.globalAnalytics = true;
+    }
+
+    updateAllAnalytics(enabled) {
+        this.globalAnalytics = enabled === true;
+        for (const bot of this.bots.values()) {
+            bot.toggleAnalytics(this.globalAnalytics);
+        }
     }
 
     setGlobalHeadless(enabled) {
@@ -59,6 +68,10 @@ class BotManager extends EventEmitter {
 
         bot.on('viewerStarted', (data) => {
             this.emit('botViewer', { username: config.username, ...data });
+        });
+
+        bot.on('swarmUpdate', (data) => {
+            this.emit('swarmUpdate', data);
         });
 
         bot.on('analyticsUpdate', (stat) => {
@@ -157,6 +170,10 @@ class BotManager extends EventEmitter {
                 watchlist.updateWatchlist(list);
             }
         }
+    }
+
+    updateAllFriends(list) {
+        this.globalFriends = list;
     }
 
     shutdown() {

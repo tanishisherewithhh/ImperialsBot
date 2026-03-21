@@ -17,7 +17,7 @@ Double-click `start.bat`. It will check for Node.js, install dependencies, and l
 3. Run `./start.sh` to start.
 
 Once running, open your browser to `http://localhost:3000`.
-If you have used a custom port then go to `http://localhost:YOUR_PORT`
+If you have used a custom port, go to `http://localhost:YOUR_PORT`.
 
 ---
 
@@ -27,16 +27,16 @@ To add a bot, click the **Add Bot** button and fill in the fields:
 - **Username**: The name the bot will use in-game.
 - **Host / Port**: The server IP and port (usually 25565).
 - **Version**: The Minecraft version. Leave empty for auto-detection.
-- **Auth**: 
+- **Auth**:
     - `Offline`: For cracked servers (no password needed).
     - `Microsoft`: For premium accounts and Minecraft Realms.
 - **Password**: Used for Microsoft accounts or Auto-Auth on cracked servers.
-- **Proxy**: Supports SOCKS4 and SOCKS5 proxies to hide your IP.
+- **Proxy**: Supports HTTP, SOCKS4, and SOCKS5 proxies.
 
 **Discord Integration**:
-You can choose between two modes:
-1. **Webhook**: Provide a Discord Webhook URL for simple alerts.
-2. **Discord Bot**: Provide a Bot Token and Channel ID for better notification handling.
+Choose between two modes:
+1. **Webhook**: Provide a Webhook URL for simple alerts.
+2. **Discord Bot**: Provide a Bot Token and Channel ID for richer notification handling.
 
 **Checkboxes**:
 - **Auto-Reconnect**: Automatically logs back in after being kicked.
@@ -47,63 +47,73 @@ You can choose between two modes:
 Use the **Bulk Generate** tool to quickly add many bots. It can automatically increment numbers in usernames (e.g., Bot1, Bot2).
 
 **Updating**:
-To change settings, click the **Edit** icon on the bot in the sidebar. You can update IPs or features without deleting the bot. Click a bot in the sidebar to switch the dashboard control to that specific instance.
+Click the **Edit** icon on a bot in the sidebar to change settings without deleting it. Click a bot's name to switch the dashboard view to that specific instance.
 
 ---
 
 ### Dashboard Features
 
-Once a bot is selected from the sidebar, you can monitor its state:
-- **Health & Hunger**: Visual bars showing the bot's survival status.
-- **Position**: Shows coordinates for both the **Overworld** and **Nether** simultaneously.
-- **Inventory**: A visual tab showing everything the bot is currently holding.
-- **Online Players**: A list of all players on the server, found in the right sidebar.
-- **Visual Feed**: A real-time 3D view of the bot's surroundings.
-- **Analytics**: Tracks server TPS, bot ping, and real-time network traffic (RX/TX bandwidth).
-- **Watchlist**: Add player names to be notified immediately when they join or leave the server.
+Once a bot is selected, you can monitor its state:
+- **Health & Hunger**: Visual bars showing survival status.
+- **Position**: Shows coordinates for both **Overworld** and **Nether** simultaneously.
+- **Inventory**: A visual tab showing weapons, armor, and items.
+- **Online Players**: A list of all players on the server in the right sidebar.
+- **Analytics & Heatmap**: Tracks server TPS, ping, CPU/RAM, and a top-down **Spatial Heatmap** of the bot's movement history.
+- **Watchlist**: Notifies you immediately when specific players join or leave.
+- **Manual Control**: Fast-access buttons for **Respawn**, **Suicide**, and **Disconnect**.
 
 ---
 
 ### Feature Controls
 
+**Arrow Key Control**
+- Use the **Arrow Keys** (↑ ↓ ← →) to manually rotate the bot's head while focused on the dashboard. This syncs instantly with the in-game view and sliders.
+
+**Swarm Coordination**
+- Located in the **Swarm** tab.
+- Assign one bot as the **Leader** and others as **Followers**.
+- Followers will automatically track and move toward the leader's position.
+
+**Killaura & Combat**
+- Configure attack range, target priority (Players/Mobs), and view distance in the **Controls** tab.
+
 **Spammer**
-Allows the bot to send messages repeatedly with custom delays and random strings to bypass filters.
+- Sends messages repeatedly with custom delays and optional random strings to bypass anti-spam filters.
 
 **Chat & Exporting**
-- **Sending Chat**: Use the bottom bar to send messages.
-- **Exporting Logs**: Use the export button above the chatbox to save the current bot's chat history to a text file.
+- **Sending Chat**: Use the bottom bar to talk as the bot.
+- **Exporting Logs**: Save a bot's entire chat history to a CSV or text file via the export button.
 
 **Bulk Actions**
-Control all selected bots at once:
-- **Move All**: Send every bot to the same coordinates.
-- **Chain Chat**: Splits your message word-by-word across your bots for coordinated talking.
-- **Reconnect All**: Instantly restarts all active bots.
+- **Move All**: Send all selected bots to specific X, Y, Z coordinates.
+- **Chain Chat**: Splits a long message word-by-word across all selected bots.
+- **Reconnect/Delete**: Quickly restart or remove multiple bots at once.
 
 ---
 
 ### Performance & Modes
 
-**Global Headless Mode**
-For high-density botting, you can turn off the dashboard entirely:
-1. Go to your **Terminal/CMD**.
-2. Type `headless`. 
-The dashboard UI will stop receiving updates to save maximum CPU and RAM. Type `gui` in the terminal to restore it.
+**Global Analytics Toggle**
+- Found in **Global Settings**. Completely disables the stats tracking engine to save maximum server resources when analytics aren't needed.
 
-**Holographic Mode**
-Hides the sidebars for a cleaner, floating-panel look. This can be toggled in the Global Settings.
+**Global Headless Mode**
+- For high-density botting, turn off the dashboard entirely:
+    1. Go to your **Terminal/CMD**.
+    2. Type `headless`.
+- To restore the UI, type `gui`.
 
 **Low Performance Mode**
-Reduces the update frequency of stats and graphs to save resources on slower computers.
+- Disables blur effects, animations, and reduces graph update frequency to save resources on older hardware.
 
 ---
 
 ### Internal Files
 
-To help manage the bot system, several files are used to store data locally:
-
-- **bots.json**: This file contains the configuration for all the bots you have added, including their usernames, server details, and specific features like spammer or auto-auth. You don't usually need to edit this manually as the dashboard handles it.
-- **settings.json**: Stores global settings like the UI theme you've selected and technical values like the reconnection delay.
-- **log.txt**: A local file that records server-side events and errors. If the program crashes or a bot behaves strangely, looking at the end of this file can provide useful information for troubleshooting.
+Several files are used to store data locally:
+- **bots.json**: Persistent configuration for all your added bots.
+- **settings.json**: Stores global preferences, themes, and reconnection delays.
+- **log.txt**: Records server-side activities and errors for troubleshooting.
+- **Audit Logs**: Stored in `logs/audit.log`, tracking every command and config change.
 
 ---
 
