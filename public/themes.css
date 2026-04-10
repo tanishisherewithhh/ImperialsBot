@@ -1,14 +1,14 @@
 body.theme-simple-dark {
-    --bg-color: #121212;
-    --glass-bg: rgba(30, 30, 30, 0.85);
-    --glass-border: rgba(255, 255, 255, 0.15);
-    --primary: #e0e0e0;
-    --primary-hover: #ffffff;
-    --text-main: #e0e0e0;
-    --text-muted: #a0a0a0;
-    --accent-warm: #ffffff;
+    --bg-color: #1e1f22;
+    --glass-bg: rgba(43, 45, 48, 0.95);
+    --glass-border: rgba(57, 59, 64, 0.6);
+    --primary: #3574f0;
+    --primary-hover: #548af7;
+    --text-main: #a9b7c6;
+    --text-muted: #70727a;
+    --accent-warm: #eda200;
     background-image: none;
-    background-color: #121212;
+    background-color: #1e1f22;
 }
 
 body.theme-simple-dark .btn,
@@ -17,9 +17,9 @@ body.theme-simple-dark .add-bot-btn,
 body.theme-simple-dark .chat-input-area button,
 body.theme-simple-dark .nav-btn,
 body.theme-simple-dark .btn-primary {
-    background: #2b2b2b !important;
-    border: 1px solid #404040;
-    color: #e0e0e0 !important;
+    background: #393b40 !important;
+    border: 1px solid #4e5157;
+    color: #a9b7c6 !important;
 }
 
 body.theme-simple-dark .btn:hover,
@@ -28,45 +28,70 @@ body.theme-simple-dark .add-bot-btn:hover,
 body.theme-simple-dark .chat-input-area button:hover,
 body.theme-simple-dark .nav-btn:hover,
 body.theme-simple-dark .btn-primary:hover {
-    background: #3a3a3a !important;
-    border-color: #505050;
+    background: #4b4d54 !important;
+    border-color: #5d6068;
 }
 
 body.theme-simple-dark .danger-btn,
 body.theme-simple-dark .nav-btn.stop {
-    background: #450a0a !important;
-    border-color: #7f1d1d;
-    color: #fca5a5 !important;
+    background: #db5860 !important;
+    border-color: #db5860;
+    color: #ffffff !important;
 }
 
 body.theme-simple-dark .success-btn,
 body.theme-simple-dark .nav-btn.go {
-    background: #064e3b !important;
-    border-color: #065f46;
-    color: #6ee7b7 !important;
+    background: #59a869 !important;
+    border-color: #59a869;
+    color: #ffffff !important;
 }
 
 body.theme-simple-dark input,
 body.theme-simple-dark select,
 body.theme-simple-dark .nav-input {
-    background: #1e1e1e !important;
-    border-color: #404040;
-    color: #e0e0e0 !important;
+    background: #1e1f22 !important;
+    border: 1px solid #393b40 !important;
+    color: #a9b7c6 !important;
 }
 
 body.theme-simple-dark .modal-content {
-    background: #121212 !important;
-    border-color: #404040;
+    background: #1e1f22 !important;
+    border-color: #393b40;
 }
 
 body.theme-simple-dark .bot-item.active {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: #fff;
+    background: rgba(53, 116, 240, 0.1);
+    border-color: #3574f0;
 }
 
 body.theme-simple-dark .tab-btn.active {
-    background: #e0e0e0 !important;
-    color: #121212 !important;
+    background: #3574f0 !important;
+    color: #ffffff !important;
+}
+
+/* JetBrains Sectional Color Overrides */
+body.theme-simple-dark #bulkPane .btn.go,
+body.theme-simple-dark #bulkPane .nav-btn.go,
+body.theme-simple-dark #bulkPane #bulkNavBtn,
+body.theme-simple-dark #bulkPane #bulkSequentialChatBtn,
+body.theme-simple-dark #bulkPane #bulkChatBtn {
+    background: #ffb86c !important;
+    border-color: #ffb86c;
+    color: #282a36 !important;
+}
+
+body.theme-simple-dark #bulkPane #bulkSpammerToggleBtn {
+    background: #ffb86c !important;
+    color: #282a36 !important;
+}
+
+body.theme-simple-dark #devPane .btn.action-btn,
+body.theme-simple-dark #devPane .btn.toggle-btn,
+body.theme-simple-dark #devPane #clearPacketsBtn,
+body.theme-simple-dark #devPane #togglePacketDebugBtn {
+    background: #bd93f9 !important;
+    border-color: #bd93f9;
+    color: #282a36 !important;
 }
 
 body.theme-emerald {

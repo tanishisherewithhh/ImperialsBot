@@ -1595,28 +1595,41 @@ body.theme-rose input:checked+.slider {
 
 .tab-btn {
     padding: 8px 15px;
-    background: transparent;
+    background: rgba(255, 255, 255, 0.03);
     border: none;
     border-radius: 8px;
     color: var(--text-muted);
     cursor: pointer;
     font-weight: 600;
     font-size: 0.85rem;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
     flex: 1;
     position: relative;
     z-index: 1;
     letter-spacing: 0.5px;
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.2);
 }
 
 .tab-btn:hover {
     color: var(--text-main);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.tab-btn:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
 }
 
 .tab-btn.active {
     background: var(--primary);
     color: white;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 0 rgba(0, 0, 0, 0.3);
+    transform: translateY(-2px);
+}
+
+.tab-btn.active:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.3);
 }
 
 .tab-pane {
