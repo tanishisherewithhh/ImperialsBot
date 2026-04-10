@@ -69,11 +69,6 @@ Once a bot is selected, you can monitor its state:
 **Arrow Key Control**
 - Use the **Arrow Keys** (↑ ↓ ← →) to manually rotate the bot's head while focused on the dashboard. This syncs instantly with the in-game view and sliders.
 
-**Swarm Coordination**
-- Located in the **Swarm** tab.
-- Assign one bot as the **Leader** and others as **Followers**.
-- Followers will automatically track and move toward the leader's position.
-
 **Killaura & Combat**
 - Configure attack range, target priority (Players/Mobs), and view distance in the **Controls** tab.
 

@@ -2735,41 +2735,4 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// Swarm UI Logic
-const swarmRoleSelect = document.getElementById('swarmRoleSelect');
-const swarmLeaderGroup = document.getElementById('swarmLeaderGroup');
-const swarmLeaderInput = document.getElementById('swarmLeaderInput');
-const applySwarmBtn = document.getElementById('applySwarmBtn');
-
-if (swarmRoleSelect) {
-    swarmRoleSelect.addEventListener('change', (e) => {
-        if (e.target.value === 'follower') {
-            swarmLeaderGroup.style.display = 'block';
-        } else {
-            swarmLeaderGroup.style.display = 'none';
-        }
-    });
-
-    applySwarmBtn.addEventListener('click', () => {
-        if (!currentBot) return showNotification('No bot selected', 'error');
-        const role = swarmRoleSelect.value;
-        const leaderName = swarmLeaderInput.value.trim();
-        if (role === 'follower' && !leaderName) return showNotification('Leader name required', 'error');
-
-        socket.emit('botAction', {
-            username: currentBot,
-            action: 'setSwarmRole',
-            payload: { role, leaderName }
-        });
-        showNotification(`Assigned role ${role.toUpperCase()} to ${currentBot}`, 'success');
-    });
-}
-
-socket.on('swarmUpdate', (data) => {
-    if (data.username === currentBot) {
-        if (swarmRoleSelect) swarmRoleSelect.value = data.role;
-        if (swarmLeaderInput) swarmLeaderInput.value = data.leaderName || '';
-        if (swarmLeaderGroup) swarmLeaderGroup.style.display = data.role === 'follower' ? 'block' : 'none';
-    }
-});
 

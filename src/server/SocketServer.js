@@ -481,12 +481,6 @@ export class SocketServer {
                             viewerFeature.toggleView();
                         }
                         break;
-                    case 'setSwarmRole':
-                        const swarmFeature = bot.featureManager.getFeature('swarm');
-                        if (swarmFeature) {
-                            swarmFeature.setRole(payload.role, payload.leaderName);
-                        }
-                        break;
                     case 'suicide':
                         const combatForSuicide = bot.featureManager.getFeature('combat');
                         if (combatForSuicide) {

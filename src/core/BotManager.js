@@ -70,10 +70,6 @@ class BotManager extends EventEmitter {
             this.emit('botViewer', { username: config.username, ...data });
         });
 
-        bot.on('swarmUpdate', (data) => {
-            this.emit('swarmUpdate', data);
-        });
-
         bot.on('analyticsUpdate', (stat) => {
             this.emit('analyticsUpdate', { username: config.username, stat });
         });
