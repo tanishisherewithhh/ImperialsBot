@@ -28,16 +28,22 @@ export class Combat extends BaseFeature {
     }
 
     init() {
-        this.botClient.bot.once('spawn', () => {
+        const bot = this.botClient.bot;
+        const load = () => {
             try {
-                this.botClient.bot.loadPlugin(pvp);
-                this.applyPvpConfig();
+                if (!bot.pvp) {
+                    bot.loadPlugin(pvp);
+                    this.applyPvpConfig();
+                }
             } catch (err) {
                 this.botClient.log(`Combat plugin failed to load: ${err.message}`, 'error');
             }
-        });
+        };
 
-        this.botClient.bot.on('physicsTick', () => {
+        if (bot.entity) load();
+        else bot.once('spawn', load);
+
+        bot.on('physicsTick', () => {
             if (this.killauraEnabled) {
                 this.killauraLoop();
             }
@@ -67,13 +73,15 @@ export class Combat extends BaseFeature {
 
     matchesFilter(entity) {
         if (!entity || entity === this.botClient.bot.entity) return false;
+        if (entity.health !== undefined && entity.health <= 0) return false;  mobs
+
         if (entity.type === 'player') {
             const name = entity.username || '';
             if (botManager.getBot(name) || botManager.globalFriends.includes(name)) return false;
             if (this.killauraConfig.attackPlayers) return true;
         }
         if (entity.type === 'mob') {
-            const name = entity.name || '';
+            const name = (entity.name || '').toLowerCase();
             if (HOSTILE_MOBS.has(name) && this.killauraConfig.attackHostileMobs) return true;
             if (!HOSTILE_MOBS.has(name) && this.killauraConfig.attackPassiveMobs) return true;
         }
@@ -81,17 +89,21 @@ export class Combat extends BaseFeature {
     }
 
     killauraLoop() {
-        if (!this.botClient.bot || !this.botClient.bot.entity) return;
+        const bot = this.botClient.bot;
+        if (!bot || !bot.entity || !bot.pvp) return;
 
-        const entity = this.botClient.bot.nearestEntity(e =>
+        const entity = bot.nearestEntity(e =>
             this.matchesFilter(e) &&
-            e.position.distanceTo(this.botClient.bot.entity.position) < this.killauraConfig.attackRange
+            e.position.distanceTo(bot.entity.position) < this.killauraConfig.attackRange
         );
 
         if (entity) {
-            this.botClient.bot.pvp.attack(entity);
-        } else if (this.botClient.bot.pvp && this.botClient.bot.pvp.target) {
-            this.botClient.bot.pvp.stop();
+            // Only trigger a new attack if we aren't already targeting this entity
+            if (bot.pvp.target !== entity) {
+                bot.pvp.attack(entity);
+            }
+        } else if (bot.pvp.target) {
+            bot.pvp.stop();
         }
     }
 

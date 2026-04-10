@@ -868,6 +868,18 @@ input[type=range] {
     width: 100%;
 }
 
+/* Suppress browser-native password reveal buttons to prevent "two eyes" */
+input::-ms-reveal,
+input::-ms-clear {
+    display: none;
+}
+
+input::-webkit-credentials-auto-fill-button {
+    visibility: hidden;
+    position: absolute;
+    right: 0;
+}
+
 .password-input-wrapper input {
     width: 100%;
     padding-right: 40px !important;

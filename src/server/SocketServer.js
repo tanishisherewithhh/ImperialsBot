@@ -13,6 +13,7 @@ const PLUGINS_DIR = path.join(__dirname, '../plugins');
 export class SocketServer {
     constructor(httpServer) {
         this.io = new Server(httpServer);
+        this.activeProxyChecks = new Map(); // Tracks AbortControllers by socket.id
         this.bindGlobalEvents();
         this.bindEvents();
         AuditLogger.init();
@@ -102,6 +103,15 @@ export class SocketServer {
             socket.emit('settings', settings);
             socket.emit('globalHeadlessChanged', botManager.isGlobalHeadless);
             socket.emit('botList', botManager.getAllBots());
+
+            socket.on('disconnect', () => {
+                const controller = this.activeProxyChecks.get(socket.id);
+                if (controller) {
+                    controller.abort();
+                    this.activeProxyChecks.delete(socket.id);
+                }
+                console.log('Client disconnected');
+            });
 
             socket.on('setGlobalHeadless', (enabled) => {
                 botManager.setGlobalHeadless(enabled);
@@ -343,10 +353,56 @@ export class SocketServer {
             });
 
             socket.on('botAction', async (data) => {
-                AuditLogger.log('Dashboard', socket.id, `Bot Action ${data.action} on bot ${data.username}`);
                 const { username, action, payload } = data;
-                const bot = botManager.getBot(username);
+                AuditLogger.log('Dashboard', socket.id, `Bot Action ${action} ${username ? `on bot ${username}` : '(Global)'}`);
 
+                // Global Actions (No bot required)
+                if (action === 'checkProxies') {
+                    console.log(`[SocketServer] Starting proxy check for socket ${socket.id}. Count: ${payload?.proxies?.length}`);
+                    try {
+                        const controller = new AbortController();
+                        this.activeProxyChecks.set(socket.id, controller);
+
+                        const { ProxyChecker } = await import('../utils/ProxyChecker.js');
+                        const results = await ProxyChecker.checkList(payload.proxies, (progress) => {
+                            socket.emit('proxyCheckProgress', progress);
+                        }, controller.signal);
+
+                        this.activeProxyChecks.delete(socket.id);
+                        socket.emit('proxyCheckResults', results);
+                    } catch (err) {
+                        console.error(`[SocketServer] Proxy check error:`, err.message);
+                        this.activeProxyChecks.delete(socket.id);
+                        socket.emit('notification', { type: 'error', message: `Proxy check failed: ${err.message}` });
+                    }
+                    return;
+                }
+
+                if (action === 'stopCheckProxies') {
+                    const controller = this.activeProxyChecks.get(socket.id);
+                    if (controller) {
+                        controller.abort();
+                        this.activeProxyChecks.delete(socket.id);
+                        socket.emit('notification', { type: 'info', message: 'Proxy check stopped.' });
+                    }
+                    return;
+                }
+
+                if (action === 'scrapeProxies') {
+                    try {
+                        const { ProxyChecker } = await import('../utils/ProxyChecker.js');
+                        const proxies = await ProxyChecker.scrapeAll((progress) => {
+                            socket.emit('proxyScrapeProgress', progress);
+                        });
+                        socket.emit('proxyScrapeResults', proxies);
+                    } catch (err) {
+                        socket.emit('notification', { type: 'error', message: `Proxy scraping failed: ${err.message}` });
+                    }
+                    return;
+                }
+
+                // Bot-Specific Actions
+                const bot = botManager.getBot(username);
                 if (!bot) return;
 
                 switch (action) {
@@ -414,6 +470,14 @@ export class SocketServer {
                         if (autoauth) {
                             if (payload.enabled) autoauth.enable();
                             else autoauth.disable();
+                            this.broadcastToggles(username);
+                        }
+                        break;
+                    case 'toggleAutoEat':
+                        const autoeat = bot.featureManager.getFeature('autoeat');
+                        if (autoeat) {
+                            if (payload.enabled) autoeat.enable();
+                            else autoeat.disable();
                             this.broadcastToggles(username);
                         }
                         break;
@@ -494,11 +558,11 @@ export class SocketServer {
                         botManager.removeBot(username);
                         break;
                     case 'togglePacketDebug':
-                        if (payload.enabled) {
+                        if (payload.enabled) 
                             bot.enablePacketDebug();
-                        } else {
+                        else 
                             bot.disablePacketDebug();
-                        }
+                        break;
                         break;
                 }
             });
@@ -596,6 +660,7 @@ export class SocketServer {
                 killauraEnabled: killaura ? killaura.killauraEnabled : false,
                 antiAfkEnabled: antiafk ? antiafk.enabled : false,
                 autoAuthEnabled: autoauth ? autoauth.enabled : false,
+                autoEatEnabled: bot.featureManager.getFeature('autoeat') ? bot.featureManager.getFeature('autoeat').enabled : false,
                 autoReconnectEnabled: bot.config.autoReconnect,
                 spammerEnabled: bot.featureManager.getFeature('spammer') ? bot.featureManager.getFeature('spammer').config.enabled : false
             });
@@ -633,6 +698,7 @@ export class SocketServer {
             killauraEnabled: killaura ? killaura.killauraEnabled : false,
             antiAfkEnabled: antiafk ? antiafk.enabled : false,
             autoAuthEnabled: autoauth ? autoauth.enabled : false,
+            autoEatEnabled: bot.featureManager.getFeature('autoeat') ? bot.featureManager.getFeature('autoeat').enabled : false,
             spammerEnabled: spammer ? spammer.config.enabled : false,
             autoReconnectEnabled: bot.config.autoReconnect !== false
         });

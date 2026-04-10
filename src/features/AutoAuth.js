@@ -45,6 +45,9 @@ export class AutoAuth extends BaseFeature {
         this.botClient.log('AutoAuth: Attempting authentication...', 'info');
 
         try {
+            // Wait a moment for bot core to fully initialize state
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
             const settings = await ConfigLoader.loadSettings() || {};
             let registerCmdStr = settings.autoAuthRegister || '/register {password} {password}';
             let loginCmdStr = settings.autoAuthLogin || '/login {password}';
@@ -52,18 +55,40 @@ export class AutoAuth extends BaseFeature {
             const registerCmd = registerCmdStr.replace(/{password}/g, password);
             const loginCmd = loginCmdStr.replace(/{password}/g, password);
 
-            if (typeof this.botClient.bot.chat === 'function') {
-                this.botClient.bot.chat(registerCmd);
-                await new Promise(resolve => setTimeout(resolve, 1200));
-                this.botClient.bot.chat(loginCmd);
+            const safeChat = (cmd) => {
+                try {
+                    this.botClient.bot.chat(cmd);
+                } catch (e) {
+                    this.botClient.log(`Standard chat failed, using fallback for: ${cmd}`, 'warning');
+                    try {
+                        if (this.botClient.bot.supportFeature && this.botClient.bot.supportFeature('chatCommands')) {
+                            this.botClient.bot._client.write('chat_command', {
+                                command: cmd.substring(1),
+                                timestamp: BigInt(Date.now()),
+                                salt: 0n,
+                                argumentSignatures: [],
+                                signedPreview: false,
+                                messageCount: 0,
+                                acknowledged: Buffer.alloc(3),
+                                previousMessages: []
+                            });
+                        } else {
+                            this.botClient.bot._client.write('chat', { message: cmd });
+                        }
+                    } catch (e2) {
+                        this.botClient.log(`Fallback chat failed: ${e2.message}`, 'error');
+                    }
+                }
+            };
 
-                // Signal completion
-                setTimeout(() => {
-                    this.botClient.emit('authCompleted');
-                }, 1000);
-            } else {
-                this.botClient.log('AutoAuth: chat function missing', 'error');
-            }
+            safeChat(registerCmd);
+            await new Promise(resolve => setTimeout(resolve, 1200));
+            safeChat(loginCmd);
+
+            // Signal completion
+            setTimeout(() => {
+                this.botClient.emit('authCompleted');
+            }, 1000);
         } catch (err) {
             this.botClient.log(`AutoAuth Error: ${err.message}`, 'error');
         }

@@ -8,6 +8,8 @@ import { NetworkUtils } from '../utils/NetworkUtils.js';
 import { MinecraftColorUtils } from '../utils/MinecraftColorUtils.js';
 import { Logger } from '../utils/Logger.js';
 import { ProxyAgent } from 'proxy-agent';
+import { SocksClient } from 'socks';
+import axios from 'axios';
 
 export class BotClient extends EventEmitter {
     constructor(config) {
@@ -237,23 +239,49 @@ export class BotClient extends EventEmitter {
         } catch (err) {
             this.log(`PreJoin hook error: ${err.message}`, 'error');
         }
-
+        let selectedProxyStr = null;
         try {
             const settings = await ConfigLoader.loadSettings();
-            if (settings && settings.randomProxy && settings.proxyList) {
+            if (settings.randomProxy && settings.proxyList) {
                 const proxies = settings.proxyList.split('\n').map(p => p.trim()).filter(p => p.length > 0 && p.includes('://'));
                 if (proxies.length > 0) {
-                    const randomProxyStr = proxies[Math.floor(Math.random() * proxies.length)];
-                    try {
-                        const parsed = new URL(randomProxyStr);
-                        this.config.proxyType = parsed.protocol.replace(':', '');
-                        this.config.proxyHost = parsed.hostname;
-                        this.config.proxyPort = parsed.port || (this.config.proxyType.startsWith('socks') ? 1080 : 80);
-                        this.config.proxyUser = decodeURIComponent(parsed.username || '');
-                        this.config.proxyPass = decodeURIComponent(parsed.password || '');
-                        this.log(`Selected random proxy: ${this.config.proxyHost}`, 'info');
-                    } catch (e) {
-                        this.log(`Failed to parse random proxy URL: ${randomProxyStr}`, 'warning');
+                    const maxAttempts = Math.min(5, proxies.length);
+                    for (let attempts = 0; attempts < maxAttempts; attempts++) {
+                        const randomProxyStr = proxies[Math.floor(Math.random() * proxies.length)];
+                        try {
+                            this.updateStatus(`Verifying Proxy (${attempts + 1}/${maxAttempts})...`);
+                            const agent = new ProxyAgent({ getProxyForUrl: () => randomProxyStr });
+                            const response = await axios.get('https://api.ipify.org?format=json', {
+                                httpAgent: agent,
+                                httpsAgent: agent,
+                                timeout: 5000
+                            });
+                            this.log(`Found working proxy! Masked IP: ${response.data.ip}`, 'success');
+                            selectedProxyStr = randomProxyStr;
+                            break;
+                        } catch (e) {
+                            this.log(`Proxy verify failed: ${e.message}`, 'warning');
+                            try {
+                                await ConfigLoader.removeProxyFromGlobal(randomProxyStr);
+                                this.log(`Removed dead proxy from global list automatically.`, 'info');
+                            } catch (e2) {}
+                        }
+                    }
+
+                    if (!selectedProxyStr) {
+                        this.log('Failed to find working proxy, using direct connection.', 'error');
+                        this.config.proxyType = 'none'; 
+                    } else {
+                        try {
+                            const parsed = new URL(selectedProxyStr);
+                            this.config.proxyType = parsed.protocol.replace(':', '');
+                            this.config.proxyHost = parsed.hostname;
+                            this.config.proxyPort = parsed.port || (this.config.proxyType.startsWith('socks') ? 1080 : 80);
+                            this.config.proxyUser = decodeURIComponent(parsed.username || '');
+                            this.config.proxyPass = decodeURIComponent(parsed.password || '');
+                        } catch (e) {
+                            this.log(`Failed to parse proxy URL: ${selectedProxyStr}`, 'error');
+                        }
                     }
                 }
             }
@@ -293,7 +321,56 @@ export class BotClient extends EventEmitter {
             const proxyUrl = `${proxyType}://${authStr}${proxyHost}:${proxyPort}`;
             try {
                 this.log(`Attempting connection via proxy: ${proxyType}://${proxyHost}:${proxyPort}`, 'info');
+                
+                // Route authentication requests
                 botOptions.agent = new ProxyAgent({ getProxyForUrl: () => proxyUrl });
+
+                // Route the actual game multi-player packet stream (TCP)
+                if (proxyType === 'socks4' || proxyType === 'socks5') {
+                    const socksType = proxyType === 'socks5' ? 5 : 4;
+                    botOptions.connect = (client) => {
+                        this.log('Establishing SOCKS TCP tunnel for game traffic...', 'info');
+                        const proxyOptions = {
+                            proxy: {
+                                host: proxyHost,
+                                port: parseInt(proxyPort),
+                                type: socksType,
+                                ...(proxyUser && { userId: proxyUser }),
+                                ...(proxyPass && { password: proxyPass })
+                            },
+                            command: 'connect',
+                            destination: {
+                                host: botOptions.host,
+                                port: parseInt(botOptions.port)
+                            }
+                        };
+
+                        SocksClient.createConnection(proxyOptions, (err, info) => {
+                            if (err) {
+                                this.log(`SOCKS connection failed: ${err.message}`, 'error');
+                                client.emit('error', err);
+                                return;
+                            }
+                            client.setSocket(info.socket);
+                            client.emit('connect');
+                        });
+                    };
+                }
+
+                if (!selectedProxyStr) {
+                    try {
+                        this.updateStatus(`Verifying Proxy IP...`);
+                        const response = await axios.get('https://api.ipify.org?format=json', {
+                            httpAgent: botOptions.agent,
+                            httpsAgent: botOptions.agent,
+                            timeout: 5000
+                        });
+                        this.log(`Connection Verified. Masked IP: ${response.data.ip}`, 'success');
+                    } catch(e) {
+                        this.log(`Proxy IP verification failed, connection may drop: ${e.message}`, 'warning');
+                    }
+                }
+                this.updateStatus('Connecting...');
             } catch (proxyErr) {
                 this.log(`Failed to create proxy agent: ${proxyErr.message}`, 'error');
             }
@@ -301,7 +378,8 @@ export class BotClient extends EventEmitter {
 
         try {
             this.bot = mineflayer.createBot(botOptions);
-            this.bot.setMaxListeners(25);
+            this.bot.setMaxListeners(100);
+            this.setMaxListeners(100);
 
             // INDEPENDENT ERROR BINDING (Immediate)
             // This ensures connection errors are caught before bindEvents

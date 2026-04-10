@@ -1413,6 +1413,14 @@ if (bulkGenerateForm) {
         const configs = [];
         for (let i = 1; i <= count; i++) {
             const botName = nameFormat.replace('%d', i);
+            
+            // VALIDATION: Minecraft names must be 3-16 chars, alphanumeric/underscores
+            const isValid = /^[a-zA-Z0-9_]{3,16}$/.test(botName);
+            if (!isValid) {
+                showNotification(`Invalid bot name generated: "${botName}". Names must be 3-16 characters and only contain alphanumeric characters or underscores.`, 'error');
+                return;
+            }
+
             const config = {
                 ...baseConfig,
                 username: botName,
@@ -1644,7 +1652,7 @@ function addSpammerInput(value = '') {
     spammerList.appendChild(div);
 }
 
-addSpamMsgBtn.onclick = () => addSpammerInput('ImperialsBot OP');
+addSpamMsgBtn.onclick = () => addSpammerInput('');
 
 const importSpamBtn = document.getElementById('importSpamBtn');
 const importSpamFile = document.getElementById('importSpamFile');
@@ -1677,6 +1685,36 @@ if (importSpamBtn && importSpamFile) {
     };
 }
 
+const exportSpamBtn = document.getElementById('exportSpamBtn');
+if (exportSpamBtn) {
+    exportSpamBtn.onclick = () => {
+        const inputs = spammerList.querySelectorAll('input');
+        const messages = Array.from(inputs)
+            .map(input => input.value)
+            .filter(v => v.trim() !== '');
+
+        if (messages.length === 0) {
+            showNotification('No messages to export', 'warning');
+            return;
+        }
+
+        const text = messages.join('\n');
+        const blob = new Blob([text], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+        a.href = url;
+        a.download = `spammer_config_${timestamp}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        showNotification(`Exported ${messages.length} messages`, 'success');
+    };
+}
+
 const autoReconnectBtn = document.getElementById('autoReconnectBtn');
 const autoAuthBtn = document.getElementById('autoAuthBtn');
 const antiAfkBtn = document.getElementById('antiAfkBtn');
@@ -1700,6 +1738,7 @@ setupToggle(autoReconnectBtn, 'toggleAutoReconnect', 'Auto Reconnect', 'Auto Rec
 setupToggle(autoAuthBtn, 'toggleAutoAuth', 'Auto Auth', 'Auto Auth');
 setupToggle(antiAfkBtn, 'toggleAntiAFK', 'Anti-AFK', 'Anti-AFK');
 setupToggle(killauraBtn, 'toggleKillaura', 'Killaura', 'Killaura');
+setupToggle(document.getElementById('autoEatBtn'), 'toggleAutoEat', 'AutoEat', 'AutoEat');
 
 socket.on('botToggles', (data) => {
     if (currentBot !== data.username) return;
@@ -1720,6 +1759,7 @@ socket.on('botToggles', (data) => {
     updateBtn(autoAuthBtn, data.autoAuthEnabled, 'AutoAuth');
     updateBtn(antiAfkBtn, data.antiAfkEnabled, 'Anti-AFK');
     updateBtn(killauraBtn, data.killauraEnabled, 'Killaura');
+    updateBtn(document.getElementById('autoEatBtn'), data.autoEatEnabled, 'AutoEat');
     updateBtn(spammerBtn, data.spammerEnabled, 'Spammer');
 
     const kaSettings = document.getElementById('killauraSettings');
@@ -1785,7 +1825,7 @@ spammerBtn.onclick = () => {
             enabled: newState,
             config: {
                 messages: messages,
-                delay: parseInt(spammerDelay.value),
+                delay: parseFloat(spammerDelay.value),
                 order: spammerOrder.value,
                 appendRandom: spammerAppend.checked,
                 randomLength: parseInt(spammerLen.value)
@@ -2736,3 +2776,129 @@ document.addEventListener('click', (e) => {
 });
 
 
+// Proxy Tools Management
+const checkProxiesBtn = document.getElementById('checkProxiesBtn');
+const scrapeProxiesBtn = document.getElementById('scrapeProxiesBtn');
+const filterDeadProxiesBtn = document.getElementById('filterDeadProxiesBtn');
+const proxyListTextarea = document.getElementById('settingProxyList');
+
+let lastProxyCheckResults = [];
+let isCheckingProxies = false;
+let validProxyCount = 0;
+
+if (checkProxiesBtn) {
+    checkProxiesBtn.onclick = (e) => {
+        try {
+            e.preventDefault();
+            const textarea = document.getElementById('settingProxyList');
+            if (!textarea) return showNotification('Internal Error: Proxy List textarea not found.', 'error');
+
+            if (isCheckingProxies) {
+                socket.emit('botAction', { action: 'stopCheckProxies' });
+                isCheckingProxies = false;
+                checkProxiesBtn.disabled = false;
+                checkProxiesBtn.innerText = 'Check Status';
+                return;
+            }
+
+            const text = textarea.value.trim();
+            const proxies = text.split(/\r?\n/).map(p => p.trim()).filter(p => p.length > 0 && p.includes('://'));
+            
+            if (proxies.length === 0) {
+                return showNotification('No valid proxies found in list (must start with socks5://, http://, etc.)', 'warning');
+            }
+
+            isCheckingProxies = true;
+            validProxyCount = 0;
+            checkProxiesBtn.innerText = 'Checking...';
+            socket.emit('botAction', { 
+                action: 'checkProxies', 
+                payload: { proxies }
+            });
+            showNotification(`Checking status of ${proxies.length} proxies...`, 'info');
+        } catch (err) {
+            console.error('Proxy check button error:', err);
+            showNotification('An error occurred while starting the check.', 'error');
+        }
+    };
+}
+
+socket.on('proxyCheckProgress', (progress) => {
+    if (progress.lastResult && progress.lastResult.status === 'online') {
+        validProxyCount++;
+    }
+    checkProxiesBtn.innerText = `Stop Check (${progress.current}/${progress.total}) - Valid: ${validProxyCount}`;
+});
+
+socket.on('proxyCheckResults', (results) => {
+    lastProxyCheckResults = results;
+    isCheckingProxies = false;
+    const onlineProxies = results.filter(r => r.status === 'online').map(r => r.url);
+    const deadCount = results.length - onlineProxies.length;
+    
+    checkProxiesBtn.disabled = false;
+    checkProxiesBtn.innerText = 'Check Status';
+    
+    if (deadCount > 0) {
+        proxyListTextarea.value = onlineProxies.join('\n');
+        showNotification(`Check Finished: ${onlineProxies.length} Online. Auto-removed ${deadCount} dead proxies!`, onlineProxies.length > 0 ? 'success' : 'warning');
+        
+        // Auto-save the pristine list
+        socket.emit('saveSettings', { proxyList: onlineProxies.join('\n') });
+        
+        filterDeadProxiesBtn.style.display = 'none';
+        lastProxyCheckResults = [];
+    } else {
+        showNotification(`Check Finished: All ${onlineProxies.length} proxies are Online!`, 'success');
+        filterDeadProxiesBtn.style.display = 'none';
+    }
+});
+
+if (scrapeProxiesBtn) {
+    scrapeProxiesBtn.onclick = (e) => {
+        e.preventDefault();
+        scrapeProxiesBtn.disabled = true;
+        scrapeProxiesBtn.innerText = 'Scraping...';
+        socket.emit('botAction', { action: 'scrapeProxies' });
+        showNotification('Scraping free proxies from online sources...', 'info');
+    };
+}
+
+socket.on('proxyScrapeProgress', (progress) => {
+    if (progress.status === 'scraping') {
+        scrapeProxiesBtn.innerText = `Scraping ${progress.source.toUpperCase()}...`;
+    } else if (progress.status === 'completed') {
+        showNotification(`Found ${progress.count} ${progress.source.toUpperCase()} proxies. Total: ${progress.totalSoFar}`, 'success');
+    } else if (progress.status === 'failed') {
+        showNotification(`Failed to scrape ${progress.source.toUpperCase()}: ${progress.error}`, 'error');
+    }
+});
+
+socket.on('proxyScrapeResults', (proxies) => {
+    scrapeProxiesBtn.disabled = false;
+    scrapeProxiesBtn.innerText = 'Scrape Free';
+
+    if (proxies.length > 0) {
+        const currentText = proxyListTextarea.value.trim();
+        proxyListTextarea.value = (currentText ? currentText + '\n' : '') + proxies.join('\n');
+        showNotification(`Successfully scraped ${proxies.length} proxies!`, 'success');
+    } else {
+        showNotification('Failed to scrape any new proxies.', 'error');
+    }
+});
+
+if (filterDeadProxiesBtn) {
+    filterDeadProxiesBtn.onclick = (e) => {
+        e.preventDefault();
+        if (lastProxyCheckResults.length === 0) return;
+        
+        const workingProxies = lastProxyCheckResults
+            .filter(r => r.status === 'online')
+            .map(r => r.url);
+            
+        proxyListTextarea.value = workingProxies.join('\n');
+        filterDeadProxiesBtn.style.display = 'none';
+        showNotification(`${lastProxyCheckResults.length - workingProxies.length} dead proxies removed from list.`, 'success');
+        lastProxyCheckResults = [];
+    };
+}

@@ -47,14 +47,25 @@ export class ConfigLoader {
             const data = await fs.readFile(SETTINGS_PATH, 'utf-8');
             return JSON.parse(data);
         } catch (err) {
-            return null;
+            return {};
         }
     }
 
     static async saveSettings(settings) {
-
         const current = await this.loadSettings() || {};
         const newSettings = { ...current, ...settings };
         await fs.writeFile(SETTINGS_PATH, JSON.stringify(newSettings, null, 2));
+    }
+
+    static async removeProxyFromGlobal(proxyUrl) {
+        const settings = await this.loadSettings();
+        if (settings && settings.proxyList) {
+            const proxies = settings.proxyList.split('\n').map(p => p.trim());
+            const filtered = proxies.filter(p => p !== proxyUrl && p.length > 0);
+            if (filtered.length !== proxies.length) {
+                settings.proxyList = filtered.join('\n');
+                await this.saveSettings(settings);
+            }
+        }
     }
 }

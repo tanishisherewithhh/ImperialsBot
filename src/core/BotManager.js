@@ -10,6 +10,7 @@ class BotManager extends EventEmitter {
         this.globalFriends = [];
         this.isGlobalHeadless = false;
         this.globalAnalytics = true;
+        this.setMaxListeners(100);
     }
 
     updateAllAnalytics(enabled) {

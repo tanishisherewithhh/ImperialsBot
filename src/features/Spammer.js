@@ -49,32 +49,39 @@ export class Spammer extends BaseFeature {
     }
 
     setConfig(config) {
+        const oldDelay = this.config.delay;
+        const oldEnabled = this.config.enabled;
+        
         this.config = { ...this.config, ...config };
+        
+        if (this.config.delay !== undefined) {
+            this.config.delay = parseFloat(this.config.delay) * 1000 || 3000;
+        }
+
         if (typeof this.config.messages === 'string') {
             this.config.messages = this.config.messages.split('\n').filter(m => m.trim().length > 0);
         }
 
         if (this.config.enabled) {
-            this.start();
+            // Check for change using a small tolerance or raw values since we already multiplied
+            if (!oldEnabled || oldDelay !== this.config.delay) {
+                this.start();
+            }
+        } else {
+            this.stop();
         }
     }
 
     spam() {
         if (!this.config.enabled) return;
 
-        if (!this.botClient.bot) {
+        if (!this.botClient.bot || !this.botClient.bot.entity) {
             this.botClient.log('Spammer stopped: Bot not initialized', 'warning');
             this.stop();
             return;
         }
 
-        if (!this.botClient.bot.entity) {
-            return;
-        }
-
         if (!this.botClient.bot._client || !this.botClient.bot._client.connected) {
-            this.botClient.log('Spammer stopped: Bot disconnected', 'warning');
-            this.stop();
             return;
         }
 
