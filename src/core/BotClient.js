@@ -301,6 +301,7 @@ export class BotClient extends EventEmitter {
 
         try {
             this.bot = mineflayer.createBot(botOptions);
+            this.bot.setMaxListeners(25);
 
             // INDEPENDENT ERROR BINDING (Immediate)
             // This ensures connection errors are caught before bindEvents
@@ -324,7 +325,6 @@ export class BotClient extends EventEmitter {
         this.bindEvents();
         try {
             this.featureManager.loadFeatures();
-            // Plugins are now loaded at the start of init()
         } catch (err) {
             console.error(`Failed to load features for ${this.username}:`, err);
             this.log(`Load error: ${err.message}`, 'error');
@@ -342,7 +342,7 @@ export class BotClient extends EventEmitter {
     bindEvents() {
         const instance = this.bot;
         instance.on('spawn', () => {
-            if (this.bot !== instance) return; // Ignore if this is an old instance
+            if (this.bot !== instance) return; 
 
             this.reconnectAttempts = 0;
             this.updateStatus('Online');
@@ -406,12 +406,17 @@ export class BotClient extends EventEmitter {
                 const now = Date.now();
                 if (now - (this.lastDataEmit || 0) > 250) {
                     this.lastDataEmit = now;
+                    const pos = instance.entity.position || { x: 0, y: 0, z: 0 };
                     this.emit('dataUpdate', {
-                        position: instance.entity.position,
-                        health: instance.health,
-                        food: instance.food,
-                        yaw: instance.entity.yaw,
-                        pitch: instance.entity.pitch,
+                        position: {
+                            x: isNaN(pos.x) ? 0 : pos.x,
+                            y: isNaN(pos.y) ? 0 : pos.y,
+                            z: isNaN(pos.z) ? 0 : pos.z
+                        },
+                        health: isNaN(instance.health) ? 20 : instance.health,
+                        food: isNaN(instance.food) ? 20 : instance.food,
+                        yaw: isNaN(instance.entity.yaw) ? 0 : instance.entity.yaw,
+                        pitch: isNaN(instance.entity.pitch) ? 0 : instance.entity.pitch,
                         dimension: instance.game ? instance.game.dimension : 'overworld'
                     });
                 }
@@ -548,9 +553,12 @@ export class BotClient extends EventEmitter {
         instance.on('death', () => {
             if (this.bot !== instance) return;
             let posStr = 'unknown location';
-            if (instance.entity) {
+            if (instance.entity && instance.entity.position) {
                 const pos = instance.entity.position;
-                posStr = `${Math.floor(pos.x)}, ${Math.floor(pos.y)}, ${Math.floor(pos.z)}`;
+                const x = Math.floor(isNaN(pos.x) ? 0 : pos.x);
+                const y = Math.floor(isNaN(pos.y) ? 0 : pos.y);
+                const z = Math.floor(isNaN(pos.z) ? 0 : pos.z);
+                posStr = `${x}, ${y}, ${z}`;
             }
             this.updateStatus(`Died at ${posStr}`);
 

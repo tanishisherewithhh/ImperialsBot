@@ -41,7 +41,12 @@ export class NetworkUtils {
                     }
                 }, timeout);
 
-                mc.ping({ host, port }, (err, results) => {
+                const ping = mc.ping || (mc.default && mc.default.ping);
+                if (typeof ping !== 'function') {
+                    return resolve({ success: false, error: 'ping is not a function in minecraft-protocol' });
+                }
+
+                ping({ host, port }, (err, results) => {
                     clearTimeout(timer);
                     if (err) {
                         if (attempt < retries) {

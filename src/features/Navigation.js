@@ -6,7 +6,13 @@ const Vec3 = require('vec3');
 
 export class Navigation extends BaseFeature {
     async init() {
-        this.botClient.bot.loadPlugin(pathfinder);
+        this.botClient.bot.once('spawn', () => {
+            try {
+                this.botClient.bot.loadPlugin(pathfinder);
+            } catch (err) {
+                this.botClient.log(`Pathfinder plugin failed to load: ${err.message}`, 'error');
+            }
+        });
 
         this.active = false;
         this.targetPos = null;

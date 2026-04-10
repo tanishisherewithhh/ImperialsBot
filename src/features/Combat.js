@@ -28,7 +28,14 @@ export class Combat extends BaseFeature {
     }
 
     init() {
-        this.botClient.bot.loadPlugin(pvp);
+        this.botClient.bot.once('spawn', () => {
+            try {
+                this.botClient.bot.loadPlugin(pvp);
+                this.applyPvpConfig();
+            } catch (err) {
+                this.botClient.log(`Combat plugin failed to load: ${err.message}`, 'error');
+            }
+        });
 
         this.botClient.bot.on('physicsTick', () => {
             if (this.killauraEnabled) {
