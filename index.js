@@ -4,10 +4,12 @@ import { botManager } from './src/core/BotManager.js';
 import { ConfigLoader } from './src/config/ConfigLoader.js';
 import { Logger } from './src/utils/Logger.js';
 import { AuditLogger } from './src/utils/AuditLogger.js';
+import { UpdateChecker } from './src/utils/UpdateChecker.js';
 import readline from 'readline';
 
 const start = async () => {
     Logger.initGlobalLogging();
+    await UpdateChecker.check();
 
     process.on('uncaughtException', (err) => {
         // Suppress known library-level TypeErrors that shouldn't crash the whole app
