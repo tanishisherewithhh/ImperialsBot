@@ -1,6 +1,6 @@
 {
   "name": "imperialsbot",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "description": "Multi-bot management tool for Minecraft with web interface",
   "main": "index.js",
   "scripts": {
