@@ -18,7 +18,6 @@ export class ProxyChecker {
         const maxConcurrent = 50;
 
         // We test if the proxy allows Minecraft traffic (Port 25565)
-        // by attempting a raw SOCKS TCP handshake to a universal port testing service.
         const testTarget = { host: 'portquiz.net', port: 25565 };
 
         const workers = Array(maxConcurrent).fill(Promise.resolve()).map(async () => {
