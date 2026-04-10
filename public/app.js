@@ -47,7 +47,7 @@ const botList = document.getElementById('botList');
 const connectionStatus = document.getElementById('connectionStatus');
 const viewerContainer = document.getElementById('viewerContainer');
 const inventoryGridEl = document.getElementById('inventoryGrid');
-const chatBox = document.getElementById('chatBox');
+let chatBox = document.getElementById('chatBox');
 const chatInput = document.getElementById('chatInput');
 const loadingOverlay = document.getElementById('loadingOverlay');
 
@@ -310,7 +310,8 @@ if (searchInputBox) {
 }
 
 socket.on('logs', (payload) => {
-    if (currentBot !== payload.username) return;
+    if (!payload.username) return;
+    const targetBox = getChatBox(payload.username);
     if (!chatVisible) return;
     const { message, type } = payload;
 
@@ -330,12 +331,36 @@ socket.on('logs', (payload) => {
     formattedMessage.innerHTML = formatChat(message);
     div.appendChild(formattedMessage);
 
-    chatBox.appendChild(div);
-    const isAtBottom = (chatBox.scrollHeight - chatBox.scrollTop - chatBox.clientHeight) < 50;
+    targetBox.appendChild(div);
+    const isAtBottom = (targetBox.scrollHeight - targetBox.scrollTop - targetBox.clientHeight) < 50;
     if (isAtBottom) {
-        chatBox.scrollTop = chatBox.scrollHeight;
+        targetBox.scrollTop = targetBox.scrollHeight;
     }
 });
+
+let chatBoxes = new Map();
+chatBoxes.set('default', chatBox);
+
+function getChatBox(username) {
+    if (!username) return chatBox;
+    if (!chatBoxes.has(username)) {
+        const box = document.createElement('div');
+        box.className = 'chat-box';
+        box.id = `chatBox_${username}`;
+        box.style.display = 'none';
+        
+        const welcome = document.createElement('div');
+        welcome.className = 'chat-message info';
+        welcome.innerText = `Chat interface for ${username}`;
+        box.appendChild(welcome);
+
+        const container = document.querySelector('.chat-container');
+        if (container) container.appendChild(box);
+        
+        chatBoxes.set(username, box);
+    }
+    return chatBoxes.get(username);
+}
 
 
 function formatMinecraftText(text) {
@@ -910,11 +935,16 @@ function selectBot(username) {
         else el.classList.remove('active');
     });
 
-    chatBox.innerHTML = '';
-    const welcome = document.createElement('div');
-    welcome.className = 'chat-message info';
-    welcome.innerText = `Switched to ${username} `;
-    chatBox.appendChild(welcome);
+    // Hide all chat boxes
+    document.querySelectorAll('.chat-box').forEach(cb => {
+        cb.style.display = 'none';
+    });
+
+    chatBox = getChatBox(username);
+    if (chatBox) {
+        chatBox.style.display = 'block';
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
 
     const botNameHeader = document.getElementById('currentBotName');
     if (botNameHeader) botNameHeader.innerText = username;
@@ -988,24 +1018,25 @@ socket.on('chatHistory', (payload) => {
     const username = payload.username;
     const history = payload.history;
 
-    if (!currentBot || currentBot.toLowerCase() !== username.toLowerCase()) return;
+    const targetBox = getChatBox(username);
 
-    chatBox.innerHTML = '';
+    targetBox.innerHTML = '';
     const welcome = document.createElement('div');
     welcome.className = 'chat-message info';
-    welcome.innerText = `Switched to ${username}`;
-    chatBox.appendChild(welcome);
+    welcome.innerText = `Chat history for ${username}`;
+    targetBox.appendChild(welcome);
 
     history.forEach(msg => {
-        renderChatMessage(msg);
+        renderChatMessage(msg, targetBox);
     });
-    chatBox.scrollTop = chatBox.scrollHeight;
+    targetBox.scrollTop = targetBox.scrollHeight;
 });
 
 socket.on('botChat', (payload) => {
-    if (!currentBot || !payload.username || currentBot.toLowerCase() !== payload.username.toLowerCase()) return;
+    if (!payload.username) return;
 
-    const lastMsg = chatBox.lastElementChild;
+    const targetBox = getChatBox(payload.username);
+    const lastMsg = targetBox.lastElementChild;
     const now = Date.now();
     const compareText = payload.raw || payload.message;
     const sender = payload.sender || '[Server]';
@@ -1026,9 +1057,9 @@ socket.on('botChat', (payload) => {
         repeatSpan.innerText = `(x${count})`;
 
         // Keep scroll at bottom if it was already there
-        const isAtBottom = (chatBox.scrollHeight - chatBox.scrollTop - chatBox.clientHeight) < 100;
+        const isAtBottom = (targetBox.scrollHeight - targetBox.scrollTop - targetBox.clientHeight) < 100;
         if (isAtBottom) {
-            chatBox.scrollTop = chatBox.scrollHeight;
+            targetBox.scrollTop = targetBox.scrollHeight;
         }
         return;
     }
@@ -1042,15 +1073,15 @@ socket.on('botChat', (payload) => {
     };
 
     if (chatVisible) {
-        const isAtBottom = (chatBox.scrollHeight - chatBox.scrollTop - chatBox.clientHeight) < 50;
-        renderChatMessage(msgObj);
+        const isAtBottom = (targetBox.scrollHeight - targetBox.scrollTop - targetBox.clientHeight) < 50;
+        renderChatMessage(msgObj, targetBox);
         if (isAtBottom) {
-            chatBox.scrollTop = chatBox.scrollHeight;
+            targetBox.scrollTop = targetBox.scrollHeight;
         }
     }
 });
 
-function renderChatMessage(msg) {
+function renderChatMessage(msg, targetBox = chatBox) {
     const div = document.createElement('div');
     div.className = `chat-message ${msg.type || 'info'}`;
 
@@ -1080,7 +1111,7 @@ function renderChatMessage(msg) {
     textSpan.innerHTML = formatChat(msg.message);
     div.appendChild(textSpan);
 
-    chatBox.appendChild(div);
+    targetBox.appendChild(div);
 }
 
 tabBtns.forEach(btn => {
@@ -2616,7 +2647,29 @@ socket.on('settings', (settings) => {
     }
     if (settings && settings.proxyList !== undefined) {
         const proxyListEl = document.getElementById('settingProxyList');
-        if (proxyListEl) proxyListEl.value = settings.proxyList;
+        if (proxyListEl) {
+            proxyListEl.value = settings.proxyList;
+            updateProxyCount();
+        }
+    }
+
+    function updateProxyCount() {
+        const textarea = document.getElementById('settingProxyList');
+        const display = document.getElementById('proxyCount');
+        if (!textarea || !display) return;
+        
+        const text = textarea.value.trim();
+        if (!text) {
+            display.innerText = '(0 proxies)';
+            return;
+        }
+        const proxies = text.split(/\r?\n/).map(p => p.trim()).filter(p => p.length > 0);
+        display.innerText = `(${proxies.length} proxies)`;
+    }
+
+    const globalProxyListEl = document.getElementById('settingProxyList');
+    if (globalProxyListEl) {
+        globalProxyListEl.addEventListener('input', updateProxyCount);
     }
     if (settings && settings.globalFriends !== undefined) {
         const friendsEl = document.getElementById('settingGlobalFriends');
@@ -2800,12 +2853,24 @@ if (checkProxiesBtn) {
                 checkProxiesBtn.innerText = 'Check Status';
                 return;
             }
-
             const text = textarea.value.trim();
-            const proxies = text.split(/\r?\n/).map(p => p.trim()).filter(p => p.length > 0 && p.includes('://'));
+            const rawProxies = text.split(/\r?\n/).map(p => p.trim()).filter(p => p.length > 0);
+            const proxies = [];
+            for (const p of rawProxies) {
+                if (p.includes('://')) {
+                    proxies.push(p);
+                } else {
+                    const parts = p.split(':');
+                    if (parts.length === 4) {
+                        proxies.push(`socks5://${encodeURIComponent(parts[2])}:${encodeURIComponent(parts[3])}@${parts[0]}:${parts[1]}`);
+                    } else if (parts.length === 2) {
+                        proxies.push(`socks5://${parts[0]}:${parts[1]}`);
+                    }
+                }
+            }
             
             if (proxies.length === 0) {
-                return showNotification('No valid proxies found in list (must start with socks5://, http://, etc.)', 'warning');
+                return showNotification('No valid proxies found in list.', 'warning');
             }
 
             isCheckingProxies = true;

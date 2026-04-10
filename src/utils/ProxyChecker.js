@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { ProxyAgent } from 'proxy-agent';
+import { SocksClient } from 'socks';
 
 export class ProxyChecker {
     /**
@@ -16,6 +17,10 @@ export class ProxyChecker {
         let index = 0;
         const maxConcurrent = 50;
 
+        // We test if the proxy allows Minecraft traffic (Port 25565)
+        // by attempting a raw SOCKS TCP handshake to a robust public server.
+        const testTarget = { host: 'mc.hypixel.net', port: 25565 };
+
         const workers = Array(maxConcurrent).fill(Promise.resolve()).map(async () => {
             while (index < total) {
                 if (signal?.aborted) break;
@@ -24,12 +29,38 @@ export class ProxyChecker {
                 const start = Date.now();
                 let result;
                 try {
-                    const agent = new ProxyAgent({ getProxyForUrl: () => proxyUrl });
-                    await axios.get('https://api.minecraftservices.com/heartbeat', {
-                        httpAgent: agent,
-                        httpsAgent: agent,
-                        timeout: 5000,
-                        validateStatus: () => true
+                    let parsed;
+                    try {
+                        parsed = new URL(proxyUrl);
+                    } catch(e) {
+                        throw new Error('Invalid URL');
+                    }
+
+                    const protocol = parsed.protocol.replace(':', '');
+                    if (protocol !== 'socks4' && protocol !== 'socks5') {
+                        throw new Error('Only SOCKS4/5 proxies are supported');
+                    }
+
+                    const proxyOptions = {
+                        proxy: {
+                            host: parsed.hostname,
+                            port: parseInt(parsed.port) || 1080,
+                            type: protocol === 'socks5' ? 5 : 4
+                        },
+                        command: 'connect',
+                        destination: testTarget,
+                        timeout: 5000
+                    };
+
+                    if (parsed.username) proxyOptions.proxy.userId = decodeURIComponent(parsed.username);
+                    if (parsed.password) proxyOptions.proxy.password = decodeURIComponent(parsed.password);
+
+                    await new Promise((resolve, reject) => {
+                        SocksClient.createConnection(proxyOptions, (err, info) => {
+                            if (err) return reject(err);
+                            info.socket.destroy(); // Handshake success, close it safely
+                            resolve();
+                        });
                     });
                     
                     result = {
@@ -65,8 +96,7 @@ export class ProxyChecker {
     static async scrapeAll(onProgress) {
         const sources = [
             { url: 'https://api.proxyscrape.com/v2/?request=displayproxies&protocol=socks5&timeout=10000&country=all&ssl=all&anonymity=all', protocol: 'socks5' },
-            { url: 'https://api.proxyscrape.com/v2/?request=displayproxies&protocol=socks4&timeout=10000&country=all&ssl=all&anonymity=all', protocol: 'socks4' },
-            { url: 'https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=10000&country=all&ssl=all&anonymity=all', protocol: 'http' }
+            { url: 'https://api.proxyscrape.com/v2/?request=displayproxies&protocol=socks4&timeout=10000&country=all&ssl=all&anonymity=all', protocol: 'socks4' }
         ];
 
         const allProxies = new Set();

@@ -588,7 +588,6 @@
                             <label for="addBotProxyType">Proxy Type</label>
                             <select id="addBotProxyType" name="proxyType" onchange="toggleProxyFields('add')">
                                 <option value="none">None</option>
-                                <option value="http">HTTP</option>
                                 <option value="socks4">SOCKS4</option>
                                 <option value="socks5">SOCKS5</option>
                             </select>
@@ -785,9 +784,9 @@
                     </p>
                 </div>
                 <div class="form-group">
-                    <label>Global Proxy List (One per line)</label>
+                    <label>Global Proxy List (One per line) <span id="proxyCount" style="color: var(--primary); font-size: 0.9em; font-weight: normal; margin-left: 8px;">(0 proxies)</span></label>
                     <textarea id="settingProxyList" name="proxyList"
-                        placeholder="socks5://user:pass@127.0.0.1:1080&#10;http://127.0.0.1:8080"
+                        placeholder="socks5://user:pass@127.0.0.1:1080&#10;socks4://127.0.0.1:1080"
                         style="width: 100%; height: 120px; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); color: white; padding: 8px; border-radius: 4px; font-family: monospace; resize: vertical; margin-bottom: 10px;"></textarea>
 
                     <div style="display: flex; gap: 8px; margin-bottom: 15px;">
@@ -854,7 +853,6 @@
                             <label for="editBotProxyType">Proxy Type</label>
                             <select id="editBotProxyType" name="proxyType" onchange="toggleProxyFields('edit')">
                                 <option value="none">None</option>
-                                <option value="http">HTTP</option>
                                 <option value="socks4">SOCKS4</option>
                                 <option value="socks5">SOCKS5</option>
                             </select>

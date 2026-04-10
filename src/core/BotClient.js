@@ -243,7 +243,20 @@ export class BotClient extends EventEmitter {
         try {
             const settings = await ConfigLoader.loadSettings();
             if (settings.randomProxy && settings.proxyList) {
-                const proxies = settings.proxyList.split('\n').map(p => p.trim()).filter(p => p.length > 0 && p.includes('://'));
+                const rawProxies = settings.proxyList.split('\n').map(p => p.trim()).filter(p => p.length > 0);
+                const proxies = [];
+                for (const p of rawProxies) {
+                    if (p.includes('://')) {
+                        proxies.push(p);
+                    } else {
+                        const parts = p.split(':');
+                        if (parts.length === 4) {
+                            proxies.push(`socks5://${encodeURIComponent(parts[2])}:${encodeURIComponent(parts[3])}@${parts[0]}:${parts[1]}`);
+                        } else if (parts.length === 2) {
+                            proxies.push(`socks5://${parts[0]}:${parts[1]}`);
+                        }
+                    }
+                }
                 if (proxies.length > 0) {
                     const maxAttempts = Math.min(5, proxies.length);
                     for (let attempts = 0; attempts < maxAttempts; attempts++) {
@@ -311,6 +324,13 @@ export class BotClient extends EventEmitter {
 
         if (this.config.proxyType && this.config.proxyType !== 'none') {
             const { proxyType, proxyHost, proxyPort, proxyUser, proxyPass } = this.config;
+            
+            if (proxyType !== 'socks4' && proxyType !== 'socks5') {
+                this.log(`Unsupported proxy type: ${proxyType}. Only SOCKS4 and SOCKS5 are supported for safe TCP tunneling. Proxy disabled.`, 'error');
+                this.updateStatus('Error: Invalid Proxy Type');
+                return;
+            }
+
             let authStr = '';
             if (proxyUser && proxyPass) {
                 authStr = `${encodeURIComponent(proxyUser)}:${encodeURIComponent(proxyPass)}@`;
@@ -340,8 +360,8 @@ export class BotClient extends EventEmitter {
                             },
                             command: 'connect',
                             destination: {
-                                host: botOptions.host,
-                                port: parseInt(botOptions.port)
+                                host: client.host || botOptions.host,
+                                port: parseInt(client.port || botOptions.port)
                             }
                         };
 
@@ -351,6 +371,15 @@ export class BotClient extends EventEmitter {
                                 client.emit('error', err);
                                 return;
                             }
+                            
+                            info.socket.on('error', (socketError) => {
+                                this.log(`Proxy TCP Socket Error: ${socketError.message}`, 'error');
+                            });
+                            
+                            info.socket.on('close', (hadError) => {
+                                this.log(`Proxy TCP Socket Closed (hadError: ${hadError}). The proxy/server forcefully closed the connection.`, 'warning');
+                            });
+
                             client.setSocket(info.socket);
                             client.emit('connect');
                         });
