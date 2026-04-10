@@ -30,5 +30,16 @@
     "proxy-agent": "^6.5.0",
     "socket.io": "^4.8.1",
     "vec3": "^0.1.10"
+  },
+  "overrides": {
+    "ws": "^7.5.10",
+    "socket.io-parser": "^4.2.4",
+    "engine.io-parser": "^5.2.1",
+    "cookie": "^0.7.1",
+    "minecraft-protocol": "^1.66.0",
+    "engine.io": "^6.6.1",
+    "socket.io": "^4.8.1",
+    "axios": "^1.7.4",
+    "prismarine-auth": "^3.1.1"
   }
 }
