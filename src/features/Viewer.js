@@ -31,10 +31,10 @@ export class Viewer extends BaseFeature {
             this.viewerInstance = null;
         }
 
-        const isRender = process.env.IMPERIALS_CLOUD_MODE === 'true';
+        const isCloud = process.env.IMPERIALS_CLOUD_MODE === 'true';
         
         let basePort;
-        if (isRender) {
+        if (isCloud) {
             const usernameHash = Array.from(this.botClient.username || '').reduce((a, c) => a + c.charCodeAt(0), 0);
             basePort = getBasePort() + 100 + (usernameHash % 50);
         } else {

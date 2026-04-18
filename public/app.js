@@ -8,7 +8,7 @@ let spammerEnabled = false;
 let lowPerformanceEnabled = false;
 let chatVisible = true;
 let watchlist = [];
-let isRenderMode = false;
+let isCloudMode = false;
 const step = 3;
 
 
@@ -967,7 +967,7 @@ function updateInventoryFrame() {
     if (bot && status === 'online' && bot.inventoryPort) {
 
         let url;
-        if (isRenderMode) {
+        if (isCloudMode) {
             url = `/inventory/${bot.inventoryPort}`;
         } else {
             url = `http://${window.location.hostname}:${bot.inventoryPort}`;
@@ -996,7 +996,7 @@ function updateViewer(port) {
     if (!port) return;
     const viewerFrame = viewerContainer.querySelector('iframe');
     let newSrc;
-    if (isRenderMode) {
+    if (isCloudMode) {
         newSrc = `/viewer/${port}`;
     } else {
         newSrc = `http://${window.location.hostname}:${port}`;
@@ -2138,7 +2138,7 @@ socket.on('settings', (settings) => {
         document.body.className = settings.theme;
         themeSelect.value = settings.theme;
     }
-    isRenderMode = settings?.isRenderMode === true;
+    isCloudMode = settings?.isCloudMode === true;
 });
 
 socket.on('globalHeadlessChanged', (enabled) => {

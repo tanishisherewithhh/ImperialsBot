@@ -460,9 +460,9 @@ export class BotClient extends EventEmitter {
 
             // Start Web Inventory ONLY on spawn
             if (true) {
-                const isRender = process.env.IMPERIALS_CLOUD_MODE === 'true';
-                let startPort;
-                if (isRender) {
+const isCloud = process.env.IMPERIALS_CLOUD_MODE === 'true';
+                
+                if (isCloud) {
                     const usernameHash = Array.from(this.username || '').reduce((a, c) => a + c.charCodeAt(0), 0);
                     startPort = getBasePort() + 200 + (usernameHash % 50);
                 } else {
