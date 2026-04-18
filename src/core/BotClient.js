@@ -10,6 +10,7 @@ import { Logger } from '../utils/Logger.js';
 import { ProxyAgent } from 'proxy-agent';
 import { SocksClient } from 'socks';
 import axios from 'axios';
+import { getBasePort } from '../utils/ConfigBase.js';
 
 export class BotClient extends EventEmitter {
     constructor(config) {
@@ -459,7 +460,14 @@ export class BotClient extends EventEmitter {
 
             // Start Web Inventory ONLY on spawn
             if (true) {
-                const startPort = this.inventoryPort || (4000 + Math.floor(Math.random() * 1000));
+                const isRender = process.env.IMPERIALS_RENDER_MODE === 'true';
+                let startPort;
+                if (isRender) {
+                    const usernameHash = Array.from(this.username || '').reduce((a, c) => a + c.charCodeAt(0), 0);
+                    startPort = getBasePort() + 200 + (usernameHash % 50);
+                } else {
+                    startPort = this.inventoryPort || (4000 + Math.floor(Math.random() * 1000));
+                }
                 NetworkUtils.findFreePort(startPort).then(port => {
                     this.inventoryPort = port;
                     try {
