@@ -106,12 +106,12 @@ Once a bot is selected, you can monitor its state:
 
 ImperialsBot can be hosted on cloud platforms like Render.com. However, unlike local hosting, cloud containers have ephemeral filesystems - any data saved to local files will be lost on restart.
 
-**Render Mode** (`IMPERIALS_RENDER_MODE=true`) enables:
+**Render Mode** (`IMPERIALS_CLOUD_MODE=true`) enables:
 - Bot config stored in environment variables (persists across restarts)
 - Viewer and inventory accessible via the main server port through proxy routes
 
 **Setup on Render:**
-1. Set environment variable `IMPERIALS_RENDER_MODE=true`
+1. Set environment variable `IMPERIALS_CLOUD_MODE=true`
 2. Deploy and use normally
 
 **Usage:**

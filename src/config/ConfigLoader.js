@@ -18,7 +18,7 @@ function getJsonFromEnv(varName) {
 }
 
 function setJsonInEnv(varName, data) {
-    if (process.env.IMPERIALS_RENDER_MODE === 'true') {
+    if (process.env.IMPERIALS_CLOUD_MODE === 'true') {
         return;
     }
     const str = JSON.stringify(data, null, 2);
@@ -28,7 +28,7 @@ function setJsonInEnv(varName, data) {
 
 export class ConfigLoader {
     static async loadBots() {
-        if (process.env.IMPERIALS_RENDER_MODE === 'true') {
+        if (process.env.IMPERIALS_CLOUD_MODE === 'true') {
             const envData = getJsonFromEnv('IMPERIALS_BOTS');
             if (envData) return envData;
         }
@@ -44,7 +44,7 @@ export class ConfigLoader {
     }
 
     static async saveBots(bots) {
-        if (process.env.IMPERIALS_RENDER_MODE === 'true') {
+        if (process.env.IMPERIALS_CLOUD_MODE === 'true') {
             setJsonInEnv('IMPERIALS_BOTS', bots);
             return;
         }
@@ -70,7 +70,7 @@ export class ConfigLoader {
     }
 
     static async loadSettings() {
-        if (process.env.IMPERIALS_RENDER_MODE === 'true') {
+        if (process.env.IMPERIALS_CLOUD_MODE === 'true') {
             const envData = getJsonFromEnv('IMPERIALS_SETTINGS');
             if (envData) return envData;
         }
@@ -83,7 +83,7 @@ export class ConfigLoader {
     }
 
     static async saveSettings(settings) {
-        if (process.env.IMPERIALS_RENDER_MODE === 'true') {
+        if (process.env.IMPERIALS_CLOUD_MODE === 'true') {
             const current = await this.loadSettings();
             const newSettings = { ...current, ...settings };
             setJsonInEnv('IMPERIALS_SETTINGS', newSettings);

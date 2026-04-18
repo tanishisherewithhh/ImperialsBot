@@ -19,11 +19,11 @@ For more information on bot capabilities, see the [Mineflayer Documentation](htt
 
 ### Cloud Deployment
 
-ImperialsBot can be deployed on cloud platforms like **Render.com**. Because cloud containers have ephemeral filesystems, the `IMPERIALS_RENDER_MODE` environment variable enables:
+ImperialsBot can be deployed on cloud platforms like **Render.com**. Because cloud containers have ephemeral filesystems, the `IMPERIALS_CLOUD_MODE` environment variable enables:
 - Bot config stored in environment variables (persists across restarts)
 - Viewer/inventory via proxy routes on the main port
 
-Set `IMPERIALS_RENDER_MODE=true` in your Render environment variables. See the [User Guide](GUIDE.md) for full details.
+Set `IMPERIALS_CLOUD_MODE=true` in your Render environment variables. See the [User Guide](GUIDE.md) for full details.
 
 ---
 

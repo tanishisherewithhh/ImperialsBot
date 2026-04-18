@@ -31,7 +31,7 @@ export class Viewer extends BaseFeature {
             this.viewerInstance = null;
         }
 
-        const isRender = process.env.IMPERIALS_RENDER_MODE === 'true';
+        const isRender = process.env.IMPERIALS_CLOUD_MODE === 'true';
         
         let basePort;
         if (isRender) {

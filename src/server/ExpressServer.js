@@ -28,7 +28,7 @@ export class ExpressServer {
             res.sendFile(path.join(__dirname, '../../public/index.html'));
         });
 
-        const isRender = process.env.IMPERIALS_RENDER_MODE === 'true';
+        const isRender = process.env.IMPERIALS_CLOUD_MODE === 'true';
         
         if (isRender) {
             this.app.use('/viewer/:port', (req, res, next) => {
