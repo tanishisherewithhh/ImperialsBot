@@ -8,6 +8,7 @@ let spammerEnabled = false;
 let lowPerformanceEnabled = false;
 let chatVisible = true;
 let watchlist = [];
+let isCloudMode = false;
 const step = 3;
 
 
@@ -965,7 +966,12 @@ function updateInventoryFrame() {
 
     if (bot && status === 'online' && bot.inventoryPort) {
 
-        const url = `http://${window.location.hostname}:${bot.inventoryPort}`;
+        let url;
+        if (isCloudMode) {
+            url = `/inventory/${bot.inventoryPort}`;
+        } else {
+            url = `http://${window.location.hostname}:${bot.inventoryPort}`;
+        }
         if (iframe.src !== url) {
             iframe.src = url;
             console.log(`Setting inventory iframe for ${currentBot} to ${url}`);
@@ -989,7 +995,12 @@ function updateInventoryFrame() {
 function updateViewer(port) {
     if (!port) return;
     const viewerFrame = viewerContainer.querySelector('iframe');
-    const newSrc = `http://${window.location.hostname}:${port}`;
+    let newSrc;
+    if (isCloudMode) {
+        newSrc = `/viewer/${port}`;
+    } else {
+        newSrc = `http://${window.location.hostname}:${port}`;
+    }
     if (!viewerFrame) {
         viewerContainer.innerHTML = `<iframe src="${newSrc}" style="width:100%; height:100%; border:none;"></iframe>`;
     } else if (viewerFrame.src !== newSrc) {
@@ -2127,6 +2138,7 @@ socket.on('settings', (settings) => {
         document.body.className = settings.theme;
         themeSelect.value = settings.theme;
     }
+    isCloudMode = settings?.isCloudMode === true;
 });
 
 socket.on('globalHeadlessChanged', (enabled) => {

@@ -4,6 +4,11 @@ const require = createRequire(import.meta.url);
 const { mineflayer: viewer } = require('prismarine-viewer');
 
 import { NetworkUtils } from '../utils/NetworkUtils.js';
+import { setBasePort, getBasePort } from '../utils/ConfigBase.js';
+
+export function setViewerBasePort(port) {
+    setBasePort(port);
+}
 
 export class Viewer extends BaseFeature {
     init() {
@@ -26,12 +31,18 @@ export class Viewer extends BaseFeature {
             this.viewerInstance = null;
         }
 
-        if (!this.botClient.config.viewerPort) {
-            this.botClient.config.viewerPort = 3000 + Math.floor(Math.random() * 5000);
+        const isCloud = process.env.IMPERIALS_CLOUD_MODE === 'true';
+        
+        let basePort;
+        if (isCloud) {
+            const usernameHash = Array.from(this.botClient.username || '').reduce((a, c) => a + c.charCodeAt(0), 0);
+            basePort = getBasePort() + 100 + (usernameHash % 50);
+        } else {
+            basePort = this.botClient.config.viewerPort || (4000 + Math.floor(Math.random() * 1000));
         }
 
         try {
-            const port = await NetworkUtils.findFreePort(this.botClient.config.viewerPort);
+            const port = await NetworkUtils.findFreePort(basePort);
 
             this.viewerInstance = viewer(this.botClient.bot, {
                 port: port,

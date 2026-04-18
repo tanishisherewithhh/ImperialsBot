@@ -5,6 +5,7 @@ import { ConfigLoader } from './src/config/ConfigLoader.js';
 import { Logger } from './src/utils/Logger.js';
 import { AuditLogger } from './src/utils/AuditLogger.js';
 import { UpdateChecker } from './src/utils/UpdateChecker.js';
+import { setViewerBasePort } from './src/features/Viewer.js';
 import readline from 'readline';
 
 const start = async () => {
@@ -73,6 +74,8 @@ const start = async () => {
 
     const server = new ExpressServer(port);
     const socketServer = new SocketServer(server.httpServer);
+
+    setViewerBasePort(port);
 
     botManager.loadSavedBots();
     server.start();
