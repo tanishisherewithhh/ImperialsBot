@@ -20,6 +20,14 @@ export class ExpressServer {
     setupMiddleware() {
         this.app.use(express.json());
 
+        // few security Headers)
+        this.app.use((req, res, next) => {
+            res.setHeader('X-Content-Type-Options', 'nosniff');
+            res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+            res.setHeader('X-XSS-Protection', '1; mode=block');
+            next();
+        });
+
         this.app.use(express.static(path.join(__dirname, '../../public')));
     }
 
@@ -28,9 +36,15 @@ export class ExpressServer {
             res.sendFile(path.join(__dirname, '../../public/index.html'));
         });
 
+        // Proxy Route for Viewer
         this.app.use('/viewer/:port', (req, res, next) => {
             const targetPort = parseInt(req.params.port);
-            if (targetPort && targetPort > 3000) {
+            
+            // proxy to ports currently authorized by the BotManager
+            const { botManager } = require('../core/BotManager.js');
+            const authorizedPorts = botManager.getAuthorizedPorts();
+            
+            if (targetPort && authorizedPorts.has(targetPort)) {
                 const proxy = createProxyMiddleware({
                     target: `http://localhost:${targetPort}`,
                     ws: true,
@@ -39,13 +53,19 @@ export class ExpressServer {
                 });
                 proxy(req, res, next);
             } else {
-                next();
+                res.status(403).json({ error: 'Access Denied: Port not authorized' });
             }
         });
 
+        // Proxy Route for Inventory
         this.app.use('/inventory/:port', (req, res, next) => {
             const targetPort = parseInt(req.params.port);
-            if (targetPort && targetPort > 3000) {
+            
+    
+            const { botManager } = require('../core/BotManager.js');
+            const authorizedPorts = botManager.getAuthorizedPorts();
+
+            if (targetPort && authorizedPorts.has(targetPort)) {
                 const proxy = createProxyMiddleware({
                     target: `http://localhost:${targetPort}`,
                     ws: true,
@@ -54,7 +74,7 @@ export class ExpressServer {
                 });
                 proxy(req, res, next);
             } else {
-                next();
+                res.status(403).json({ error: 'Access Denied: Port not authorized' });
             }
         });
     }

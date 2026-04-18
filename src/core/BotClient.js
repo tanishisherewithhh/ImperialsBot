@@ -470,7 +470,12 @@ export class BotClient extends EventEmitter {
                 NetworkUtils.findFreePort(startPort).then(port => {
                     this.inventoryPort = port;
                     try {
-                        inventoryViewer(instance, { port: this.inventoryPort, startOnLoad: true });
+                        // bind to localhost so it is only accessible via our authorized proxy
+                        inventoryViewer(instance, { 
+                            port: this.inventoryPort, 
+                            host: '127.0.0.1',
+                            startOnLoad: true 
+                        });
                         this.log(`Web Inventory started on port ${this.inventoryPort}`, 'info');
                         this.updateStatus(this.status); // Push status to update port in UI
                     } catch (err) {

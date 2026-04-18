@@ -140,6 +140,15 @@ class BotManager extends EventEmitter {
         }));
     }
 
+    getAuthorizedPorts() {
+        const ports = new Set();
+        for (const bot of this.bots.values()) {
+            if (bot.viewerPort) ports.add(parseInt(bot.viewerPort));
+            if (bot.inventoryPort) ports.add(parseInt(bot.inventoryPort));
+        }
+        return ports;
+    }
+
     async updateBot(config) {
         const bot = this.bots.get(config.username);
         if (!bot) {

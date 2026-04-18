@@ -45,6 +45,7 @@ export class Viewer extends BaseFeature {
 
             this.viewerInstance = viewer(this.botClient.bot, {
                 port: port,
+                host: '127.0.0.1',
                 firstPerson: !!this.botClient.config.firstPerson
             });
 
