@@ -436,13 +436,11 @@ function formatMinecraftText(text) {
 function ansiToHtml(text) {
     if (!text) return '';
 
-
     const ansiMap = {
         '30': '#000000', '31': '#AA0000', '32': '#00AA00', '33': '#FFAA00',
         '34': '#0000AA', '35': '#AA00AA', '36': '#00AAAA', '37': '#AAAAAA',
         '90': '#555555', '91': '#FF5555', '92': '#55FF55', '93': '#FFFF55',
         '94': '#5555FF', '95': '#FF55FF', '96': '#55FFFF', '97': '#FFFFFF',
-
         '40': 'background:#000000;', '41': 'background:#AA0000;', '42': 'background:#00AA00;', '43': 'background:#FFAA00;',
         '44': 'background:#0000AA;', '45': 'background:#AA00AA;', '46': 'background:#00AAAA;', '47': 'background:#AAAAAA;'
     };
@@ -462,44 +460,72 @@ function ansiToHtml(text) {
     let currentColor = '';
     let currentBackground = '';
     let currentStyles = new Set();
+    
+    let currentHover = null;
+    let currentClick = null;
 
+    const parts = text.split(/([\u001b\x1b]\[[0-9;]*m|[\u001b\x1b]\]imc;.*?\x1b\\|[\u001b\x1b]\]imc;.*?\x07)/);
 
+    for (const part of parts) {
+        if (!part) continue;
 
-    const parts = text.split(/[\u001b\x1b]\[([0-9;]*)m/);
-
-    for (let i = 0; i < parts.length; i++) {
-        if (i % 2 === 0) {
-
-            if (parts[i]) {
-                const styleArr = Array.from(currentStyles);
-                if (currentColor) styleArr.push(`color:${currentColor};`);
-                if (currentBackground) styleArr.push(currentBackground);
-
-                const styleStr = styleArr.join('');
-                if (styleStr) {
-                    html += `<span style="${styleStr}">${escapeHtml(parts[i])}</span>`;
-                } else {
-                    html += escapeHtml(parts[i]);
-                }
-            }
-        } else {
-
-            const codes = parts[i].split(';');
+        if (part.startsWith('\x1b[') || part.startsWith('\u001b[')) {
+            const codes = part.substring(2, part.length - 1).split(';');
             for (const code of codes) {
-
                 if (code === '0' || code === '') {
                     currentColor = '';
                     currentBackground = '';
                     currentStyles.clear();
                 } else if (ansiMap[code]) {
-                    if (code.startsWith('4')) {
-                        currentBackground = ansiMap[code];
-                    } else {
-                        currentColor = ansiMap[code];
-                    }
+                    if (code.startsWith('4')) currentBackground = ansiMap[code];
+                    else currentColor = ansiMap[code];
                 } else if (styles[code]) {
                     currentStyles.add(styles[code]);
                 }
+            }
+        } else if (part.startsWith('\x1b]') || part.startsWith('\u001b]')) {
+            const content = part.substring(2, part.length - 2);
+            if (content.startsWith('imc;')) {
+                const cmd = content.substring(4);
+                if (cmd.startsWith('h:')) {
+                    try {
+                        currentHover = atob(cmd.substring(2));
+                    } catch(e) {}
+                } else if (cmd === 'h') {
+                    currentHover = null;
+                } else if (cmd.startsWith('c:')) {
+                    try {
+                        currentClick = atob(cmd.substring(2));
+                    } catch(e) {}
+                } else if (cmd === 'c') {
+                    currentClick = null;
+                }
+            }
+        } else {
+            const styleArr = Array.from(currentStyles);
+            if (currentColor) styleArr.push(`color:${currentColor};`);
+            if (currentBackground) styleArr.push(currentBackground);
+
+            let content = escapeHtml(part);
+            let cls = [];
+            let attrs = `style="${styleArr.join('')}"`;
+
+            if (currentHover) {
+                cls.push('mc-hover');
+                const hoverHtml = ansiToHtml(currentHover);
+                attrs += ` data-mc-hover="${encodeURIComponent(hoverHtml)}"`;
+            }
+            if (currentClick) {
+                cls.push('mc-click');
+                attrs += ` data-mc-click="${encodeURIComponent(currentClick)}"`;
+            }
+
+            if (cls.length > 0) {
+                html += `<span class="${cls.join(' ')}" ${attrs}>${content}</span>`;
+            } else if (styleArr.length > 0) {
+                html += `<span ${attrs}>${content}</span>`;
+            } else {
+                html += content;
             }
         }
     }

@@ -71,7 +71,20 @@ export class MinecraftColorUtils {
 
                 const baseText = getValue(val.text);
                 if (baseText) {
-                    text += currentFormat + baseText + (currentFormat ? '\x1b[0m' : '');
+                    let wrapped = baseText;
+                    const hover = getValue(val.hoverEvent);
+                    if (hover) {
+                        const contents = getValue(hover.contents) || getValue(hover.value);
+                        const hoverText = (typeof contents === 'object') ? this.nbtToAnsi(contents) : String(contents);
+                        if (hoverText) wrapped = `\x1b]imc;h:${Buffer.from(hoverText).toString('base64')}\x1b\\${wrapped}\x1b]imc;h\x1b\\`;
+                    }
+                    const click = getValue(val.clickEvent);
+                    if (click) {
+                        const action = getValue(click.action);
+                        const value = getValue(click.value);
+                        if (action && value) wrapped = `\x1b]imc;c:${Buffer.from(`${action}:${value}`).toString('base64')}\x1b\\${wrapped}\x1b]imc;c\x1b\\`;
+                    }
+                    text += currentFormat + wrapped + (currentFormat ? '\x1b[0m' : '');
                 }
 
                 const extra = getValue(val.extra);

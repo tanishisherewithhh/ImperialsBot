@@ -1784,3 +1784,36 @@ body.low-perf .bot-item::after {
         transform: scale(1);
     }
 }
+
+.mc-hover {
+    text-decoration: underline dotted var(--text-muted);
+    cursor: help;
+}
+
+.mc-click {
+    color: #60a5fa !important;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.mc-click:hover {
+    filter: brightness(1.2);
+}
+
+.chat-tooltip {
+    position: fixed;
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(8px);
+    padding: 10px 15px;
+    border-radius: 8px;
+    color: white;
+    font-size: 0.9rem;
+    pointer-events: none;
+    z-index: 10001;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    max-width: 300px;
+    word-break: break-all;
+    display: none;
+    animation: fadeInScale 0.15s ease-out;
+}
