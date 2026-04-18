@@ -9,10 +9,17 @@ then
     exit 1
 fi
 
-if [ ! -d "node_modules" ]; then
-    echo "Installing dependencies..."
-    npm install
+echo "Checking dependencies..."
+npm install --no-audit --no-fund
+if [ $? -ne 0 ]; then
+    echo "[ERROR] npm install failed."
+    read -p "Press [Enter] to exit..."
+    exit 1
 fi
 
 echo "Starting ImperialsBot..."
 npm start
+
+echo ""
+echo "App terminated or crashed."
+read -p "Press [Enter] to exit..."
