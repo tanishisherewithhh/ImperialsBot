@@ -100,7 +100,7 @@ export class SocketServer {
         this.io.on('connection', async (socket) => {
             console.log('Client connected');
             const settings = await ConfigLoader.loadSettings() || {};
-            settings.isCloudMode = process.env.IMPERIALS_CLOUD_MODE === 'true';
+            settings.isCloudMode = ConfigLoader.isCloud;
             socket.emit('settings', settings);
             socket.emit('globalHeadlessChanged', botManager.isGlobalHeadless);
             socket.emit('botList', botManager.getAllBots());

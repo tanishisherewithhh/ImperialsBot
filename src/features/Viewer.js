@@ -5,6 +5,7 @@ const { mineflayer: viewer } = require('prismarine-viewer');
 
 import { NetworkUtils } from '../utils/NetworkUtils.js';
 import { setBasePort, getBasePort } from '../utils/ConfigBase.js';
+import { ConfigLoader } from '../config/ConfigLoader.js';
 
 export function setViewerBasePort(port) {
     setBasePort(port);
@@ -31,10 +32,8 @@ export class Viewer extends BaseFeature {
             this.viewerInstance = null;
         }
 
-        const isCloud = process.env.IMPERIALS_CLOUD_MODE === 'true';
-        
         let basePort;
-        if (isCloud) {
+        if (ConfigLoader.isCloud) {
             const usernameHash = Array.from(this.botClient.username || '').reduce((a, c) => a + c.charCodeAt(0), 0);
             basePort = getBasePort() + 100 + (usernameHash % 50);
         } else {

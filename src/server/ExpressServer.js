@@ -28,39 +28,35 @@ export class ExpressServer {
             res.sendFile(path.join(__dirname, '../../public/index.html'));
         });
 
-        const isCloud = process.env.IMPERIALS_CLOUD_MODE === 'true';
-        
-        if (isCloud) {
-            this.app.use('/viewer/:port', (req, res, next) => {
-                const targetPort = parseInt(req.params.port);
-                if (targetPort && targetPort > 3000) {
-                    const proxy = createProxyMiddleware({
-                        target: `http://localhost:${targetPort}`,
-                        ws: true,
-                        changeOrigin: true,
-                        pathRewrite: (path) => path
-                    });
-                    proxy(req, res, next);
-                } else {
-                    next();
-                }
-            });
+        this.app.use('/viewer/:port', (req, res, next) => {
+            const targetPort = parseInt(req.params.port);
+            if (targetPort && targetPort > 3000) {
+                const proxy = createProxyMiddleware({
+                    target: `http://localhost:${targetPort}`,
+                    ws: true,
+                    changeOrigin: true,
+                    pathRewrite: (path) => path
+                });
+                proxy(req, res, next);
+            } else {
+                next();
+            }
+        });
 
-            this.app.use('/inventory/:port', (req, res, next) => {
-                const targetPort = parseInt(req.params.port);
-                if (targetPort && targetPort > 3000) {
-                    const proxy = createProxyMiddleware({
-                        target: `http://localhost:${targetPort}`,
-                        ws: true,
-                        changeOrigin: true,
-                        pathRewrite: (path) => path
-                    });
-                    proxy(req, res, next);
-                } else {
-                    next();
-                }
-            });
-        }
+        this.app.use('/inventory/:port', (req, res, next) => {
+            const targetPort = parseInt(req.params.port);
+            if (targetPort && targetPort > 3000) {
+                const proxy = createProxyMiddleware({
+                    target: `http://localhost:${targetPort}`,
+                    ws: true,
+                    changeOrigin: true,
+                    pathRewrite: (path) => path
+                });
+                proxy(req, res, next);
+            } else {
+                next();
+            }
+        });
     }
 
     start() {
