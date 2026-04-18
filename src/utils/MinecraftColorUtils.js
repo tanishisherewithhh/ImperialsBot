@@ -41,69 +41,52 @@ export class MinecraftColorUtils {
         if (!nbt) return '';
         if (typeof nbt === 'string') return this.minecraftToAnsi(nbt);
 
-        // Helper to extract value from NBT tag or raw object
         const getValue = (tag) => {
             if (tag === null || tag === undefined) return null;
             return (typeof tag === 'object' && tag.value !== undefined) ? tag.value : tag;
         };
 
-        // Recursive processor with depth limit
-        const process = (node, depth = 0) => {
+        const process = (node, parentFormat = '', depth = 0) => {
             if (depth > 20) return '';
             if (node === null || node === undefined) return '';
 
-            // Handle simple types
-            if (typeof node === 'string') return node;
-            if (typeof node === 'number' || typeof node === 'boolean') return String(node);
-
-            // Handle NBT string type
-            if (typeof node === 'object' && node.type === 'string' && node.value !== undefined) return node.value;
+            if (typeof node === 'string') return parentFormat + node + (parentFormat ? '\x1b[0m' : '');
+            if (typeof node === 'number' || typeof node === 'boolean') return parentFormat + String(node) + (parentFormat ? '\x1b[0m' : '');
 
             let text = '';
+            let currentFormat = parentFormat;
 
-            // Handle compound/object
             if (typeof node === 'object' && !Array.isArray(node)) {
                 const val = (node.type === 'compound' && node.value) ? node.value : node;
-                if (!val || typeof val !== 'object') return '';
 
-                let codes = '';
-
-                // Add color
                 if (val.color) {
-                    const colorName = getValue(val.color);
-                    const colorCode = this.getColorCode(colorName);
-                    if (colorCode) codes += colorCode;
+                    const colorCode = this.getColorCode(getValue(val.color));
+                    if (colorCode) currentFormat = colorCode;
                 }
 
-                // Add styles
-                if (getValue(val.bold)) codes += '\x1b[1m';
-                if (getValue(val.italic)) codes += '\x1b[3m';
-                if (getValue(val.underlined)) codes += '\x1b[4m';
-                if (getValue(val.strikethrough)) codes += '\x1b[9m';
+                if (getValue(val.bold)) currentFormat += '\x1b[1m';
+                if (getValue(val.italic)) currentFormat += '\x1b[3m';
+                if (getValue(val.underlined)) currentFormat += '\x1b[4m';
+                if (getValue(val.strikethrough)) currentFormat += '\x1b[9m';
 
-                text += codes;
-
-                // Text part
                 const baseText = getValue(val.text);
-                if (baseText) text += baseText;
+                if (baseText) {
+                    text += currentFormat + baseText + (currentFormat ? '\x1b[0m' : '');
+                }
 
-                // Extra parts (recursive)
                 const extra = getValue(val.extra);
                 if (extra) {
                     const extraItems = (typeof extra === 'object' && extra.value !== undefined) ? extra.value : extra;
                     if (Array.isArray(extraItems)) {
                         for (const item of extraItems) {
-                            text += process(item, depth + 1);
+                            text += process(item, currentFormat, depth + 1);
                         }
-                    } else if (extraItems && typeof extraItems === 'object') {
-                        text += process(extraItems, depth + 1);
+                    } else {
+                        text += process(extra, currentFormat, depth + 1);
                     }
                 }
-
-                // Reset if we added codes
-                if (codes) text += '\x1b[0m';
             } else if (Array.isArray(node)) {
-                for (const item of node) text += process(item, depth + 1);
+                for (const item of node) text += process(item, parentFormat, depth + 1);
             }
 
             return text;
@@ -114,6 +97,16 @@ export class MinecraftColorUtils {
 
     static getColorCode(colorName) {
         if (!colorName) return '';
+
+        if (colorName.startsWith('#')) {
+            const hex = colorName.slice(1);
+            if (hex.length === 6) {
+                const r = parseInt(hex.slice(0, 2), 16);
+                const g = parseInt(hex.slice(2, 4), 16);
+                const b = parseInt(hex.slice(4, 6), 16);
+                return `\x1b[38;2;${r};${g};${b}m`;
+            }
+        }
 
         const nameMap = {
             'black': '\x1b[30m', 'dark_blue': '\x1b[34m', 'dark_green': '\x1b[32m', 'dark_aqua': '\x1b[36m',

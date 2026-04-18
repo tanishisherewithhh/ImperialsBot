@@ -3,6 +3,7 @@ import { createServer } from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createProxyMiddleware } from 'http-proxy-middleware';
+import compression from 'compression';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,9 +19,10 @@ export class ExpressServer {
     }
 
     setupMiddleware() {
+        this.app.use(compression());
         this.app.use(express.json());
 
-        // few security Headers)
+        // Security Headers
         this.app.use((req, res, next) => {
             res.setHeader('X-Content-Type-Options', 'nosniff');
             res.setHeader('X-Frame-Options', 'SAMEORIGIN');
@@ -28,7 +30,9 @@ export class ExpressServer {
             next();
         });
 
-        this.app.use(express.static(path.join(__dirname, '../../public')));
+        this.app.use(express.static(path.join(__dirname, '../../public'), {
+            maxAge: '1d'
+        }));
     }
 
     setupRoutes() {

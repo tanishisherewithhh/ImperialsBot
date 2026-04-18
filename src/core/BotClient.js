@@ -458,7 +458,6 @@ export class BotClient extends EventEmitter {
             this.log(`${this.username} spawned`, 'success');
             this.lastSpawnTime = Date.now();
 
-            // Start Web Inventory ONLY on spawn
             if (true) {
                 let startPort;
                 if (ConfigLoader.isCloud) {
@@ -470,14 +469,13 @@ export class BotClient extends EventEmitter {
                 NetworkUtils.findFreePort(startPort).then(port => {
                     this.inventoryPort = port;
                     try {
-                        // bind to localhost so it is only accessible via our authorized proxy
                         inventoryViewer(instance, { 
                             port: this.inventoryPort, 
                             host: '127.0.0.1',
                             startOnLoad: true 
                         });
                         this.log(`Web Inventory started on port ${this.inventoryPort}`, 'info');
-                        this.updateStatus(this.status); // Push status to update port in UI
+                        this.updateStatus(this.status);
                     } catch (err) {
                         this.log(`Web Inventory error: ${err.message}`, 'error');
                     }

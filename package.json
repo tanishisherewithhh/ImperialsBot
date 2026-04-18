@@ -18,6 +18,7 @@
   "type": "module",
   "dependencies": {
     "canvas": "^3.2.0",
+    "compression": "^1.8.1",
     "express": "^5.2.1",
     "http-proxy-middleware": "^3.0.0",
     "minecraft-data": "^3.101.0",

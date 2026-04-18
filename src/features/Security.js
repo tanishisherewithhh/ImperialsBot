@@ -28,7 +28,7 @@ export class Security extends BaseFeature {
 
 
                 const pos = entity.position;
-                const posStr = `\x1b[3m\x1b[90mat (${Math.floor(pos.x)}, ${Math.floor(pos.y)}, ${Math.floor(pos.z)})\x1b[0m`;
+                const posStr = `\x1b[4m\x1b[94mat (${Math.floor(pos.x)}, ${Math.floor(pos.y)}, ${Math.floor(pos.z)})\x1b[0m`;
 
 
 

@@ -210,12 +210,20 @@ const start = async () => {
         } else if (cmd === 'clear') {
             console.clear();
         } else if (cmd === 'exit') {
-            console.log('Shutting down...');
-            botManager.shutdown();
-            setTimeout(() => process.exit(0), 1000);
+            handleExit();
         }
         rl.prompt();
     });
+
+    const handleExit = () => {
+        console.log('\nShutting down gracefully...');
+        botManager.shutdown();
+        setTimeout(() => process.exit(0), 1000);
+    };
+
+    // Cloud Graceful Shutdown (SIGTERM/SIGINT)
+    process.on('SIGTERM', handleExit);
+    process.on('SIGINT', handleExit);
 };
 
 start();

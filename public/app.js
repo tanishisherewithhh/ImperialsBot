@@ -1145,11 +1145,9 @@ tabBtns.forEach(btn => {
         document.getElementById(btn.dataset.tab).classList.add('active');
         currentTab = btn.dataset.tab;
 
-        if (currentTab === 'inventory') {
-            updateInventoryFrame();
-        }
-        if (currentTab === 'analyticsPane') {
-            updateAnalyticsGraphs();
+        if (currentTab === 'inventory' || currentTab === 'analyticsPane') {
+            if (currentTab === 'inventory') updateInventoryFrame();
+            else updateAnalyticsGraphs();
         }
         if (currentTab === 'watchlistPane') {
             renderWatchlist();

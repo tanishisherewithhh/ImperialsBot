@@ -24,6 +24,11 @@ export class Logger {
 
             const logEntry = `[${timestamp}] [${type.toUpperCase()}] ${cleanMessage}\n`;
 
+            // Skip file writing if minimal logging is requested (useful for cloud platforms)
+            if (process.env.IMPERIALS_MINIMAL_LOGS === 'true') {
+                return;
+            }
+
             fs.appendFileSync(this.logFile, logEntry, 'utf8');
         } catch (err) {
 

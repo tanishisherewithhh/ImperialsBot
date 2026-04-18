@@ -13,13 +13,8 @@ export function setViewerBasePort(port) {
 
 export class Viewer extends BaseFeature {
     init() {
-        this.botClient.bot.once('spawn', () => {
-
-            setTimeout(() => {
-                if (this.botClient.bot && this.botClient.bot.entity) {
-                    this.startViewer();
-                }
-            }, 3000);
+        this.botClient.bot.on('spawn', () => {
+            this.startViewer();
         });
     }
 
