@@ -141,6 +141,18 @@ if (chatInput) {
     });
 }
 
+const closeSelectionTip = document.getElementById('closeSelectionTip');
+const selectionTip = document.getElementById('selectionTip');
+if (closeSelectionTip && selectionTip) {
+    closeSelectionTip.onclick = () => {
+        selectionTip.style.display = 'none';
+        localStorage.setItem('hideSelectionTip', 'true');
+    };
+    if (localStorage.getItem('hideSelectionTip') === 'true') {
+        selectionTip.style.display = 'none';
+    }
+}
+
 
 const notificationContainer = document.createElement('div');
 notificationContainer.className = 'notification-container';
