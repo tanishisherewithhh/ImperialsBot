@@ -73,23 +73,29 @@ export class BotClient extends EventEmitter {
     parseReason(reason) {
         if (!reason) return 'Unknown reason';
 
-        console.log('Raw Kick Reason:', reason);
+        let target = reason;
 
-        if (typeof reason.toAnsi === 'function') {
-            return reason.toAnsi();
+        if (typeof reason === 'string' && reason.trim().startsWith('{')) {
+            try {
+                target = JSON.parse(reason);
+            } catch (e) { }
         }
 
-        if (typeof reason === 'object' && reason !== null) {
-            const parsed = this.mcColors.nbtToAnsi(reason);
+        if (typeof target === 'object' && target !== null) {
+            const parsed = this.mcColors.nbtToAnsi(target);
             if (parsed && parsed.trim().length > 0) return parsed;
         }
 
-        if (typeof reason === 'string') {
-            return this.mcColors.minecraftToAnsi(reason);
+        if (typeof target.toAnsi === 'function') {
+            return target.toAnsi();
+        }
+
+        if (typeof target === 'string') {
+            return this.mcColors.minecraftToAnsi(target);
         }
 
         try {
-            return JSON.stringify(reason, null, 2);
+            return JSON.stringify(target, null, 2);
         } catch (e) {
             return 'Unable to parse kick reason';
         }
@@ -121,7 +127,6 @@ export class BotClient extends EventEmitter {
         this.config = { ...this.config, ...newConfig };
 
         // Soft updates (apply without restart)
-
         if (needsRejoin && this.status !== 'Offline') {
             this.log('Configuration change detected requiring rejoin...', 'warning');
             this.rejoin();
@@ -228,7 +233,7 @@ export class BotClient extends EventEmitter {
         }
 
         if (this.manuallyStopped === false && !this.reconnectTimer) {
-            this.reconnectAttempts = 0;
+            // Reconnect attempts are reset on successful spawn instead.
         }
 
         this.updateStatus('Connecting');
