@@ -312,6 +312,23 @@ export class SocketServer {
 
                 if (bot.config.spammer) {
                     socket.emit('spammerConfig', { username, config: bot.config.spammer });
+                } else {
+                    // Send an empty mock config to clear the UI from the previously selected bot
+                    socket.emit('spammerConfig', { 
+                        username, 
+                        config: { 
+                            delay: 3, 
+                            messages: [], 
+                            order: 'random', 
+                            appendRandom: false, 
+                            randomLength: 5 
+                        } 
+                    });
+                }
+
+                const combatPlugin = bot.featureManager.getFeature('combat');
+                if (combatPlugin) {
+                    socket.emit('killauraConfig', { username: bot.username, config: combatPlugin.getConfig() });
                 }
 
                 if (bot.bot && bot.bot.entity) {
@@ -422,6 +439,8 @@ export class SocketServer {
                         const combat = bot.featureManager.getFeature('combat');
                         if (combat) {
                             combat.toggleKillaura(payload.enabled);
+                            bot.config.killaura = payload.enabled;
+                            botManager.updateBot(bot.config).catch(e => console.error(e));
                             this.broadcastToggles(username);
                         }
                         break;
@@ -429,9 +448,12 @@ export class SocketServer {
                         const combatForConfig = bot.featureManager.getFeature('combat');
                         if (combatForConfig) {
                             combatForConfig.updateConfig(payload.config);
+                            bot.config.killauraConfig = combatForConfig.getConfig();
+                            botManager.updateBot(bot.config).catch(e => console.error(e));
+                            
                             this.io.emit('killauraConfig', {
                                 username: bot.username,
-                                config: combatForConfig.getConfig()
+                                config: bot.config.killauraConfig
                             });
                         }
                         break;
@@ -439,21 +461,22 @@ export class SocketServer {
                         const spammer = bot.featureManager.getFeature('spammer');
                         if (spammer) {
                             if (payload.enabled) {
-                                spammer.setConfig(payload.config);
+                                spammer.setConfig(payload.config || { enabled: true });
                                 spammer.start();
                             } else {
+                                spammer.setConfig({ enabled: false });
                                 spammer.stop();
                             }
 
+                            if (!bot.config.spammer) bot.config.spammer = {};
+                            bot.config.spammer.enabled = payload.enabled;
                             if (payload.config) {
-                                if (!bot.config.spammer) bot.config.spammer = {};
                                 bot.config.spammer = { ...bot.config.spammer, ...payload.config };
-                                try {
-                                    await botManager.updateBot(bot.config);
-                                } catch (err) {
-                                    console.error('Failed to save spammer config:', err);
-                                }
                             }
+                            
+                            botManager.updateBot(bot.config).catch(err => {
+                                console.error('Failed to save spammer config:', err);
+                            });
 
                             this.broadcastToggles(username);
                         }
@@ -463,6 +486,8 @@ export class SocketServer {
                         if (antiafk) {
                             if (payload.enabled) antiafk.enable();
                             else antiafk.disable();
+                            bot.config.antiAfk = payload.enabled;
+                            botManager.updateBot(bot.config).catch(e => console.error(e));
                             this.broadcastToggles(username);
                         }
                         break;
@@ -471,6 +496,8 @@ export class SocketServer {
                         if (autoauth) {
                             if (payload.enabled) autoauth.enable();
                             else autoauth.disable();
+                            bot.config.autoAuth = payload.enabled;
+                            botManager.updateBot(bot.config).catch(e => console.error(e));
                             this.broadcastToggles(username);
                         }
                         break;
@@ -479,11 +506,14 @@ export class SocketServer {
                         if (autoeat) {
                             if (payload.enabled) autoeat.enable();
                             else autoeat.disable();
+                            bot.config.autoEat = payload.enabled;
+                            botManager.updateBot(bot.config).catch(e => console.error(e));
                             this.broadcastToggles(username);
                         }
                         break;
                     case 'toggleAutoReconnect':
                         bot.config.autoReconnect = payload.enabled;
+                        botManager.updateBot(bot.config).catch(e => console.error(e));
                         bot.log(`Auto Reconnect ${payload.enabled ? 'enabled' : 'disabled'}`, 'info');
                         this.broadcastToggles(username);
                         break;

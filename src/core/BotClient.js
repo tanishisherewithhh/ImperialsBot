@@ -20,6 +20,7 @@ export class BotClient extends EventEmitter {
         this.username = config.username;
         this.bot = null;
         this.featureManager = new FeatureManager(this);
+        this.features = this.featureManager.features;
         this.pluginManager = new PluginManager(this);
         this.status = 'Offline';
         this.chatHistory = [];
@@ -31,6 +32,7 @@ export class BotClient extends EventEmitter {
         this.inventoryPort = null;
         this.packetDebugEnabled = false;
         this._packetListener = null;
+        this.customReconnectDelay = null;
 
         this.pluginManager.on('pluginsUpdated', (data) => {
             this.emit('pluginsUpdated', data);
@@ -43,6 +45,26 @@ export class BotClient extends EventEmitter {
         this.mcColors = MinecraftColorUtils;
 
         this.log('Bot initialized but offline. Click the "Join" button to start!', 'info');
+    }
+
+    generateIdentity() {
+        const locales = ['en_US', 'en_GB', 'fr_FR', 'de_DE', 'es_ES', 'ru_RU', 'pt_BR'];
+        const brands = ['vanilla']; 
+        
+        return {
+            locale: locales[Math.floor(Math.random() * locales.length)],
+            viewDistance: 8 + Math.floor(Math.random() * 8),
+            skinParts: {
+                cape: Math.random() > 0.5,
+                jacket: Math.random() > 0.5,
+                left_sleeve: Math.random() > 0.5,
+                right_sleeve: Math.random() > 0.5,
+                left_pants_leg: Math.random() > 0.5,
+                right_pants_leg: Math.random() > 0.5,
+                hat: Math.random() > 0.5
+            },
+            brand: brands[Math.floor(Math.random() * brands.length)]
+        };
     }
 
     emitChat(username, message, type = 'chat', ansi = null) {
@@ -328,6 +350,29 @@ export class BotClient extends EventEmitter {
             botOptions.port = this.config.port;
         }
 
+        let identity;
+        const antiBotConfig = this.config.plugins && this.config.plugins['Anti-AntiBot'];
+        const shouldRandomize = antiBotConfig && antiBotConfig.randomizeIdentity !== undefined ? 
+            (antiBotConfig.randomizeIdentity.value === true) : false;
+
+        if (shouldRandomize) {
+            identity = this.generateIdentity();
+        } else {
+            identity = {
+                locale: 'en_US',
+                viewDistance: 10,
+                skinParts: { cape: true, jacket: true, left_sleeve: true, right_sleeve: true, left_pants_leg: true, right_pants_leg: true, hat: true },
+                brand: 'vanilla'
+            };
+        }
+
+        botOptions.brand = identity.brand;
+        botOptions.childSettings = {
+            locale: identity.locale,
+            viewDistance: identity.viewDistance,
+            skinParts: identity.skinParts
+        };
+
         if (this.config.proxyType && this.config.proxyType !== 'none') {
             const { proxyType, proxyHost, proxyPort, proxyUser, proxyPass } = this.config;
             
@@ -416,7 +461,6 @@ export class BotClient extends EventEmitter {
             this.bot.setMaxListeners(100);
             this.setMaxListeners(100);
 
-            // INDEPENDENT ERROR BINDING (Immediate)
             // This ensures connection errors are caught before bindEvents
             this.bot.on('error', (err) => {
                 let msg = err.message;
@@ -569,8 +613,10 @@ export class BotClient extends EventEmitter {
                 if (baseDelay < 2000) baseDelay = 2000;
 
                 const maxDelay = 60000;
-                let delay = baseDelay * Math.pow(1.5, this.reconnectAttempts);
-                if (delay > maxDelay) delay = maxDelay;
+                let delay = this.customReconnectDelay || (baseDelay * Math.pow(1.5, this.reconnectAttempts));
+                this.customReconnectDelay = null;
+
+                if (delay > maxDelay && !this.customReconnectDelay) delay = maxDelay;
                 this.reconnectAttempts++;
 
                 this.log(`Reconnecting in ${Math.round(delay / 1000)}s (Attempt ${this.reconnectAttempts})...`, 'info');
@@ -594,10 +640,6 @@ export class BotClient extends EventEmitter {
             const reasonStr = this.parseReason(reason);
             this.log(`Kicked: ${reasonStr}`, 'error');
             this.updateStatus('Kicked');
-
-            if (this.config.webhookUrl) {
-                this.sendWebhook(`**${this.username}** was kicked!`, `**Reason:**\n${reasonStr}`, 16711680);
-            }
         });
 
         instance.on('error', (err) => {
@@ -685,23 +727,31 @@ export class BotClient extends EventEmitter {
             this.updateStatus(`Died at ${posStr}`);
 
             this.emitChat('[Server]', `\x1b[1;36mBOT DIED AT ${posStr}\x1b[0m`, 'chat');
-
-            if (this.config.webhookUrl) {
-                this.sendWebhook(`**${this.username}** died!`, `Location: ${posStr}`, 16711680);
-            }
         });
 
         instance.on('playerJoined', (player) => {
             if (this.bot !== instance) return;
             if (player.username !== this.username) {
-                this.log(`[+] ${player.username} joined the game`, 'success');
+                const uuid = (player.uuid || '').replace(/-/g, '');
+                const hasValidUUID = /^[0-9a-f]{32}$/i.test(uuid);
+                const hasStandardName = /^[a-zA-Z0-9_]{3,16}$/.test(player.username);
+                
+                if (hasValidUUID && hasStandardName) {
+                    this.log(`[+] ${player.username} joined the game`, 'success');
+                }
             }
         });
 
         instance.on('playerLeft', (player) => {
             if (this.bot !== instance) return;
             if (player.username !== this.username) {
-                this.log(`[-] ${player.username} left the game`, 'error');
+                const uuid = (player.uuid || '').replace(/-/g, '');
+                const hasValidUUID = /^[0-9a-f]{32}$/i.test(uuid);
+                const hasStandardName = /^[a-zA-Z0-9_]{3,16}$/.test(player.username);
+                
+                if (hasValidUUID && hasStandardName) {
+                    this.log(`[-] ${player.username} left the game`, 'error');
+                }
             }
         });
     }

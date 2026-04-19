@@ -990,6 +990,21 @@ function selectBot(username) {
 
     socket.emit('requestBotData', { username });
     socket.emit('requestAnalyticsHistory', { username });
+
+    const resetBtn = (btn, label) => {
+        if (!btn) return;
+        btn.classList.remove('active');
+        btn.innerText = `Start ${label}`;
+    };
+    resetBtn(autoReconnectBtn, 'Auto-Reconnect');
+    resetBtn(autoAuthBtn, 'AutoAuth');
+    resetBtn(antiAfkBtn, 'Anti-AFK');
+    resetBtn(killauraBtn, 'Killaura');
+    resetBtn(document.getElementById('autoEatBtn'), 'AutoEat');
+    resetBtn(spammerBtn, 'Spammer');
+    const kaSettings = document.getElementById('killauraSettings');
+    if (kaSettings) kaSettings.style.display = 'none';
+
     updateInventoryFrame();
 
     viewerContainer.innerHTML = '<div class="placeholder">Viewer Offline</div>';

@@ -5,7 +5,7 @@ const autoEat = require('mineflayer-auto-eat');
 
 export class AutoEat extends BaseFeature {
     init() {
-        this.enabled = false;
+        this.enabled = this.botClient.config.autoEat || false;
         const bot = this.botClient.bot;
 
         const load = () => {
@@ -20,9 +20,10 @@ export class AutoEat extends BaseFeature {
                         startAt: 14,
                         bannedFood: []
                     };
-                 //   this.botClient.log('AutoEat plugin loaded and configured.', 'success');
-                } else {
-                 //   this.botClient.log('AutoEat plugin property not found after load.', 'error');
+                    // Restore enabled state from config
+                    if (this.enabled) {
+                        bot.autoEat.enableAuto();
+                    }
                 }
             } catch (err) {
                 this.botClient.log(`AutoEat plugin failed to load: ${err.message}`, 'error');

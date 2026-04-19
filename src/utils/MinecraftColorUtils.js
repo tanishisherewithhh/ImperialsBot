@@ -43,22 +43,25 @@ export class MinecraftColorUtils {
 
         const getValue = (tag) => {
             if (tag === null || tag === undefined) return null;
-            return (typeof tag === 'object' && tag.value !== undefined) ? tag.value : tag;
+            if (typeof tag === 'object') {
+                if (tag.value !== undefined) return getValue(tag.value);
+                return tag;
+            }
+            return tag;
         };
 
-        const process = (node, parentFormat = '', depth = 0) => {
-            if (depth > 20) return '';
+        const processNode = (node, parentFormat = '', depth = 0) => {
+            if (depth > 25) return '';
             if (node === null || node === undefined) return '';
 
-            if (typeof node === 'string') return parentFormat + node + (parentFormat ? '\x1b[0m' : '');
-            if (typeof node === 'number' || typeof node === 'boolean') return parentFormat + String(node) + (parentFormat ? '\x1b[0m' : '');
+            const val = getValue(node);
+            if (typeof val === 'string') return parentFormat + val + (parentFormat ? '\x1b[0m' : '');
+            if (typeof val === 'number' || typeof val === 'boolean') return parentFormat + String(val) + (parentFormat ? '\x1b[0m' : '');
 
             let text = '';
             let currentFormat = parentFormat;
 
-            if (typeof node === 'object' && !Array.isArray(node)) {
-                const val = (node.type === 'compound' && node.value) ? node.value : node;
-
+            if (typeof val === 'object' && !Array.isArray(val)) {
                 if (val.color) {
                     const colorCode = this.getColorCode(getValue(val.color));
                     if (colorCode) currentFormat = colorCode;
@@ -89,23 +92,21 @@ export class MinecraftColorUtils {
 
                 const extra = getValue(val.extra);
                 if (extra) {
-                    const extraItems = (typeof extra === 'object' && extra.value !== undefined) ? extra.value : extra;
+                    const extraItems = getValue(extra);
                     if (Array.isArray(extraItems)) {
-                        for (const item of extraItems) {
-                            text += process(item, currentFormat, depth + 1);
-                        }
+                        for (const item of extraItems) text += processNode(item, currentFormat, depth + 1);
                     } else {
-                        text += process(extra, currentFormat, depth + 1);
+                        text += processNode(extra, currentFormat, depth + 1);
                     }
                 }
-            } else if (Array.isArray(node)) {
-                for (const item of node) text += process(item, parentFormat, depth + 1);
+            } else if (Array.isArray(val)) {
+                for (const item of val) text += processNode(item, parentFormat, depth + 1);
             }
 
             return text;
         };
 
-        return process(nbt);
+        return processNode(nbt);
     }
 
     static getColorCode(colorName) {

@@ -16,14 +16,15 @@ const HOSTILE_MOBS = new Set([
 export class Combat extends BaseFeature {
     constructor(botClient) {
         super(botClient);
-        this.killauraEnabled = false;
+        this.killauraEnabled = this.botClient.config.killaura || false;
         this.killauraConfig = {
             attackRange: 4,
             followRange: 6,
             viewDistance: 16,
             attackPlayers: true,
             attackHostileMobs: true,
-            attackPassiveMobs: false
+            attackPassiveMobs: false,
+            ...this.botClient.config.killauraConfig
         };
     }
 

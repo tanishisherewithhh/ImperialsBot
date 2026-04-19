@@ -37,17 +37,13 @@ export class Discord extends BaseFeature {
                 this.sendEmbed('spawn', 'Status', 'Spawned Successfully');
             });
 
-            this.botClient.bot.on('end', () => {
-                this.sendEmbed('kick', 'Status', 'Disconnected');
-            });
-
             this.botClient.bot.on('death', () => {
                 this.sendEmbed('death', 'Status', 'Died');
             });
 
             this.botClient.bot.on('kicked', (reason) => {
-                const reasonStr = typeof reason === 'object' ? JSON.stringify(reason) : reason;
-                this.sendEmbed('kick', 'Kicked', reasonStr);
+                const reasonStr = this.botClient.parseReason(reason);
+                this.sendEmbed('kick', `${this.botClient.username} was kicked!`, `**Reason:**\n${reasonStr}`);
             });
 
             this.botClient.bot.on('error', (err) => {
@@ -106,6 +102,7 @@ export class Discord extends BaseFeature {
             case 'kick': color = 0xFEE75C; break;
             case 'chat': color = 0xFFFFFF; break;
             case 'info': color = 0x3498db; break;
+            case 'verification': color = 0xFFA500; break;
         }
 
         const embed = {

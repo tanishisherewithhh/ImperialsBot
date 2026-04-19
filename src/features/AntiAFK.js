@@ -3,11 +3,14 @@ import { BaseFeature } from './BaseFeature.js';
 export class AntiAFK extends BaseFeature {
     constructor(botClient) {
         super(botClient);
-        this.enabled = false;
+        this.enabled = this.botClient.config.antiAfk || false;
         this.interval = null;
     }
 
     init() {
+        if (this.enabled) {
+            this.startAFK();
+        }
     }
 
     start() {

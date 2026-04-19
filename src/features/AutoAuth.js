@@ -3,7 +3,7 @@ import { ConfigLoader } from '../config/ConfigLoader.js';
 
 export class AutoAuth extends BaseFeature {
     init() {
-        this.enabled = this.botClient.config.autoAuth !== false;
+        this.enabled = this.botClient.config.autoAuth === true;
 
         this.botClient.bot.on('spawn', () => {
             if (this.enabled) this.handleAuth();
