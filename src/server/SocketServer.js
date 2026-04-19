@@ -304,7 +304,7 @@ export class SocketServer {
                 if (!bot) return;
 
                 socket.emit('chatHistory', { username: bot.username, history: bot.chatHistory || [] });
-                this.broadcastToggles(username);
+                this.broadcastToggles(username, socket);
 
                 if (bot.pluginManager) {
                     socket.emit('pluginList', { username: bot.username, plugins: bot.pluginManager.getAllPlugins() });
@@ -313,7 +313,6 @@ export class SocketServer {
                 if (bot.config.spammer) {
                     socket.emit('spammerConfig', { username, config: bot.config.spammer });
                 } else {
-                    // Send an empty mock config to clear the UI from the previously selected bot
                     socket.emit('spammerConfig', { 
                         username, 
                         config: { 
@@ -419,7 +418,6 @@ export class SocketServer {
                     return;
                 }
 
-                // Bot-Specific Actions
                 const bot = botManager.getBot(username);
                 if (!bot) return;
 
@@ -433,6 +431,14 @@ export class SocketServer {
                             navigation.moveTo(payload.x, payload.y, payload.z);
                         } else {
                             socket.emit('notification', { type: 'error', message: 'Navigation feature not available' });
+                        }
+                        break;
+                    case 'stopNavigation':
+                        const navToStop = bot.featureManager.getFeature('navigation');
+                        if (navToStop) navToStop.stop();
+                        const combatToStop = bot.featureManager.getFeature('combat');
+                        if (combatToStop) {
+                            if (bot.pvp) bot.pvp.stop();
                         }
                         break;
                     case 'toggleKillaura':
@@ -715,23 +721,30 @@ export class SocketServer {
         });
     }
 
-    broadcastToggles(username) {
+    broadcastToggles(username, socket = null) {
         const bot = botManager.getBot(username);
         if (!bot) return;
 
-        const killaura = bot.featureManager.getFeature('combat');
-        const antiafk = bot.featureManager.getFeature('antiafk');
-        const autoauth = bot.featureManager.getFeature('autoauth');
-        const spammer = bot.featureManager.getFeature('spammer');
+        const killaura = bot.featureManager?.getFeature('combat');
+        const antiafk = bot.featureManager?.getFeature('antiafk');
+        const autoauth = bot.featureManager?.getFeature('autoauth');
+        const spammer = bot.featureManager?.getFeature('spammer');
+        const autoeat = bot.featureManager?.getFeature('autoeat');
 
-        this.io.emit('botToggles', {
+        const data = {
             username: bot.username,
-            killauraEnabled: killaura ? killaura.killauraEnabled : false,
-            antiAfkEnabled: antiafk ? antiafk.enabled : false,
-            autoAuthEnabled: autoauth ? autoauth.enabled : false,
-            autoEatEnabled: bot.featureManager.getFeature('autoeat') ? bot.featureManager.getFeature('autoeat').enabled : false,
-            spammerEnabled: spammer ? spammer.config.enabled : false,
+            killauraEnabled: killaura ? killaura.killauraEnabled : (bot.config.killaura === true),
+            antiAfkEnabled: antiafk ? antiafk.enabled : (bot.config.antiAfk === true),
+            autoAuthEnabled: autoauth ? autoauth.enabled : (bot.config.autoAuth === true),
+            autoEatEnabled: autoeat ? autoeat.enabled : (bot.config.autoEat === true),
+            spammerEnabled: spammer ? spammer.config.enabled : (bot.config.spammer?.enabled === true),
             autoReconnectEnabled: bot.config.autoReconnect !== false
-        });
+        };
+
+        if (socket) {
+            socket.emit('botToggles', data);
+        } else {
+            this.io.emit('botToggles', data);
+        }
     }
 }

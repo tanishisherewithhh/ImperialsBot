@@ -155,8 +155,8 @@ class BotManager extends EventEmitter {
             throw new Error(`Bot ${config.username} not found`);
         }
 
-        await ConfigLoader.addBotConfig(config);
         await bot.updateConfig(config);
+        await ConfigLoader.addBotConfig(bot.config);
     }
 
     updateAllNavigationProfiles(profileName) {

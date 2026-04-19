@@ -570,7 +570,7 @@ export class BotClient extends EventEmitter {
 
             if (instance.entity) {
                 const now = Date.now();
-                if (now - (this.lastDataEmit || 0) > 250) {
+                if (now - (this.lastDataEmit || 0) > 100) {
                     this.lastDataEmit = now;
                     const pos = instance.entity.position || { x: 0, y: 0, z: 0 };
                     this.emit('dataUpdate', {
@@ -645,7 +645,6 @@ export class BotClient extends EventEmitter {
         instance.on('error', (err) => {
             if (this.bot !== instance) return;
             if (err.code === 'ECONNRESET' && this.lastSpawnTime && (Date.now() - this.lastSpawnTime) < 10000) {
-                this.log('Connection reset during server transfer, reconnecting...', 'info');
                 this.isTransferring = true;
                 return;
             }
@@ -656,7 +655,9 @@ export class BotClient extends EventEmitter {
             }
 
             this.emit('error', err);
-            this.updateStatus(`Error: ${msg}`);
+            if (this.status !== 'Online' || !this.bot?.entity) {
+                this.updateStatus(`Error: ${msg}`);
+            }
             this.log(`${this.username} error: ${msg}`, 'error');
         });
 

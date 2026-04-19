@@ -72,6 +72,11 @@ const spammerBtn = document.getElementById('spammerBtn');
 const spammerAppend = document.getElementById('spammerAppend');
 const spammerLen = document.getElementById('spammerLen');
 
+const autoReconnectBtn = document.getElementById('autoReconnectBtn');
+const autoAuthBtn = document.getElementById('autoAuthBtn');
+const antiAfkBtn = document.getElementById('antiAfkBtn');
+const killauraBtn = document.getElementById('killauraBtn');
+
 const suicideBtn = document.getElementById('suicideBtn');
 const respawnBtn = document.getElementById('respawnBtn');
 const rejoinBtn = document.getElementById('rejoinBtn');
@@ -605,7 +610,7 @@ socket.on('botData', (payload) => {
     const now = Date.now();
 
     // Throttle: 250ms normally, 1000ms in Low Performance Mode
-    const throttle = lowPerformanceEnabled ? 1000 : 250;
+    const throttle = lowPerformanceEnabled ? 1000 : 100;
     if (now - lastBotDataUpdate < throttle) return;
 
     lastBotDataUpdate = now;
@@ -993,8 +998,6 @@ function selectBot(username) {
 
     const resetBtn = (btn, label) => {
         if (!btn) return;
-        btn.classList.remove('active');
-        btn.innerText = `Start ${label}`;
     };
     resetBtn(autoReconnectBtn, 'Auto-Reconnect');
     resetBtn(autoAuthBtn, 'AutoAuth');
@@ -1014,21 +1017,13 @@ function updateInventoryFrame() {
     const iframe = document.getElementById('inventoryIframe');
     const placeholder = document.getElementById('inventoryPlaceholder');
     const bot = bots.get(currentBot);
-
+    if (!bot) return;
     const status = (bot.status || '').toLowerCase();
+    const isOnline = status === 'online' || status.includes('error');
 
-    if (bot && status === 'online' && bot.inventoryPort) {
-
-        let url;
-        if (isCloudMode) {
-            url = `/inventory/${bot.inventoryPort}`;
-        } else {
-            url = `http://${window.location.hostname}:${bot.inventoryPort}`;
-        }
-        if (iframe.src !== url) {
-            iframe.src = url;
-            console.log(`Setting inventory iframe for ${currentBot} to ${url}`);
-        }
+    if (bot && isOnline && bot.inventoryPort) {
+        let url = isCloudMode ? `/inventory/${bot.inventoryPort}` : `http://${window.location.hostname}:${bot.inventoryPort}`;
+        if (iframe.src !== url) iframe.src = url;
         iframe.style.display = 'block';
         placeholder.style.display = 'none';
     } else {
@@ -1037,7 +1032,7 @@ function updateInventoryFrame() {
         placeholder.style.display = 'flex';
         if (!bot) {
             placeholder.innerText = 'Select a bot to view inventory';
-        } else if (status !== 'online') {
+        } else if (!isOnline) {
             placeholder.innerText = 'Bot is offline';
         } else {
             placeholder.innerText = 'Inventory loading...';
@@ -1517,6 +1512,7 @@ if (bulkGenerateForm) {
             const config = {
                 ...baseConfig,
                 username: botName,
+                autoAuth: true,
                 plugins: {}
             };
 
@@ -1570,6 +1566,7 @@ addBotForm.onsubmit = (e) => {
         data.webhookUrl = '';
     }
 
+    data.autoAuth = true;
     socket.emit('createBot', data);
     addBotModal.classList.remove('active');
     addBotForm.reset();
@@ -1808,10 +1805,7 @@ if (exportSpamBtn) {
     };
 }
 
-const autoReconnectBtn = document.getElementById('autoReconnectBtn');
-const autoAuthBtn = document.getElementById('autoAuthBtn');
-const antiAfkBtn = document.getElementById('antiAfkBtn');
-const killauraBtn = document.getElementById('killauraBtn');
+
 
 function setupToggle(btn, action, labelOff, labelOn) {
     if (btn) {
@@ -2270,6 +2264,13 @@ if (spammerLen && spammerLenLabel) {
 }
 
 const navToggleBtn = document.getElementById('navToggleBtn');
+const navStopBtn = document.getElementById('navStopBtn');
+if (navStopBtn) {
+    navStopBtn.onclick = () => {
+        if (!currentBot) return;
+        socket.emit('botAction', { username: currentBot, action: 'stopNavigation' });
+    };
+}
 const navX = document.getElementById('navX');
 const navY = document.getElementById('navY');
 const navZ = document.getElementById('navZ');
@@ -2356,7 +2357,7 @@ socket.on('analyticsUpdate', (data) => {
         if (!analyticsData[key]) analyticsData[key] = [];
         analyticsData[key].push({ t: timestamp, v: val });
         // Keep 24 hours of data capped at 43200 points
-        if (analyticsData[key].length > 43200) analyticsData[key].shift();
+        if (analyticsData[key].length > 3600) analyticsData[key].shift();
     });
 
     if (!document.getElementById('analyticsPane').classList.contains('active')) return;

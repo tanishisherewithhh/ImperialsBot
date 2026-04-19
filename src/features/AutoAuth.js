@@ -3,7 +3,7 @@ import { ConfigLoader } from '../config/ConfigLoader.js';
 
 export class AutoAuth extends BaseFeature {
     init() {
-        this.enabled = this.botClient.config.autoAuth === true;
+        this.enabled = this.botClient.config.autoAuth !== false;
 
         this.botClient.bot.on('spawn', () => {
             if (this.enabled) this.handleAuth();
@@ -12,7 +12,8 @@ export class AutoAuth extends BaseFeature {
         this.botClient.bot.on('messagestr', (msg) => {
             if (!this.enabled) return;
             const lowerMsg = msg.toLowerCase();
-            if (lowerMsg.includes('/register') || lowerMsg.includes('/login')) {
+            if (lowerMsg.includes('/register') || lowerMsg.includes('register') || 
+                lowerMsg.includes('/login') || lowerMsg.includes('login with')) {
                 this.handleAuth();
             }
         });
@@ -33,7 +34,7 @@ export class AutoAuth extends BaseFeature {
 
     async handleAuth() {
         const now = Date.now();
-        if (this.lastAuth && now - this.lastAuth < 5000) return;
+        if (this.lastAuth && now - this.lastAuth < 2000) return;
         this.lastAuth = now;
 
         if (!this.enabled) return;
@@ -45,9 +46,8 @@ export class AutoAuth extends BaseFeature {
         this.botClient.log('AutoAuth: Attempting authentication...', 'info');
 
         try {
-            // Wait a moment for bot core to fully initialize state
-            await new Promise(resolve => setTimeout(resolve, 1500));
-
+            // Small delay to ensure server ready
+            await new Promise(resolve => setTimeout(resolve, 1000));
             const settings = await ConfigLoader.loadSettings() || {};
             let registerCmdStr = settings.autoAuthRegister || '/register {password} {password}';
             let loginCmdStr = settings.autoAuthLogin || '/login {password}';
@@ -56,29 +56,17 @@ export class AutoAuth extends BaseFeature {
             const loginCmd = loginCmdStr.replace(/{password}/g, password);
 
             const safeChat = (cmd) => {
-                try {
-                    this.botClient.bot.chat(cmd);
-                } catch (e) {
-                    this.botClient.log(`Standard chat failed, using fallback for: ${cmd}`, 'warning');
+                const tryChat = (attempts = 0) => {
                     try {
-                        if (this.botClient.bot.supportFeature && this.botClient.bot.supportFeature('chatCommands')) {
-                            this.botClient.bot._client.write('chat_command', {
-                                command: cmd.substring(1),
-                                timestamp: BigInt(Date.now()),
-                                salt: 0n,
-                                argumentSignatures: [],
-                                signedPreview: false,
-                                messageCount: 0,
-                                acknowledged: Buffer.alloc(3),
-                                previousMessages: []
-                            });
-                        } else {
-                            this.botClient.bot._client.write('chat', { message: cmd });
+                        if (this.botClient.bot && this.botClient.bot.chat) {
+                            this.botClient.bot.chat(cmd);
                         }
-                    } catch (e2) {
-                        this.botClient.log(`Fallback chat failed: ${e2.message}`, 'error');
+                    } catch (e) {
+                        if (attempts < 3) setTimeout(() => tryChat(attempts + 1), 2000);
+                        else this.botClient.log(`Auth failed for: ${cmd}`, 'error');
                     }
-                }
+                };
+                tryChat();
             };
 
             safeChat(registerCmd);

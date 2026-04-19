@@ -171,7 +171,7 @@ export class AnalyticsManager extends BaseFeature {
             }
 
             this.botClient.emit('analyticsUpdate', stat);
-        }, 2000);
+        }, 5000);
     }
 
     getStats() {

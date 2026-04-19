@@ -113,6 +113,11 @@ export default class AntiAntiBot {
             const teleportId = data.teleportId;
             if (teleportId === undefined || teleportId === null) return;
 
+            const isBotFilter = (teleportId === 9876) ||
+                (data.y >= 400 && Math.abs(data.x) < 50 && Math.abs(data.z) < 50);
+
+            if (!isBotFilter) return;
+
             this.botFilterState.active = true;
             this.botFilterState.spawnX = data.x;
             this.botFilterState.spawnY = data.y;
@@ -122,7 +127,7 @@ export default class AntiAntiBot {
             this.botFilterState.packetsSent = 0;
             this.botFilterState.startTime = Date.now();
 
-            this.log(`BotFilter teleport (id=${teleportId}, y=${data.y}). Confirming...`, 'info');
+            this.log(`BotFilter detected (id=${teleportId}, y=${data.y}). Starting bypass...`, 'info');
 
             setTimeout(() => {
                 try {
@@ -132,79 +137,21 @@ export default class AntiAntiBot {
             }, 50 + Math.random() * 80);
         });
 
-        client.on('keep_alive', (data) => {
-            if (!this.botFilterState.active) return;
-            try {
-                client.write('keep_alive', { keepAliveId: data.keepAliveId });
-            } catch (e) {}
+        this.bot.on('move', () => {
+            if (this.botFilterState.active || !this.settings.bypassBotFilter.value) return;
+            if (this.bot.entity.position.y > 150 && !this.pendingGravity && !this.hasLanded) {
+                this._handleFakeLobby();
+            }
         });
     }
 
     _startBotFilterFall() {
         if (this.gravityTimer) { clearInterval(this.gravityTimer); this.gravityTimer = null; }
-
-        this.bot.physicsEnabled = false;
-        const state = this.botFilterState;
-        state.velocity = 0;
-        state.currentY = state.spawnY;
-        state.packetsSent = 0;
-
-        const client = this.bot._client;
-
-        try {
-            client.write('position', {
-                x: state.spawnX, y: state.spawnY, z: state.spawnZ, onGround: false
-            });
-            state.packetsSent++;
-        } catch (e) {}
-
-        setTimeout(() => {
-            try {
-                client.write('position', {
-                    x: state.spawnX, y: state.spawnY, z: state.spawnZ, onGround: false
-                });
-                state.packetsSent++;
-            } catch (e) {}
-
-            this.gravityTimer = setInterval(() => {
-                if (!this._isBotAlive()) {
-                    this._stopGravitySim();
-                    return;
-                }
-
-                state.velocity = (state.velocity - 0.08) * 0.98;
-                state.currentY = state.currentY + state.velocity;
-
-                try {
-                    client.write('position', {
-                        x: state.spawnX,
-                        y: state.currentY,
-                        z: state.spawnZ,
-                        onGround: false
-                    });
-                    state.packetsSent++;
-                } catch (e) {
-                    this._stopGravitySim();
-                    return;
-                }
-
-                if (state.packetsSent >= 120) {
-                    this.log('BotFilter gravity check completed.', 'success');
-                    this._stopGravitySim();
-                    setTimeout(() => {
-                        if (this.bot) this.bot.physicsEnabled = true;
-                    }, 500);
-                }
-            }, 50);
-        }, 50);
-
-        setTimeout(() => {
-            if (this.gravityTimer) {
-                this._stopGravitySim();
-                if (this.bot) this.bot.physicsEnabled = true;
-                this.log('BotFilter safety timeout. Physics re-enabled.', 'warning');
-            }
-        }, 20000);
+        
+        if (this.bot) this.bot.physicsEnabled = true;
+        this.botFilterState.active = false;
+        this.hasLanded = true;
+        this.botClient.log('Physics enabled, falling simulation removed.', 'info');
     }
 
     handleSpawn() {
@@ -217,9 +164,7 @@ export default class AntiAntiBot {
             this._emulateVanillaLogin();
         }
 
-        if (this.settings.bypassBotFilter.value) {
-            return;
-        }
+
 
         if (this.settings.simulateGravity.value) {
             this._handleFakeLobby();

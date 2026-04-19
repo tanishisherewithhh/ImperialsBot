@@ -74,7 +74,7 @@ export class Combat extends BaseFeature {
 
     matchesFilter(entity) {
         if (!entity || entity === this.botClient.bot.entity) return false;
-        if (entity.health !== undefined && entity.health <= 0) return false;  mobs
+        if (entity.health !== undefined && entity.health <= 0) return false;
 
         if (entity.type === 'player') {
             const name = entity.username || '';
